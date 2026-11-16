@@ -18,7 +18,10 @@ import {
   Check,
   Funnel,
   Sparkle,
-  ArrowRight
+  ArrowRight,
+  Buildings,
+  Binoculars,
+  CarProfile
 } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "motion/react";
 import BackButton from "../components/BackButton";
@@ -135,6 +138,29 @@ function BookingCard({ booking, idx }) {
   const flight = booking.flight;
   const airline = getAirline(flight?.flight_number ?? "");
   const status = booking.status;
+  const serviceStartDate = flight?.arrival_time?.slice(0, 10) || flight?.departure_time?.slice(0, 10) || "";
+
+  const getNextDate = (date) => {
+    if (!date) return "";
+    const [year, month, day] = date.split("-").map(Number);
+    const nextDate = new Date(Date.UTC(year, month - 1, day + 1));
+    return nextDate.toISOString().slice(0, 10);
+  };
+
+  const openTravelService = (type) => {
+    const params = new URLSearchParams({
+      q: flight?.arrival_airport?.city || "",
+      start_date: serviceStartDate,
+      guests: String(Math.max(1, booking.tickets?.length || 1)),
+      booking_id: String(booking.id),
+    });
+
+    if (type === "hotel" || type === "car") {
+      params.set("end_date", getNextDate(serviceStartDate));
+    }
+
+    navigate(`/travel/${type}?${params.toString()}`);
+  };
 
   const handleCopyPnr = (e) => {
     e.stopPropagation();
@@ -444,6 +470,35 @@ function BookingCard({ booking, idx }) {
 
         </div>
 
+        {status === "paid" && flight?.arrival_time && new Date(flight.arrival_time) >= new Date() && (
+          <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+            <div className="mb-3">
+              <p className="text-sm font-extrabold text-blue-950">Thêm dịch vụ cho chuyến đi</p>
+              <p className="mt-1 text-xs leading-relaxed text-blue-800">
+                Dịch vụ được đặt riêng và liên kết với vé này; việc hủy dịch vụ không ảnh hưởng đến vé máy bay.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { type: "hotel", label: "Khách sạn", Icon: Buildings },
+                { type: "experience", label: "Trải nghiệm", Icon: Binoculars },
+                { type: "car", label: "Thuê xe", Icon: CarProfile },
+              ].map(({ type, label, Icon }) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => openTravelService(type)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-3.5 py-2.5 text-xs font-extrabold text-blue-800 transition hover:border-blue-400 hover:bg-blue-100"
+                >
+                  <Icon size={16} weight="bold" />
+                  {label}
+                  <ArrowRight size={14} weight="bold" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
     </motion.div>
   );
@@ -624,4 +679,3 @@ export default function MyBookings() {
     </motion.div>
   );
 }
-

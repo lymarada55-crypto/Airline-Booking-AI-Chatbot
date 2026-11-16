@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\CheckInController;
 use App\Http\Controllers\Api\UserProfileController;
 use App\Http\Controllers\Api\AI\AIChatController;
+use App\Http\Controllers\Api\TravelServiceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,6 +29,11 @@ Route::get('/airports', [AirportController::class, 'index']);
 Route::get('/flights', [FlightController::class, 'index']);
 Route::get('/flights/{id}/seats', [FlightController::class, 'seats']);
 Route::get('/services', [ServiceController::class, 'index']);
+Route::get('/travel-services/{type}', [TravelServiceController::class, 'index'])
+    ->whereIn('type', ['hotel', 'experience', 'car']);
+Route::get('/travel-services/{type}/{id}', [TravelServiceController::class, 'show'])
+    ->whereIn('type', ['hotel', 'experience', 'car'])
+    ->whereNumber('id');
 Route::post('/check-in', [CheckInController::class, 'processCheckIn']);
 Route::get('/check-in', [CheckInController::class, 'query']);
 
@@ -81,6 +87,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/bookings', [BookingController::class, 'index']);
     Route::get('/bookings/{id}', [BookingController::class, 'show']);
 
+    Route::get('/travel-service-reservations', [TravelServiceController::class, 'reservations']);
+    Route::get('/travel-service-reservations/{id}', [TravelServiceController::class, 'showReservation'])
+        ->whereNumber('id');
+    Route::post('/travel-services/{type}/{id}/reservations', [TravelServiceController::class, 'storeReservation'])
+        ->whereIn('type', ['hotel', 'experience', 'car'])
+        ->whereNumber('id');
+    Route::post('/travel-service-reservations/{id}/pay', [TravelServiceController::class, 'payReservation'])
+        ->whereNumber('id');
+    Route::patch('/travel-service-reservations/{id}/cancel', [TravelServiceController::class, 'cancelReservation'])
+        ->whereNumber('id');
+
     Route::post('/bookings/lock-seat', [BookingController::class, 'lockSeat']);
     Route::post('/bookings', [BookingController::class, 'store']);
     Route::post('/bookings/pay', [PaymentController::class, 'pay']);
@@ -106,6 +123,9 @@ Route::middleware(['auth:sanctum', 'role:admin'])
     ->group(function () {
 
         Route::get('/dashboard', [DashboardController::class, 'index']);
+    Route::get('/travel-service-reservations', [TravelServiceController::class, 'adminReservations']);
+    Route::patch('/travel-service-reservations/{id}', [TravelServiceController::class, 'updateReservationStatus'])
+        ->whereNumber('id');
 
         // PROFILE
         Route::get('/profile', [ProfileController::class, 'show']);

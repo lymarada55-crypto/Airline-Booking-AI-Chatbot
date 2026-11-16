@@ -20,7 +20,12 @@ import {
   Headset,
   UserCircle,
   List,
-  Sparkle
+  Sparkle,
+  SuitcaseRolling,
+  IdentificationCard,
+  ClipboardText,
+  ShieldCheck,
+  Wrench,
 } from "@phosphor-icons/react";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -51,6 +56,47 @@ const NAV_LINKS = [
         items: [
           { icon: Gift, label: "Quà tặng doanh nghiệp", desc: "Giải pháp cho công ty", href: "/services/corporate" },
           { icon: Headset, label: "Hotline 24/7", desc: "Hỗ trợ khách hàng: 1900 6067", href: "/support" },
+        ],
+      },
+    ],
+  },
+  {
+    label: "Cẩm nang bay",
+    href: "/flight-guide/baggage",
+    activePrefix: "/flight-guide/",
+    mega: true,
+    sections: [
+      {
+        title: "Hành lý",
+        items: [
+          { icon: SuitcaseRolling, label: "Quy định hành lý", desc: "Hành lý xách tay, ký gửi và vật dụng hạn chế", href: "/flight-guide/baggage" },
+        ],
+      },
+      {
+        title: "Giấy tờ & thủ tục",
+        items: [
+          { icon: IdentificationCard, label: "Giấy tờ cần chuẩn bị", desc: "Checklist giấy tờ cho chuyến bay nội địa và quốc tế", href: "/flight-guide/documents" },
+          { icon: ClipboardText, label: "Thủ tục tại sân bay", desc: "Các bước check-in, an ninh và lên máy bay", href: "/flight-guide/procedures" },
+        ],
+      },
+    ],
+  },
+  {
+    label: "An toàn bay",
+    href: "/flight-safety/policy",
+    activePrefix: "/flight-safety/",
+    mega: true,
+    sections: [
+      {
+        title: "An toàn khai thác",
+        items: [
+          { icon: ShieldCheck, label: "Chính sách an toàn", desc: "Ưu tiên an toàn và nhận diện rủi ro chủ động", href: "/flight-safety/policy" },
+        ],
+      },
+      {
+        title: "Đội bay",
+        items: [
+          { icon: Wrench, label: "Cam kết bảo dưỡng", desc: "Bảo dưỡng theo chương trình và yêu cầu áp dụng", href: "/flight-safety/maintenance" },
         ],
       },
     ],
@@ -336,7 +382,7 @@ function MegaMenu({ sections }) {
       <div className="relative bg-white/95 backdrop-blur-2xl rounded-3xl border border-slate-200/80 shadow-2xl shadow-blue-900/10 overflow-hidden p-6">
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
 
-        <div className="grid grid-cols-3 gap-6">
+        <div className={`grid gap-6 ${sections.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
           {sections.map((section, si) => (
             <div key={si}>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
@@ -570,6 +616,7 @@ export default function Navbar() {
   const [activeLink, setActiveLink] = useState(null);
   const [hoveredItem, setHoveredItem] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileExpandedItem, setMobileExpandedItem] = useState(null);
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem("user") || sessionStorage.getItem("user");
     if (saved) {
@@ -588,7 +635,9 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    const matched = NAV_LINKS.find((l) => location.pathname.startsWith(l.href) && l.href !== "/");
+    const matched = NAV_LINKS.find((l) => (
+      location.pathname.startsWith(l.activePrefix || l.href) && l.href !== "/"
+    ));
     setActiveLink(matched?.label ?? null);
   }, [location.pathname]);
 
@@ -748,18 +797,53 @@ export default function Navbar() {
           >
             <div className="flex flex-col space-y-2">
               {NAV_LINKS.map((item) => (
-                <button
-                  key={item.label}
-                  onClick={() => { navigate(item.href); setMobileMenuOpen(false); }}
-                  className="text-left font-bold text-slate-800 hover:text-blue-600 py-2.5 border-b border-slate-100 flex items-center justify-between"
-                >
-                  <span>{item.label}</span>
-                  {item.badge && (
-                    <span className="text-[9px] font-black bg-amber-400 text-white px-2 py-0.5 rounded-full">
-                      {item.badge}
+                <div key={item.label} className="border-b border-slate-100">
+                  <button
+                    type="button"
+                    aria-expanded={item.mega ? mobileExpandedItem === item.label : undefined}
+                    onClick={() => {
+                      if (item.mega) {
+                        setMobileExpandedItem((current) => current === item.label ? null : item.label);
+                      } else {
+                        navigate(item.href);
+                        setMobileMenuOpen(false);
+                      }
+                    }}
+                    className="w-full text-left font-bold text-slate-800 hover:text-blue-600 py-2.5 flex items-center justify-between"
+                  >
+                    <span>{item.label}</span>
+                    <span className="flex items-center gap-2">
+                      {item.badge && (
+                        <span className="text-[9px] font-black bg-amber-400 text-white px-2 py-0.5 rounded-full">
+                          {item.badge}
+                        </span>
+                      )}
+                      {item.mega && <CaretDown size={14} className={`transition-transform ${mobileExpandedItem === item.label ? "rotate-180" : ""}`} />}
                     </span>
+                  </button>
+                  {item.mega && mobileExpandedItem === item.label && (
+                    <div className="pb-3 pl-3">
+                      {item.sections.flatMap((section) => section.items).map((child) => (
+                        <button
+                          key={child.href}
+                          type="button"
+                          onClick={() => {
+                            navigate(child.href);
+                            setMobileMenuOpen(false);
+                            setMobileExpandedItem(null);
+                          }}
+                          className="flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-blue-50"
+                        >
+                          <child.icon size={18} weight="bold" className="mt-0.5 shrink-0 text-blue-600" />
+                          <span>
+                            <span className="block text-sm font-bold text-slate-800">{child.label}</span>
+                            <span className="mt-0.5 block text-xs text-slate-500">{child.desc}</span>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   )}
-                </button>
+                </div>
               ))}
             </div>
           </motion.div>
@@ -784,4 +868,3 @@ export default function Navbar() {
     </>
   );
 }
-

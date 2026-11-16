@@ -2,6 +2,7 @@
 
 namespace App\Services\AI;
 
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -132,12 +133,8 @@ PROMPT;
             if (!empty($geminiTools)) $payload['tools'] = $geminiTools;
         }
 
-        $candidateModels = array_values(array_filter(array_unique([
-            'gemini-flash-latest',
-            'gemini-1.5-flash-latest',
-            'gemini-1.5-flash',
-            'gemini-2.0-flash',
-        ])));
+        $candidateModels = array_slice($this->candidateModels(), 0, 2);
+        $requestBudget = 2;
 
         $lastError = null;
 
@@ -145,7 +142,12 @@ PROMPT;
             $url = $this->baseUrl . '/models/' . $model . ':generateContent';
 
             foreach ($this->apiKeys as $apiKey) {
-                $maxAttempts = 3;
+                if ($requestBudget <= 0) {
+                    break 2;
+                }
+
+                $requestBudget--;
+                $maxAttempts = 1;
                 for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
                     Log::info('Gemini complete request', ['model' => $model, 'attempt' => $attempt, 'messages' => count($messages)]);
 
@@ -161,8 +163,8 @@ PROMPT;
                         ])
                         ->acceptJson()
                         ->withoutVerifying()
-                        ->connectTimeout(15)
-                        ->timeout(40)
+                        ->connectTimeout(5)
+                        ->timeout(12)
                         ->withQueryParameters(['key' => $apiKey])
                         ->post($url, $payload);
                     } catch (\Throwable $e) {
@@ -194,7 +196,7 @@ PROMPT;
                     if (in_array($status, [503, 429], true)) {
                         Log::warning("Gemini model {$model} key busy (HTTP {$status}), retrying attempt {$attempt}/{$maxAttempts}...");
                         if ($attempt < $maxAttempts) {
-                            $sleepSecs = ($status === 429) ? ($attempt * 2) : $attempt;
+                            $sleepSecs = 1;
                             sleep($sleepSecs);
                             continue;
                         }
@@ -279,10 +281,10 @@ PROMPT;
         $matches = [];
 
         foreach ($airports as $name => $code) {
-            $pos = mb_strpos($textLower, $name, 0, 'UTF-8');
-            if ($pos !== false) {
+            $pattern = '/(?<![\p{L}\p{N}])' . preg_quote($name, '/') . '(?![\p{L}\p{N}])/u';
+            if (preg_match($pattern, $textLower, $match, PREG_OFFSET_CAPTURE)) {
                 $matches[] = [
-                    'pos' => $pos,
+                    'pos' => $match[0][1],
                     'code' => $code,
                 ];
             }
@@ -326,6 +328,7 @@ PROMPT;
         }
 
         $q = mb_strtolower($lastUserMsg, 'UTF-8');
+        $normalizedQuery = Str::ascii($q);
 
         // Explicitly check for policy / knowledge base questions first
         $isPolicyOrKnowledge = str_contains($q, 'hành lý') || str_contains($q, 'hanh ly') ||
@@ -350,7 +353,7 @@ PROMPT;
 
         $airports = [
             'hà nội' => 'HAN', 'ha noi' => 'HAN', 'hn' => 'HAN', 'nội bài' => 'HAN', 'han' => 'HAN',
-            'tp hcm' => 'SGN', 'tphcm' => 'SGN', 'tp.hcm' => 'SGN', 'hồ chí minh' => 'SGN', 'ho chi minh' => 'SGN', 'sài gòn' => 'SGN', 'sai gon' => 'SGN', 'sg' => 'SGN', 'sgn' => 'SGN',
+            'tp hcm' => 'SGN', 'tphcm' => 'SGN', 'tp.hcm' => 'SGN', 'hcm' => 'SGN', 'hồ chí minh' => 'SGN', 'ho chi minh' => 'SGN', 'sài gòn' => 'SGN', 'sai gon' => 'SGN', 'sg' => 'SGN', 'sgn' => 'SGN',
             'đà nẵng' => 'DAD', 'da nang' => 'DAD', 'dad' => 'DAD',
             'phú quốc' => 'PQC', 'phu quoc' => 'PQC', 'pqc' => 'PQC',
             'nha trang' => 'CXR', 'cam ranh' => 'CXR', 'cxr' => 'CXR',
@@ -379,7 +382,7 @@ PROMPT;
             }
         }
 
-        $hasFlightKeyword = str_contains($q, 'chuyến bay') || str_contains($q, 'tim chuyen') || str_contains($q, 'vé bay') || str_contains($q, 'vé từ') || str_contains($q, 'rẻ nhất') || str_contains($q, 're nhat') || str_contains($q, 'sớm nhất') || str_contains($q, 'som nhat') || str_contains($q, 'bay') || str_contains($q, 'chuyến');
+        $hasFlightKeyword = str_contains($q, 'chuyến bay') || str_contains($q, 'tim chuyen') || str_contains($q, 'tìm vé') || str_contains($q, 'tim ve') || str_contains($q, 'vé bay') || str_contains($q, 'vé từ') || str_contains($q, 'vé về') || str_contains($q, 'rẻ nhất') || str_contains($q, 're nhat') || str_contains($q, 'sớm nhất') || str_contains($q, 'som nhat') || str_contains($q, 'bay') || str_contains($q, 'chuyến');
 
         if (!$hasFlightKeyword && !$foundOrigin && !$foundDestination) {
             return null;
@@ -398,12 +401,42 @@ PROMPT;
             'sort_by' => 'price_asc',
         ];
 
-        if (str_contains($q, 'rẻ nhất') || str_contains($q, 're nhat') || str_contains($q, '1 chuyến') || str_contains($q, 'thấp nhất') || str_contains($q, 'giá rẻ')) {
+        if (str_contains($normalizedQuery, 'ngay mai') || preg_match('/\bmai\b/u', $normalizedQuery)) {
+            $args['date'] = now()->addDay()->toDateString();
+        } elseif (str_contains($normalizedQuery, 'hom nay')) {
+            $args['date'] = now()->toDateString();
+        }
+
+        if (preg_match('/\bngay\s+(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})\b/u', $normalizedQuery, $dateMatch)) {
+            $args['date'] = sprintf('%04d-%02d-%02d', $dateMatch[3], $dateMatch[2], $dateMatch[1]);
+        }
+
+        if (
+            str_contains($normalizedQuery, 'buoi sang') ||
+            str_contains($normalizedQuery, 'sang som') ||
+            str_contains($normalizedQuery, 'morning')
+        ) {
+            $args['time_of_day'] = 'morning';
+        } elseif (
+            str_contains($normalizedQuery, 'buoi chieu') ||
+            str_contains($normalizedQuery, 'buoi trua') ||
+            str_contains($normalizedQuery, 'afternoon')
+        ) {
+            $args['time_of_day'] = 'afternoon';
+        } elseif (
+            str_contains($normalizedQuery, 'buoi toi') ||
+            str_contains($normalizedQuery, 'ban dem') ||
+            str_contains($normalizedQuery, 'evening')
+        ) {
+            $args['time_of_day'] = 'evening';
+        }
+
+        if (str_contains($normalizedQuery, 're nhat') || str_contains($normalizedQuery, '1 chuyen') || str_contains($normalizedQuery, 'thap nhat') || str_contains($normalizedQuery, 'gia re')) {
             $args['limit'] = 1;
             $args['sort_by'] = 'price_asc';
         }
 
-        if (str_contains($q, 'sớm nhất') || str_contains($q, 'som nhat')) {
+        if (str_contains($normalizedQuery, 'som nhat')) {
             $args['limit'] = 1;
             $args['sort_by'] = 'departure_asc';
         }
@@ -419,12 +452,8 @@ PROMPT;
             'generationConfig' => ['temperature' => 0.2],
         ];
 
-        $candidateModels = array_values(array_filter(array_unique([
-            'gemini-flash-latest',
-            'gemini-1.5-flash-latest',
-            'gemini-1.5-flash',
-            'gemini-2.0-flash',
-        ])));
+        $candidateModels = array_slice($this->candidateModels(), 0, 2);
+        $requestBudget = 2;
 
         $response = null;
         $lastError = null;
@@ -433,7 +462,12 @@ PROMPT;
             $url = $this->baseUrl . '/models/' . $model . ':streamGenerateContent';
 
             foreach ($this->apiKeys as $apiKey) {
-                $maxAttempts = 4;
+                if ($requestBudget <= 0) {
+                    break 2;
+                }
+
+                $requestBudget--;
+                $maxAttempts = 1;
                 for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
                     try {
                         $res = Http::withOptions([
@@ -446,8 +480,8 @@ PROMPT;
                         ])
                         ->withoutVerifying()
                         ->acceptJson()
-                        ->connectTimeout(15)
-                        ->timeout(45)
+                        ->connectTimeout(5)
+                        ->timeout(12)
                         ->withQueryParameters(['key' => $apiKey, 'alt' => 'sse'])
                         ->post($url, $payload);
                     } catch (\Throwable $e) {
@@ -462,7 +496,7 @@ PROMPT;
 
                     if ($res->successful()) {
                         $response = $res;
-                        break 2;
+                        break 3;
                     }
 
                     $status = $res->status();
@@ -473,7 +507,7 @@ PROMPT;
                     if (in_array($status, [503, 429], true)) {
                         Log::warning("Gemini stream model {$model} key busy (HTTP {$status}), retrying attempt {$attempt}/{$maxAttempts}...");
                         if ($attempt < $maxAttempts) {
-                            $sleepSecs = ($status === 429) ? ($attempt * 2) : $attempt;
+                            $sleepSecs = 1;
                             sleep($sleepSecs);
                             continue;
                         }
@@ -490,9 +524,10 @@ PROMPT;
             $fallbackText = $this->generateFallbackResponse($messages, $lastError);
             $words = preg_split('/(\s+)/u', $fallbackText, -1, PREG_SPLIT_DELIM_CAPTURE);
             foreach ($words as $word) {
-                yield $word;
+                yield ['content' => $word, 'done' => false];
                 usleep(25000); // 25ms streaming simulation
             }
+            yield ['content' => '', 'done' => true];
             return;
         }
 
@@ -528,6 +563,17 @@ PROMPT;
         }
 
         yield ['content' => '', 'done' => true];
+    }
+
+    private function candidateModels(): array
+    {
+        return array_values(array_unique(array_filter([
+            $this->model,
+            'gemini-2.0-flash',
+            'gemini-flash-latest',
+            'gemini-1.5-flash-latest',
+            'gemini-1.5-flash',
+        ])));
     }
 
     private function convertMessagesToGemini(array $messages): array
@@ -798,6 +844,23 @@ PROMPT;
                    "- Hỗ trợ thanh toán qua: Thẻ Visa/Mastercard, Ví MoMo, VNPAY-QR, Chuyển khoản ngân hàng.\n" .
                    "- Mã đặt chỗ (PNR) và Vé điện tử sẽ được tự động gửi qua Email của bạn ngay trong 1-3 phút sau khi thanh toán thành công.\n" .
                    "- Hóa đơn VAT điện tử sẽ gửi qua email trong 24h nếu chọn nhập thông tin xuất hóa đơn tại bước thanh toán.";
+        }
+
+        $isCheapestFlightQuestion =
+            str_contains($query, 'rẻ nhất') ||
+            str_contains($query, 're nhat') ||
+            str_contains($query, 'giá thấp nhất') ||
+            str_contains($query, 'gia thap nhat') ||
+            str_contains($query, 'cheap');
+
+        if ($isCheapestFlightQuestion && (
+            str_contains($query, 'chuyến bay') ||
+            str_contains($query, 'chuyen bay') ||
+            str_contains($query, 'vé') ||
+            str_contains($query, 've ') ||
+            str_contains($query, 'flight')
+        )) {
+            return 'Để tìm chuyến bay rẻ nhất, bạn cho mình biết điểm đi, điểm đến và ngày bay nhé?';
         }
 
         if (str_contains($query, 'chuyến bay') || str_contains($query, 'vé') || str_contains($query, 'bay') || str_contains($query, 'giá')) {

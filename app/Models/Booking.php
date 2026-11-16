@@ -33,6 +33,11 @@ class Booking extends Model
         return $this->hasMany(Ticket::class);
     }
 
+    public function travelServiceReservations()
+    {
+        return $this->hasMany(TravelServiceReservation::class);
+    }
+
     public function services()
     {
         return $this->belongsToMany(Service::class)

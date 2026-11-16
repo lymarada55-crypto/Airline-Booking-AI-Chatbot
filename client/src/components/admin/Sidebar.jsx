@@ -8,6 +8,7 @@ function Sidebar() {
     { path: "/admin", label: "Home", icon: "fa-home" },
     { path: "/admin/users", label: "Users management", icon: "fa-users" },
     { path: "/admin/bookings", label: "Reservation", icon: "fa-calendar-alt" },
+    { path: "/admin/travel-services", label: "Travel services", icon: "fa-concierge-bell" },
     { path: "/admin/flights", label: "Flights", icon: "fa-plane" },
     { path: "/admin/airports", label: "Airports", icon: "fa-map-marker-alt" },
     { path: "/admin/payments", label: "Payment", icon: "fa-credit-card" },

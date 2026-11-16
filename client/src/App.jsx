@@ -16,6 +16,11 @@ import SkyClub from "./pages/SkyClub";
 import PaymentRetry from "./pages/PaymentRetry";
 import CheckInPage from "./pages/CheckInPage";
 import ProfilePage from "./pages/ProfilePage";
+import TravelServicesPage from "./pages/TravelServicesPage";
+import MyTravelServices from "./pages/MyTravelServices";
+import TravelServicePayment from "./pages/TravelServicePayment";
+import FlightGuide from "./pages/FlightGuide";
+import FlightSafety from "./pages/FlightSafety";
 
 import AirportTransfer from "./pages/services/AirportTransfer";
 import SpecialMeals from "./pages/services/SpecialMeals";
@@ -36,6 +41,7 @@ import Profits from "./pages/admin/Profits";
 import Offers from "./pages/admin/Offers";
 import Reports from "./pages/admin/Reports";
 import Profile from "./pages/admin/Profile";
+import TravelServices from "./pages/admin/TravelServices";
 import ChatWidget from "./components/ai/ChatWidget";
 import GoogleOneTap from "./components/auth/GoogleOneTap";
 import { ChatProvider } from "./store/ChatProvider";
@@ -54,6 +60,8 @@ function PageTitleUpdater() {
       "/auth/callback": "Xác thực tài khoản - SkyLink Airlines",
       "/flights": "Tìm kiếm chuyến bay - SkyLink Airlines",
       "/search": "Tìm kiếm chuyến bay - SkyLink Airlines",
+      "/my-travel-services": "Dịch vụ đã đặt - SkyLink Airlines",
+      "/travel-service-payment": "Thanh toán dịch vụ - SkyLink Airlines",
       "/seat-selection": "Chọn chỗ ngồi - SkyLink Airlines",
       "/services": "Dịch vụ & Tiện ích chuyến bay - SkyLink Airlines",
       "/services/transfer": "Dịch vụ đưa đón sân bay - SkyLink Airlines",
@@ -66,6 +74,11 @@ function PageTitleUpdater() {
       "/checkout": "Thanh toán đặt vé máy bay - SkyLink Airlines",
       "/payment": "Thanh toán chuyến bay - SkyLink Airlines",
       "/check-in": "Làm thủ tục trực tuyến (Online Check-in) - SkyLink Airlines",
+      "/flight-guide/baggage": "Cẩm nang bay - Quy định hành lý - SkyLink Airlines",
+      "/flight-guide/documents": "Cẩm nang bay - Giấy tờ cần chuẩn bị - SkyLink Airlines",
+      "/flight-guide/procedures": "Cẩm nang bay - Thủ tục tại sân bay - SkyLink Airlines",
+      "/flight-safety/policy": "An toàn bay - Chính sách an toàn - SkyLink Airlines",
+      "/flight-safety/maintenance": "An toàn bay - Cam kết bảo dưỡng - SkyLink Airlines",
       "/my-bookings": "Tra cứu vé & Chuyến bay của tôi - SkyLink Airlines",
       "/skyclub": "Chương trình hội viên SkyClub - SkyLink Airlines",
       "/profile": "Hồ sơ cá nhân - SkyLink Airlines",
@@ -73,6 +86,7 @@ function PageTitleUpdater() {
       "/admin/flights": "Quản lý chuyến bay - SkyLink Admin",
       "/admin/users": "Quản lý người dùng - SkyLink Admin",
       "/admin/bookings": "Quản lý đặt vé - SkyLink Admin",
+      "/admin/travel-services": "Quản lý dịch vụ du lịch - SkyLink Admin",
       "/admin/payments": "Quản lý giao dịch thanh toán - SkyLink Admin",
       "/admin/profits": "Thống kê doanh thu & Lợi nhuận - SkyLink Admin",
       "/admin/offers": "Quản lý chương trình khuyến mãi - SkyLink Admin",
@@ -86,6 +100,10 @@ function PageTitleUpdater() {
     if (!title) {
       if (pathname.startsWith("/payment-retry")) {
         title = "Thanh toán lại chuyến bay - SkyLink Airlines";
+      } else if (pathname.startsWith("/travel-service-payment/")) {
+        title = "Thanh toán đặt dịch vụ - SkyLink Airlines";
+      } else if (pathname.startsWith("/travel/")) {
+        title = "Tìm dịch vụ du lịch - SkyLink Airlines";
       } else if (pathname.startsWith("/admin")) {
         title = "Hệ thống quản trị - SkyLink Admin";
       } else {
@@ -113,6 +131,9 @@ function App() {
 
           <Route path="/flights" element={<FlightResults />} />
           <Route path="/search" element={<FlightResults />} />
+          <Route path="/travel/:type" element={<TravelServicesPage />} />
+          <Route path="/my-travel-services" element={<MyTravelServices />} />
+          <Route path="/travel-service-payment/:reservationId" element={<TravelServicePayment />} />
           <Route path="/seat-selection" element={<SeatSelection />} />
           <Route path="/services" element={<ServiceSelection />} />
 
@@ -129,6 +150,8 @@ function App() {
           <Route path="/payment" element={<PaymentRetry />} />
           <Route path="/payment-retry/:bookingId" element={<PaymentRetry />} />
           <Route path="/check-in" element={<CheckInPage />} />
+          <Route path="/flight-guide/:topic" element={<FlightGuide />} />
+          <Route path="/flight-safety/:topic" element={<FlightSafety />} />
           <Route path="/my-bookings" element={<MyBookings />} />
           <Route path="/skyclub" element={<SkyClub />} />
           <Route path="/profile" element={<ProfilePage />} />
@@ -140,6 +163,7 @@ function App() {
               <Route path="flights" element={<Flights />} />
               <Route path="users" element={<Users />} />
               <Route path="bookings" element={<Bookings />} />
+              <Route path="travel-services" element={<TravelServices />} />
               <Route path="payments" element={<Payments />} />
               <Route path="profits" element={<Profits />} />
               <Route path="offers" element={<Offers />} />

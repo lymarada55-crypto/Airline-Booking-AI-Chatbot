@@ -47,6 +47,21 @@ class AIChatService
             ...$history,
         ];
 
+        $cheapestFlightReply = $this->cheapestFlightFollowUp($conversation, $message);
+        if ($cheapestFlightReply !== null) {
+            $conversation->messages()->create([
+                'role' => 'assistant',
+                'content' => $cheapestFlightReply['message'],
+            ]);
+
+            return [
+                'type' => 'message',
+                ...$cheapestFlightReply,
+                'conversation_id' => $conversation->uuid,
+                'quick_replies' => [],
+            ];
+        }
+
         $tools = $this->shouldUseTools($message) ? $this->getTools() : [];
         $flights = [];
 
@@ -124,7 +139,30 @@ class AIChatService
 
         yield ['type' => 'status', 'status' => 'thinking', 'message' => 'SkyAI đang kiểm tra thông tin...'];
 
-        $response = $this->aiService->complete($messages, $this->getTools());
+        $cheapestFlightReply = $this->cheapestFlightFollowUp($conversation, $message);
+        if ($cheapestFlightReply !== null) {
+            $conversation->messages()->create([
+                'role' => 'assistant',
+                'content' => $cheapestFlightReply['message'],
+            ]);
+
+            yield ['type' => 'chunk', 'content' => $cheapestFlightReply['message']];
+            yield [
+                'type' => 'done',
+                ...$cheapestFlightReply,
+                'conversation_id' => $conversation->uuid,
+                'quick_replies' => [],
+            ];
+            return;
+        }
+
+        $tools = $this->shouldUseTools($message) ? $this->getTools() : [];
+        if (empty($tools)) {
+            yield from $this->streamFinalAnswer($conversation, $messages);
+            return;
+        }
+
+        $response = $this->aiService->complete($messages, $tools);
         $toolCalls = $response['tool_calls'] ?? [];
 
         if (!$toolCalls) {
@@ -234,25 +272,7 @@ class AIChatService
         // Đối với các tool khác (chính sách, tra cứu booking), tổng hợp câu trả lời từ AI
         yield ['type' => 'status', 'status' => 'writing', 'message' => 'Đang tổng hợp câu trả lời...'];
         
-        $finalResponse = $this->aiService->complete($messages);
-        $content = trim((string) ($finalResponse['content'] ?? ''));
-
-        $conversation->messages()->create([
-            'role' => 'assistant',
-            'content' => $content,
-        ]);
-
-        if ($content !== '') {
-            yield ['type' => 'chunk', 'content' => $content];
-        }
-
-        yield [
-            'type' => 'done',
-            'conversation_id' => $conversation->uuid,
-            'message' => $content,
-            'flights' => [],
-            'quick_replies' => [],
-        ];
+        yield from $this->streamFinalAnswer($conversation, $messages);
     }
 
     private function streamFinalAnswer(AIConversation $conversation, array $messages): \Generator
@@ -260,9 +280,9 @@ class AIChatService
         $content = '';
 
         foreach ($this->aiService->stream($messages) as $chunk) {
-            if (($chunk['done'] ?? false) === true) break;
+            if (is_array($chunk) && ($chunk['done'] ?? false) === true) break;
 
-            $text = $chunk['content'] ?? '';
+            $text = is_string($chunk) ? $chunk : ($chunk['content'] ?? '');
             if ($text === '') continue;
 
             $content .= $text;
@@ -280,6 +300,112 @@ class AIChatService
             'message' => $content,
             'flights' => [],
             'quick_replies' => [],
+        ];
+    }
+
+    private function cheapestFlightFollowUp(AIConversation $conversation, string $message): ?array
+    {
+        $query = mb_strtolower(trim($message), 'UTF-8');
+        $asksForCheapest = str_contains($query, 'rẻ nhất')
+            || str_contains($query, 're nhat')
+            || str_contains($query, 'giá thấp nhất')
+            || str_contains($query, 'gia thap nhat')
+            || str_contains($query, 'cheapest')
+            || str_contains($query, 'cheapest flight');
+
+        if (!$asksForCheapest) {
+            return null;
+        }
+
+        $currentUserMessageId = $conversation->messages()
+            ->where('role', 'user')
+            ->latest('id')
+            ->value('id');
+
+        if (!$currentUserMessageId) {
+            return null;
+        }
+
+        $previousUserMessageId = $conversation->messages()
+            ->where('role', 'user')
+            ->where('id', '<', $currentUserMessageId)
+            ->latest('id')
+            ->value('id');
+
+        if (!$previousUserMessageId) {
+            return $this->missingCheapestFlightContext();
+        }
+
+        $searchMessage = $conversation->messages()
+            ->where('role', 'tool')
+            ->where('tool_name', 'search_flight')
+            ->where('id', '>', $previousUserMessageId)
+            ->where('id', '<', $currentUserMessageId)
+            ->latest('id')
+            ->first();
+
+        if (!$searchMessage) {
+            return $this->missingCheapestFlightContext();
+        }
+
+        $result = $searchMessage->tool_result;
+        if ($result instanceof \ArrayObject) {
+            $result = $result->getArrayCopy();
+        } elseif (is_string($result)) {
+            $result = json_decode($result, true);
+        }
+
+        if (!is_array($result)) {
+            return $this->missingCheapestFlightContext();
+        }
+
+        $flights = $result['flights'] ?? [];
+        if ($flights instanceof \ArrayObject) {
+            $flights = $flights->getArrayCopy();
+        }
+
+        if (!is_array($flights)) {
+            return $this->missingCheapestFlightContext();
+        }
+
+        $flights = array_values(array_filter(
+            $flights,
+            fn ($flight) => is_array($flight) && is_numeric($flight['base_price'] ?? null)
+        ));
+
+        if ($flights === []) {
+            return [
+                'message' => 'Danh sách chuyến bay vừa tìm không có chuyến phù hợp để so sánh giá.',
+                'flights' => [],
+            ];
+        }
+
+        usort(
+            $flights,
+            fn (array $first, array $second) => (float) $first['base_price'] <=> (float) $second['base_price']
+        );
+
+        $cheapestFlight = $flights[0];
+        $flightNumber = $cheapestFlight['flight_number'] ?? 'Chuyến bay';
+        $origin = $cheapestFlight['origin'] ?? '';
+        $destination = $cheapestFlight['destination'] ?? '';
+        $route = $origin !== '' && $destination !== '' ? " ({$origin} → {$destination})" : '';
+        $departureTime = isset($cheapestFlight['departure_time'])
+            ? ' khởi hành lúc ' . substr((string) $cheapestFlight['departure_time'], 11, 5)
+            : '';
+        $price = number_format((float) $cheapestFlight['base_price'], 0, ',', '.');
+
+        return [
+            'message' => "Trong danh sách vừa tìm, chuyến rẻ nhất là **{$flightNumber}**{$route}{$departureTime}, giá **{$price} VND**.",
+            'flights' => [$cheapestFlight],
+        ];
+    }
+
+    private function missingCheapestFlightContext(): array
+    {
+        return [
+            'message' => 'Bạn muốn tìm chuyến rẻ nhất cho hành trình nào? Vui lòng cho biết điểm đi, điểm đến và ngày bay.',
+            'flights' => [],
         ];
     }
 
@@ -311,7 +437,7 @@ class AIChatService
 
     private function shouldUseTools(string $message): bool
     {
-        $message = mb_strtolower(trim($message));
+        $message = Str::ascii(mb_strtolower(trim($message), 'UTF-8'));
 
         foreach ([
             'tìm chuyến bay', 'tìm vé', 'chuyến bay', 'vé máy bay', 'bay từ', 'bay đi',
@@ -320,7 +446,7 @@ class AIChatService
             'chính sách', 'quy định', 'dịch vụ', 'sân bay', 'nội bài', 'tân sơn nhất',
             'đà nẵng', 'cam ranh', 'phú quốc',
         ] as $keyword) {
-            if (str_contains($message, $keyword)) return true;
+            if (str_contains($message, Str::ascii($keyword))) return true;
         }
 
         return false;

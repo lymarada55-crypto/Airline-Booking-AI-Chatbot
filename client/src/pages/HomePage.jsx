@@ -24,9 +24,141 @@ import {
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
+function ServiceCityPicker({ icon: Icon, value, options, placeholder, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const normalizedValue = value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase();
+  const filteredOptions = options.filter((city) => city
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase()
+    .includes(normalizedValue));
+
+  const selectCity = (city) => {
+    onChange(city);
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="relative min-w-0 flex-1">
+      <div className="flex items-center gap-2">
+        <Icon size={16} className="shrink-0 text-slate-400" />
+        <input
+          type="text"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={isOpen}
+          placeholder={placeholder}
+          className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none placeholder:text-slate-400"
+          value={value}
+          onFocus={() => {
+            setActiveIndex(-1);
+            setIsOpen(true);
+          }}
+          onChange={(event) => {
+            onChange(event.target.value);
+            setActiveIndex(-1);
+            setIsOpen(true);
+          }}
+          onBlur={() => window.setTimeout(() => setIsOpen(false), 120)}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowDown" && filteredOptions.length > 0) {
+              event.preventDefault();
+              setIsOpen(true);
+              setActiveIndex((index) => (index + 1) % filteredOptions.length);
+            } else if (event.key === "ArrowUp" && filteredOptions.length > 0) {
+              event.preventDefault();
+              setActiveIndex((index) => (index <= 0 ? filteredOptions.length - 1 : index - 1));
+            } else if (event.key === "Enter" && isOpen && activeIndex >= 0 && filteredOptions[activeIndex]) {
+              event.preventDefault();
+              selectCity(filteredOptions[activeIndex]);
+            } else if (event.key === "Escape") {
+              setIsOpen(false);
+            }
+          }}
+        />
+      </div>
+
+      {isOpen && (
+        <div
+          role="listbox"
+          className="absolute left-0 right-0 top-[calc(100%+14px)] z-50 max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_18px_45px_-12px_rgba(15,23,42,0.28)]"
+        >
+          <div className="px-3 pb-2 pt-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+            Chọn thành phố
+          </div>
+          <button
+            type="button"
+            role="option"
+            aria-selected={!value}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => selectCity("")}
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
+              !value ? "bg-blue-50 text-blue-800" : "text-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+              <MapPinLine size={17} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold">Tất cả địa điểm</span>
+              <span className="mt-0.5 block text-[11px] text-slate-400">Hiển thị toàn bộ danh sách</span>
+            </span>
+            {!value && <CheckCircle size={17} weight="fill" className="text-blue-600" />}
+          </button>
+
+          {filteredOptions.map((city, index) => (
+            <button
+              type="button"
+              role="option"
+              aria-selected={value === city}
+              key={city}
+              onMouseDown={(event) => event.preventDefault()}
+              onMouseEnter={() => setActiveIndex(index)}
+              onClick={() => selectCity(city)}
+              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
+                activeIndex === index ? "bg-blue-50 text-blue-800" : "text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                activeIndex === index ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"
+              }`}>
+                <MapPinLine size={17} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-bold">{city}</span>
+                <span className="mt-0.5 block text-[11px] text-slate-400">Thành phố</span>
+              </span>
+              {value === city && <CheckCircle size={17} weight="fill" className="text-blue-600" />}
+            </button>
+          ))}
+
+          {filteredOptions.length === 0 && (
+            <p className="px-3 py-4 text-center text-xs text-slate-500">
+              Không tìm thấy thành phố phù hợp. Bạn vẫn có thể tìm theo tên dịch vụ.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function HomePage() {
   const navigate = useNavigate();
   const today = new Date().toISOString().split('T')[0];
+  const dateAfterDays = (days) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return date.toISOString().split("T")[0];
+  };
   const videoRef = useRef(null);
 
   useEffect(() => {
@@ -41,6 +173,12 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState("flights");
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
+  const [serviceSearch, setServiceSearch] = useState({
+    hotel: { q: "", start_date: dateAfterDays(1), end_date: dateAfterDays(2) },
+    experience: { q: "", start_date: dateAfterDays(1) },
+    car: { q: "", start_date: dateAfterDays(1), end_date: dateAfterDays(2) },
+  });
+  const [serviceSuggestions, setServiceSuggestions] = useState({});
 
   const [searchData, setSearchData] = useState({
     departure: "",
@@ -88,7 +226,44 @@ export default function HomePage() {
       });
   }, []);
 
+  useEffect(() => {
+    if (activeTab === "flights") return;
+
+    const type = activeTab === "hotels" ? "hotel" : activeTab === "experiences" ? "experience" : "car";
+    axios.get(`/api/travel-services/${type}`, { params: { per_page: 200 } })
+      .then(({ data }) => {
+        const products = data.data?.data || [];
+        const suggestions = [...new Set(products.map((product) => product.city).filter(Boolean))];
+        setServiceSuggestions((previous) => ({ ...previous, [type]: suggestions }));
+      })
+      .catch((error) => {
+        console.error(`Failed to load ${type} suggestions:`, error);
+        setServiceSuggestions((previous) => ({ ...previous, [type]: [] }));
+      });
+  }, [activeTab]);
+
   const handleSearch = () => {
+    if (activeTab !== "flights") {
+      const type = activeTab === "hotels" ? "hotel" : activeTab === "experiences" ? "experience" : "car";
+      const search = serviceSearch[type];
+
+      if (!search.start_date) {
+        alert("Vui lòng chọn ngày bắt đầu.");
+        return;
+      }
+      if (type !== "experience" && (!search.end_date || search.end_date <= search.start_date)) {
+        alert("Ngày trả phải sau ngày bắt đầu.");
+        return;
+      }
+
+      const params = new URLSearchParams({
+        ...search,
+        guests: String(searchData.passengers.adults + searchData.passengers.children),
+      });
+      navigate(`/travel/${type}?${params.toString()}`);
+      return;
+    }
+
     if (!searchData.departure || !searchData.arrival) {
       alert("Vui lòng chọn đầy đủ điểm đi và điểm đến.");
       return;
@@ -380,27 +555,47 @@ export default function HomePage() {
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
                 <div className="md:col-span-5 bg-slate-50 border border-slate-200/90 rounded-2xl p-3">
                   <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Thành phố hoặc Khách sạn</label>
-                  <div className="flex items-center gap-2">
-                    <Buildings size={16} className="text-slate-400 shrink-0" />
-                    <input
-                      type="text"
-                      placeholder="Nhập điểm đến, tên khách sạn..."
-                      className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none"
-                    />
-                  </div>
+                  <ServiceCityPicker
+                    icon={Buildings}
+                    value={serviceSearch.hotel.q}
+                    options={serviceSuggestions.hotel || []}
+                    placeholder="Để trống để xem tất cả hoặc chọn thành phố..."
+                    onChange={(value) => setServiceSearch((prev) => ({
+                      ...prev,
+                      hotel: { ...prev.hotel, q: value },
+                    }))}
+                  />
                 </div>
                 <div className="md:col-span-3 bg-slate-50 border border-slate-200/90 rounded-2xl p-3">
                   <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Nhận phòng</label>
                   <div className="flex items-center gap-2">
                     <CalendarBlank size={16} className="text-slate-400 shrink-0" />
-                    <input type="date" className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer" min={today} />
+                    <input
+                      type="date"
+                      className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer"
+                      min={today}
+                      value={serviceSearch.hotel.start_date}
+                      onChange={(e) => setServiceSearch((prev) => ({
+                        ...prev,
+                        hotel: { ...prev.hotel, start_date: e.target.value },
+                      }))}
+                    />
                   </div>
                 </div>
                 <div className="md:col-span-4 bg-slate-50 border border-slate-200/90 rounded-2xl p-3">
                   <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Trả phòng</label>
                   <div className="flex items-center gap-2">
                     <CalendarBlank size={16} className="text-slate-400 shrink-0" />
-                    <input type="date" className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer" min={today} />
+                    <input
+                      type="date"
+                      className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer"
+                      min={serviceSearch.hotel.start_date || today}
+                      value={serviceSearch.hotel.end_date}
+                      onChange={(e) => setServiceSearch((prev) => ({
+                        ...prev,
+                        hotel: { ...prev.hotel, end_date: e.target.value },
+                      }))}
+                    />
                   </div>
                 </div>
               </div>
@@ -411,20 +606,31 @@ export default function HomePage() {
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
                 <div className="md:col-span-7 bg-slate-50 border border-slate-200/90 rounded-2xl p-3">
                   <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Địa điểm & Trải nghiệm</label>
-                  <div className="flex items-center gap-2">
-                    <Compass size={16} className="text-slate-400 shrink-0" />
-                    <input
-                      type="text"
-                      placeholder="Nhập thành phố hoặc hoạt động muốn trải nghiệm..."
-                      className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none"
-                    />
-                  </div>
+                  <ServiceCityPicker
+                    icon={Compass}
+                    value={serviceSearch.experience.q}
+                    options={serviceSuggestions.experience || []}
+                    placeholder="Để trống để xem tất cả hoặc chọn thành phố..."
+                    onChange={(value) => setServiceSearch((prev) => ({
+                      ...prev,
+                      experience: { ...prev.experience, q: value },
+                    }))}
+                  />
                 </div>
                 <div className="md:col-span-5 bg-slate-50 border border-slate-200/90 rounded-2xl p-3">
                   <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Ngày trải nghiệm</label>
                   <div className="flex items-center gap-2">
                     <CalendarBlank size={16} className="text-slate-400 shrink-0" />
-                    <input type="date" className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer" min={today} />
+                    <input
+                      type="date"
+                      className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer"
+                      min={today}
+                      value={serviceSearch.experience.start_date}
+                      onChange={(e) => setServiceSearch((prev) => ({
+                        ...prev,
+                        experience: { ...prev.experience, start_date: e.target.value },
+                      }))}
+                    />
                   </div>
                 </div>
               </div>
@@ -435,27 +641,47 @@ export default function HomePage() {
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
                 <div className="md:col-span-5 bg-slate-50 border border-slate-200/90 rounded-2xl p-3">
                   <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Địa điểm nhận xe</label>
-                  <div className="flex items-center gap-2">
-                    <Car size={16} className="text-slate-400 shrink-0" />
-                    <input
-                      type="text"
-                      placeholder="Nhập sân bay hoặc thành phố nhận xe..."
-                      className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none"
-                    />
-                  </div>
+                  <ServiceCityPicker
+                    icon={Car}
+                    value={serviceSearch.car.q}
+                    options={serviceSuggestions.car || []}
+                    placeholder="Để trống để xem tất cả hoặc chọn thành phố..."
+                    onChange={(value) => setServiceSearch((prev) => ({
+                      ...prev,
+                      car: { ...prev.car, q: value },
+                    }))}
+                  />
                 </div>
                 <div className="md:col-span-3 bg-slate-50 border border-slate-200/90 rounded-2xl p-3">
                   <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Ngày nhận</label>
                   <div className="flex items-center gap-2">
                     <CalendarBlank size={16} className="text-slate-400 shrink-0" />
-                    <input type="date" className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer" min={today} />
+                    <input
+                      type="date"
+                      className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer"
+                      min={today}
+                      value={serviceSearch.car.start_date}
+                      onChange={(e) => setServiceSearch((prev) => ({
+                        ...prev,
+                        car: { ...prev.car, start_date: e.target.value },
+                      }))}
+                    />
                   </div>
                 </div>
                 <div className="md:col-span-4 bg-slate-50 border border-slate-200/90 rounded-2xl p-3">
                   <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Ngày trả</label>
                   <div className="flex items-center gap-2">
                     <CalendarBlank size={16} className="text-slate-400 shrink-0" />
-                    <input type="date" className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer" min={today} />
+                    <input
+                      type="date"
+                      className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer"
+                      min={serviceSearch.car.start_date || today}
+                      value={serviceSearch.car.end_date}
+                      onChange={(e) => setServiceSearch((prev) => ({
+                        ...prev,
+                        car: { ...prev.car, end_date: e.target.value },
+                      }))}
+                    />
                   </div>
                 </div>
               </div>
@@ -473,7 +699,10 @@ export default function HomePage() {
                 >
                   <div className="flex items-center gap-2">
                     <Users size={16} className="text-slate-500" />
-                    <span>Hành khách: {searchData.passengers.adults + searchData.passengers.children} Người • Phổ thông</span>
+                    <span>
+                      {activeTab === "flights" ? "Hành khách" : "Số khách"}: {searchData.passengers.adults + searchData.passengers.children} Người
+                      {activeTab === "flights" && " • Phổ thông"}
+                    </span>
                   </div>
                   <span className="text-slate-400">˅</span>
                 </button>

@@ -28,6 +28,7 @@ class AIChatController extends Controller
      *
      * POST /api/ai/chat
      */
+
     public function chat(Request $request): JsonResponse
     {
         set_time_limit(300);
@@ -52,40 +53,26 @@ class AIChatController extends Controller
         ]);
 
         try {
-            $user =
-                $request->user('sanctum')
-                ?? $request->user();
+            $user = $request->user('sanctum') ?? $request->user();
 
-            $response = $this->aiChatService->chat(
-                message: $validated['message'] ?? ' ',
-                user: $user,
-                conversationId: $validated['conversation_id'] ?? null,
-                images: $validated['images'] ?? []
+            // Dispatch asynchronous job to process AI request
+            \App\Jobs\ProcessAiChatJob::dispatch(
+                $validated['message'] ?? '',
+                $user,
+                $validated['conversation_id'] ?? null,
+                $validated['images'] ?? []
             );
 
             return response()->json([
                 'success' => true,
-                'conversation_id' => $response['conversation_id'],
-                'data' => [
-                    'type' => 'message',
-                    'message' => $response['message'] ?? '',
-                    'conversation_id' => $response['conversation_id'],
-                    'flights' => $response['flights'] ?? [],
-                    'quick_replies' => $response['quick_replies'] ?? [],
-                ],
-                'reply' => [
-                    'type' => !empty($response['flights']) ? 'mixed' : 'text',
-                    'text' => $response['message'] ?? '',
-                    'flights' => $response['flights'] ?? [],
-                    'quick_replies' => $response['quick_replies'] ?? [],
-                ],
+                'status'  => 'processing',
+                'message' => 'Đang xử lý, vui lòng chờ…',
             ]);
-
         } catch (Throwable $e) {
             Log::error('AI Chat Error', [
                 'user_id' => $request->user()?->id,
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'trace'   => $e->getTraceAsString(),
             ]);
 
             return response()->json([

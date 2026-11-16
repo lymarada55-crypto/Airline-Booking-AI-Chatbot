@@ -39,6 +39,7 @@ class DatabaseSeeder extends Seeder
             AirportSeeder::class,
             AircraftSeeder::class, // File này sẽ tự đẻ ra cả SEATS
             FlightSeeder::class,   // Tự động đẻ ra ít nhất 5 chuyến bay/ngày cho tất cả tuyến đường
+            TravelProductSeeder::class,
         ]);
 
         // 5. TẠO DỊCH VỤ BỔ TRỢ

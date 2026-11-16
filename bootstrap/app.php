@@ -10,6 +10,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -75,6 +76,18 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'status'  => 'error',
                     'message' => $e->getMessage(),
+                ], 422);
+            }
+
+            return null;
+        });
+
+        $exceptions->render(function (ValidationException $e, Request $request): mixed {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $e->getMessage(),
+                    'errors' => $e->errors(),
                 ], 422);
             }
 

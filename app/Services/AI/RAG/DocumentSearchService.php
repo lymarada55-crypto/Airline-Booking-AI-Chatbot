@@ -59,7 +59,7 @@ class DocumentSearchService
             [
                 'category' => 'inflight-services',
                 'title' => 'In-flight services & Meals',
-                'text' => 'Suất ăn nóng, đồ uống và suất ăn chay (Vegetarian) có thể đặt trước tại Bước chọn dịch vụ trước giờ bay ít nhất 24 giờ. Trẻ sơ sinh (dưới 2 tuổi): 10% giá vé người lớn (ngồi chung); Trẻ em (từ 2 đến dưới 12 tuổi): 75% giá vé người lớn.',
+                'text' => 'Trong luồng đặt vé SkyLink hiện có thể chọn gói Suất ăn nóng tại Bước chọn dịch vụ. Danh mục suất ăn đặc biệt và thời hạn đăng ký phụ thuộc hãng khai thác, chuyến bay và chặng bay; cần xác nhận trực tiếp với hãng. Trẻ sơ sinh (dưới 2 tuổi): 10% giá vé người lớn (ngồi chung); Trẻ em (từ 2 đến dưới 12 tuổi): 75% giá vé người lớn.',
             ],
         ];
     }

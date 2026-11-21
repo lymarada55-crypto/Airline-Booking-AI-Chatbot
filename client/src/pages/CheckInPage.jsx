@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import axios from 'axios';
-import { 
-  PaperPlaneTilt, 
-  Ticket, 
-  User, 
-  ShieldCheck, 
-  ArrowRight, 
-  WarningCircle, 
-  Clock, 
-  Headset, 
+import { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import axios from "axios";
+import {
+  PaperPlaneTilt,
+  AirplaneTilt,
+  ArrowLeft,
+  Ticket,
+  User,
+  ShieldCheck,
+  ArrowRight,
+  WarningCircle,
+  Clock,
+  Headset,
   ArrowUpRight,
   Printer,
   PlusCircle,
@@ -17,507 +19,932 @@ import {
   CaretRight,
   X,
   EnvelopeSimple,
-} from '@phosphor-icons/react';
-import BoardingPassDisplay from '../components/BoardingPassDisplay';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import './CheckInPage.css';
+  Fire,
+  BatteryWarning,
+  Scissors,
+  Flask,
+  Prohibit,
+  SuitcaseRolling,
+  IdentificationCard,
+  Sparkle,
+} from "@phosphor-icons/react";
+import BoardingPassDisplay from "../components/BoardingPassDisplay";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
+import "./CheckInPage.css";
+
+const HERO_CHECKIN_BG_URL =
+  "https://static.vecteezy.com/system/resources/previews/035/719/664/non_2x/ai-generated-image-of-a-large-airliner-flying-in-the-sky-free-photo.jpg";
+
+const PROHIBITED_ITEMS = [
+  {
+    icon: Fire,
+    color: "#dc2626",
+    bg: "#fef2f2",
+    text: "Chất nổ, pháo hoa, khí gas hoặc vật phẩm dễ cháy nổ",
+  },
+  {
+    icon: BatteryWarning,
+    color: "#059669",
+    bg: "#ecfdf5",
+    text: "Pin dự phòng công suất lớn trên 160Wh (pin ≤ 100Wh chỉ được mang xách tay)",
+  },
+  {
+    icon: Scissors,
+    color: "#0b57d0",
+    bg: "#eff6ff",
+    text: "Dao, kéo, lưỡi cạo hoặc các dụng cụ sắc nhọn trong hành lý xách tay",
+  },
+  {
+    icon: Flask,
+    color: "#7c3aed",
+    bg: "#f5f3ff",
+    text: "Hóa chất ăn mòn, axit, chất độc hại hoặc chất phóng xạ",
+  },
+  {
+    icon: Prohibit,
+    color: "#d97706",
+    bg: "#fffbeb",
+    text: "Vũ khí, vật phẩm mô phỏng vũ khí hoặc công cụ hỗ trợ bị cấm bay",
+  },
+];
 
 /**
  * CheckInPage Component
- * 
- * Trang Check-in điện tử chuẩn Hãng hàng không SkyLink (Form + Thẻ lên máy bay)
+ *
+ * Trang Check-in điện tử chuẩn 5 sao SkyLink Airlines (Form + Chọn nhanh PNR + Thẻ lên máy bay)
  */
 export default function CheckInPage() {
   const [searchParams] = useSearchParams();
 
   // State quản lý dữ liệu form
-  const [pnrCode, setPnrCode] = useState('');
-  const [passengerName, setPassengerName] = useState('');
-  
+  const [pnrCode, setPnrCode] = useState("");
+  const [passengerName, setPassengerName] = useState("");
+
   // Tự động lấy email từ user đang đăng nhập
   const [email, setEmail] = useState(() => {
     try {
-      const user = localStorage.getItem('user');
-      return user ? JSON.parse(user)?.email || '' : '';
+      const user = localStorage.getItem("user");
+      return user ? JSON.parse(user)?.email || "" : "";
     } catch {
-      return '';
+      return "";
     }
   });
 
+  // Danh sách vé đã thanh toán sắp khởi hành của user (để chọn nhanh 1 click)
+  const [eligibleBookings, setEligibleBookings] = useState([]);
+
   // Auto fill form fields from query params when page loads
   useEffect(() => {
-    const pnr = searchParams.get('pnr');
-    const name = searchParams.get('name');
-    const mail = searchParams.get('email');
-    if (pnr) {
-      setPnrCode(pnr.toUpperCase());
-    }
-    if (name) {
-      setPassengerName(name);
-    }
-    if (mail) {
-      setEmail(mail);
-    }
+    const pnr = searchParams.get("pnr");
+    const name = searchParams.get("name");
+    const mail = searchParams.get("email");
+    if (pnr) setPnrCode(pnr.toUpperCase());
+    if (name) setPassengerName(name);
+    if (mail) setEmail(mail);
   }, [searchParams]);
+
+  // Tải nhanh các đặt chỗ đã thanh toán nếu người dùng đã đăng nhập
+  useEffect(() => {
+    const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
+    if (!token) return;
+
+    let cancelled = false;
+    axios
+      .get("/api/bookings", { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => {
+        if (cancelled) return;
+        const list = Array.isArray(res.data?.data)
+          ? res.data.data
+          : Array.isArray(res.data)
+          ? res.data
+          : [];
+        const paidUpcoming = list
+          .filter((b) => (b.status || "").toLowerCase() === "paid" && b.pnr_code)
+          .slice(0, 4);
+        setEligibleBookings(paidUpcoming);
+      })
+      .catch(() => {
+        // Bỏ qua nếu chưa đăng nhập hoặc lỗi mạng
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const [safetyCommitment, setSafetyCommitment] = useState(false);
   const [termsAgreed, setTermsAgreed] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   // State quản lý trạng thái xử lý
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [boardingPass, setBoardingPass] = useState(null);
   const [showSuccessBanner, setShowSuccessBanner] = useState(true);
+
+  const handleQuickFill = (booking) => {
+    setPnrCode((booking.pnr_code || "").toUpperCase());
+    const firstPassenger =
+      booking.tickets?.[0]?.passenger_name || booking.passenger_name || "";
+    if (firstPassenger) {
+      setPassengerName(firstPassenger);
+    }
+    setError("");
+  };
 
   /**
    * Xử lý sự kiện Check-in
    */
   const handleCheckIn = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
-    // Validate input
     if (!pnrCode.trim()) {
-      setError('Vui lòng nhập mã đặt chỗ (PNR)');
+      setError("Vui lòng nhập mã đặt chỗ (PNR).");
       return;
     }
 
     if (!passengerName.trim()) {
-      setError('Vui lòng nhập tên hành khách');
+      setError("Vui lòng nhập họ và tên hành khách.");
       return;
     }
 
     if (!safetyCommitment) {
-      setError('Vui lòng xác nhận cam kết an toàn bay');
+      setError("Vui lòng xác nhận cam kết an toàn bay.");
       return;
     }
 
     if (!termsAgreed) {
-      setError('Vui lòng đồng ý với các điều khoản và điều kiện');
+      setError("Vui lòng đồng ý với các điều khoản và điều kiện Check-in trực tuyến.");
       return;
     }
 
-    // Gọi API Check-in kèm token xác thực và email nếu có
     setLoading(true);
     try {
-      const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+      const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const response = await axios.post('/api/check-in', {
-        pnr_code: pnrCode.toUpperCase(),
-        passenger_name: passengerName.trim(),
-        email: email.trim() || undefined,
-      }, { headers });
+      const response = await axios.post(
+        "/api/check-in",
+        {
+          pnr_code: pnrCode.trim().toUpperCase(),
+          passenger_name: passengerName.trim(),
+          email: email.trim() || undefined,
+        },
+        { headers }
+      );
 
-      if (response.data.status === 'success') {
+      if (response.data.status === "success") {
         setBoardingPass(response.data.data);
         setShowSuccessBanner(true);
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
     } catch (err) {
       if (err.response?.data?.message) {
         setError(err.response.data.message);
       } else {
-        setError('Có lỗi xảy ra khi Check-in. Vui lòng kiểm tra lại Mã PNR và Tên hành khách.');
+        setError(
+          "Không thể thực hiện Check-in. Vui lòng kiểm tra lại Mã PNR và Họ tên hành khách."
+        );
       }
     } finally {
       setLoading(false);
     }
   };
 
-  /**
-   * In lại thẻ lên máy bay
-   */
   const handlePrintAgain = () => {
     window.print();
   };
 
-  /**
-   * Check-in thêm hành khách khác
-   */
   const handleCheckInAnother = () => {
     setBoardingPass(null);
-    setPnrCode('');
-    setPassengerName('');
+    setPnrCode("");
+    setPassengerName("");
     setSafetyCommitment(false);
     setTermsAgreed(false);
-    setError('');
+    setError("");
   };
 
-  // NẾU ĐÃ CHECK-IN THÀNH CÔNG: Hiển thị giao diện Thẻ Lên Máy Bay trên nền Bầu Trời tươi sáng
+  // ─── GIAO DIỆN KHI ĐÃ CHECK-IN THÀNH CÔNG (THẺ LÊN MÁY BAY) ──────────────
   if (boardingPass) {
+    const isRetrieved = Boolean(boardingPass.already_checked_in);
     return (
-      <div className="min-h-[100dvh] bg-gradient-to-b from-[#6b8cff] via-[#859eff] to-[#c7d5ff] flex flex-col justify-between selection:bg-blue-600 selection:text-white relative overflow-x-hidden font-sans">
+      <div
+        className="flex min-h-[100dvh] flex-col font-sans text-[#0b1f44] selection:bg-blue-600 selection:text-white"
+        style={{ background: "linear-gradient(180deg, #b8dafc 0%, #d8ecff 32%, #eef6ff 100%)" }}
+      >
         <Navbar />
 
-        {/* Bright Sky Background & Plane Graphic */}
-        <div className="relative pt-24 pb-20 px-4 md:px-8 flex-1 flex flex-col items-center">
-          
-          {/* Background Sky Image */}
-          <div 
-            className="absolute inset-0 bg-cover bg-top opacity-85 mix-blend-soft-light pointer-events-none"
-            style={{ 
-              backgroundImage: "url('/skylink_checkin_bg.png')" 
-            }}
-          />
-
-          {/* Airplane Flying Graphic Top Right */}
-          <div className="absolute top-14 right-4 lg:right-24 w-72 lg:w-96 opacity-90 pointer-events-none z-10">
-            <img 
-              src="https://png.pngtree.com/png-clipart/20230508/original/pngtree-blue-airplane-flying-in-cloudy-sky-png-image_9151593.png" 
-              alt="SkyLink Airplane Flying"
-              className="w-full object-contain filter drop-shadow-xl"
-              onError={(e) => { e.target.style.display = 'none'; }}
+        <main className="relative flex-1 overflow-hidden pb-16 pt-24">
+          {/* Hero Sky Background */}
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0"
+            style={{ height: 340, overflow: "hidden" }}
+          >
+            <img
+              src={HERO_CHECKIN_BG_URL}
+              alt=""
+              aria-hidden="true"
+              className="h-full w-full object-cover"
+              style={{ objectPosition: "center 32%", opacity: 0.42 }}
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(169,211,252,0.45) 0%, rgba(216,236,255,0.82) 68%, #eef6ff 100%)",
+              }}
             />
           </div>
 
-          <div className="relative z-20 max-w-3xl lg:max-w-4xl w-full space-y-6 pt-2">
-            
-            {/* Top Teal-Green Success Notification Banner (Có nút bấm đóng X) */}
+          <div className="relative z-10 mx-auto max-w-[1000px] space-y-6 px-4 sm:px-6">
+            {/* Success / Retrieved Notification Banner */}
             {showSuccessBanner && (
-              <div className="p-5 md:p-6 bg-gradient-to-r from-emerald-600/90 via-teal-600/90 to-emerald-700/90 backdrop-blur-md rounded-3xl border border-emerald-400/40 shadow-xl shadow-teal-950/20 text-white flex items-start justify-between gap-4 animate-fadeIn">
-                <div className="flex items-start sm:items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-white text-emerald-600 flex items-center justify-center shrink-0 shadow-md">
+              <div
+                className="flex items-start justify-between gap-4 p-5 text-white shadow-lg md:p-6"
+                style={{
+                  background: "linear-gradient(95deg, #059669 0%, #0d9488 100%)",
+                  borderRadius: 24,
+                  border: "1px solid rgba(255,255,255,0.28)",
+                }}
+              >
+                <div className="flex items-start gap-4 sm:items-center">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm">
                     <CheckCircle size={28} weight="fill" />
                   </div>
                   <div>
-                    <h2 className="text-xl md:text-2xl font-black tracking-tight">Check-in thành công!</h2>
-                    <p className="text-emerald-100 text-xs md:text-sm font-medium mt-0.5 leading-relaxed">
-                      Bạn đã hoàn tất thủ tục check-in. Vui lòng lưu hoặc in thẻ lên máy bay và có mặt tại cổng khởi hành trước giờ bay ít nhất 2 giờ.
+                    <h2 className="text-lg font-black tracking-tight md:text-2xl">
+                      {isRetrieved
+                        ? "Đã tải lại Thẻ lên máy bay của bạn!"
+                        : "Check-in trực tuyến thành công!"}
+                    </h2>
+                    <p className="mt-1 text-xs font-medium leading-relaxed text-emerald-50 md:text-sm">
+                      {isRetrieved
+                        ? "Hành khách đã hoàn tất Check-in trước đó. Bạn có thể lưu lại mã QR hoặc in lại thẻ lên máy bay bên dưới."
+                        : "Thẻ lên máy bay điện tử đã được phát hành. Nếu chỉ có hành lý xách tay, vui lòng qua thẳng cửa an ninh và có mặt tại cửa lên tàu trước giờ bay 30–40 phút (có hành lý ký gửi: gửi tại quầy Bag Drop trước 60–90 phút)."}
                     </p>
                   </div>
                 </div>
 
-                {/* Nút bấm đóng (Close button) */}
                 <button
                   type="button"
                   onClick={() => setShowSuccessBanner(false)}
-                  className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/20 transition-all shrink-0 cursor-pointer active:scale-95"
+                  className="shrink-0 cursor-pointer rounded-xl p-2 text-white/80 transition hover:bg-white/20 hover:text-white"
                   title="Đóng thông báo"
                   aria-label="Đóng thông báo"
                 >
-                  <X size={22} weight="bold" />
+                  <X size={20} weight="bold" />
                 </button>
               </div>
             )}
 
-            {/* Boarding Pass Component */}
+            {/* Boarding Pass Card */}
             <BoardingPassDisplay boardingPass={boardingPass} />
 
             {/* Action Buttons Below Card */}
-            <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4 no-print">
-              
-              {/* Primary Action Button: In Thẻ Lên Máy Bay / Tải PDF */}
-              <button 
-                className="w-full sm:w-auto px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-base md:text-lg rounded-2xl shadow-xl shadow-blue-600/30 transition-all flex items-center justify-center gap-2.5 active:scale-95 cursor-pointer"
+            <div className="no-print flex flex-wrap items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
                 onClick={handlePrintAgain}
+                className="inline-flex items-center justify-center gap-2.5 px-7 py-3.5 text-sm font-black text-white shadow-lg transition hover:brightness-105 md:text-base"
+                style={{
+                  background: "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
+                  borderRadius: 9999,
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 10px 24px rgba(13, 97, 225, 0.28)",
+                }}
               >
-                <Printer size={22} weight="bold" />
-                <span>In Thẻ Lên Máy Bay / Tải PDF</span>
-                <CaretRight size={18} weight="bold" />
+                <Printer size={20} weight="bold" />
+                <span>In Thẻ Lên Máy Bay / Lưu PDF</span>
+                <CaretRight size={16} weight="bold" />
               </button>
 
-              {/* Secondary Action Button: Check-in Hành Khách Khác */}
-              <button 
-                className="w-full sm:w-auto px-8 py-4 bg-white/90 hover:bg-white text-blue-600 font-extrabold text-base md:text-lg rounded-2xl shadow-lg border border-blue-200 transition-all flex items-center justify-center gap-2.5 active:scale-95 cursor-pointer"
+              <button
+                type="button"
                 onClick={handleCheckInAnother}
+                className="inline-flex items-center justify-center gap-2 bg-white px-6 py-3.5 text-sm font-extrabold text-[#0b4fd0] shadow-xs transition hover:bg-blue-50 md:text-base"
+                style={{
+                  borderRadius: 9999,
+                  border: "1px solid #c6defd",
+                  cursor: "pointer",
+                }}
               >
-                <PlusCircle size={22} weight="bold" />
+                <PlusCircle size={20} weight="bold" />
                 <span>Check-in Hành Khách Khác</span>
-                <CaretRight size={18} weight="bold" />
               </button>
 
-            </div>
-
-          </div>
-
-          {/* Bottom Footer Trust Line */}
-          <div className="relative z-20 max-w-3xl lg:max-w-4xl w-full mt-12 flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-800 text-xs md:text-sm font-extrabold border-t border-white/40 pt-6">
-            <div className="flex items-center gap-2 text-slate-800">
-              <PaperPlaneTilt size={18} weight="fill" className="text-blue-700" />
-              <span>Bay cùng SkyLink – Kết nối những hành trình tuyệt vời</span>
-            </div>
-            <div className="flex items-center gap-6 text-slate-700">
-              <div className="flex items-center gap-1.5">
-                <ShieldCheck size={18} className="text-emerald-700" weight="bold" />
-                <span>An toàn</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Headset size={18} className="text-purple-700" weight="bold" />
-                <span>Hỗ trợ 24/7</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <PaperPlaneTilt size={18} className="text-blue-700" weight="bold" />
-                <span>SkyLink Airlines</span>
-              </div>
+              <Link
+                to="/my-bookings"
+                className="inline-flex items-center justify-center gap-2 bg-white/90 px-6 py-3.5 text-sm font-extrabold text-[#163d7a] transition hover:bg-white md:text-base"
+                style={{
+                  borderRadius: 9999,
+                  border: "1px solid #d5e6fc",
+                  textDecoration: "none",
+                }}
+              >
+                <span>Về Chuyến bay của tôi</span>
+              </Link>
             </div>
           </div>
-
-        </div>
+        </main>
 
         <Footer />
       </div>
     );
   }
 
-  // Form Check-in tỉ lệ rộng rãi (max-w-3xl đến max-w-4xl) sang trọng
+  // ─── GIAO DIỆN FORM CHECK-IN TRỰC TUYẾN 5 SAO ─────────────────────────────
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-b from-[#6b8cff] via-[#859eff] to-[#c7d5ff] flex flex-col justify-between selection:bg-blue-600 selection:text-white relative overflow-x-hidden font-sans">
+    <div
+      className="flex min-h-[100dvh] flex-col font-sans text-[#0b1f44] selection:bg-blue-600 selection:text-white"
+      style={{ background: "linear-gradient(180deg, #b8dafc 0%, #d8ecff 32%, #eef6ff 100%)" }}
+    >
       <Navbar />
 
-      {/* Bright Sky Cloud Layer & Graphics */}
-      <div className="relative pt-24 pb-24 px-4 md:px-8 flex-1 flex flex-col items-center">
-        
-        {/* Background Sky Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-top opacity-85 mix-blend-soft-light pointer-events-none"
-          style={{ 
-            backgroundImage: "url('/skylink_checkin_bg.png')" 
-          }}
-        />
-
-        {/* Airplane Flying Graphic on Top Right */}
-        <div className="absolute top-14 right-4 lg:right-24 w-72 lg:w-96 opacity-90 pointer-events-none z-10 transform translate-x-2 -translate-y-2">
-          <img 
-            src="https://png.pngtree.com/png-clipart/20230508/original/pngtree-blue-airplane-flying-in-cloudy-sky-png-image_9151593.png" 
-            alt="SkyLink Airplane Flying"
-            className="w-full object-contain filter drop-shadow-xl"
-            onError={(e) => { e.target.style.display = 'none'; }}
+      <main className="relative flex-1 overflow-hidden pb-16 pt-24">
+        {/* Hero Sky Background */}
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0"
+          style={{ height: 340, overflow: "hidden" }}
+        >
+          <img
+            src={HERO_CHECKIN_BG_URL}
+            alt=""
+            aria-hidden="true"
+            className="h-full w-full object-cover"
+            style={{ objectPosition: "center 32%", opacity: 0.48 }}
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(169,211,252,0.38) 0%, rgba(216,236,255,0.78) 65%, #eef6ff 100%)",
+            }}
           />
         </div>
 
-        {/* Airplane Wing Graphic on Left Side */}
-        <div className="absolute top-1/3 left-0 w-48 md:w-80 opacity-40 pointer-events-none z-10 hidden sm:block">
-          <img 
-            src="https://png.pngtree.com/png-vector/20220611/ourmid/pngtree-airplane-wing-in-the-clouds-sky-view-from-the-window-png-image_4983020.png" 
-            alt="Airplane Wing View"
-            className="w-full object-contain"
-            onError={(e) => { e.target.style.display = 'none'; }}
-          />
-        </div>
-
-        {/* Top Header Banner - Rộng Rãi */}
-        <div className="relative z-20 max-w-3xl lg:max-w-4xl w-full text-left mb-6 pt-4 px-2">
-          <div className="flex items-center gap-2 mb-2 text-white/90 font-semibold tracking-wide text-sm drop-shadow-sm">
-            <PaperPlaneTilt size={20} weight="fill" className="text-white" />
-            <span>SkyLink Airlines</span>
-          </div>
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white tracking-tight mb-2 drop-shadow-md">
-            Check-in Điện Tử SkyLink Airlines
-          </h1>
-          <p className="text-white/95 text-base md:text-lg font-medium drop-shadow-sm">
-            Vui lòng nhập thông tin của bạn để Check-in 24 giờ trước khi cất cánh
-          </p>
-        </div>
-
-        {/* Main White Card Container - Rộng max-w-3xl đến max-w-4xl */}
-        <div className="relative z-20 max-w-3xl lg:max-w-4xl w-full bg-white rounded-[32px] md:rounded-[40px] shadow-2xl shadow-blue-950/20 overflow-hidden border border-white/90">
-          
-          <form className="p-6 md:p-12 lg:p-14 space-y-7 md:space-y-8" onSubmit={handleCheckIn}>
-
-            {/* Error Banner */}
-            {error && (
-              <div className="flex items-start gap-3 p-4 bg-red-50 text-red-700 rounded-2xl border border-red-100 text-sm font-medium animate-fadeIn">
-                <WarningCircle size={22} weight="fill" className="mt-0.5 shrink-0 text-red-500" />
-                <span className="leading-relaxed">{error}</span>
-              </div>
-            )}
-
-            {/* Section Title */}
-            <div className="flex items-center gap-3.5 pb-2">
-              <div className="w-11 h-11 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-600/30">
-                <PaperPlaneTilt size={22} weight="fill" />
-              </div>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">
-                Thông tin hành khách
-              </h2>
-            </div>
-
-            {/* Input 1: Mã Đặt Chỗ (PNR) */}
-            <div className="space-y-2.5">
-              <label htmlFor="pnr-code" className="block text-sm md:text-base font-bold text-slate-800">
-                Mã Đặt Chỗ (PNR) <span className="text-red-500">*</span>
-              </label>
-              <div className="relative flex items-center">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-slate-100/90 flex items-center justify-center text-slate-500 border border-slate-200/60">
-                  <Ticket size={22} weight="bold" />
-                </div>
-                <input
-                  id="pnr-code"
-                  type="text"
-                  placeholder="Ví dụ: BQCV0E"
-                  value={pnrCode}
-                  onChange={(e) => setPnrCode(e.target.value.toUpperCase())}
-                  maxLength={6}
-                  disabled={loading}
-                  className="w-full pl-16 pr-5 py-4 bg-white border border-slate-200 rounded-2xl text-slate-900 font-semibold placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all uppercase tracking-wider text-base md:text-lg"
-                  required
-                />
-              </div>
-              <p className="text-xs md:text-sm text-slate-500 font-medium pl-1">
-                Mã 6 ký tự được ghi trên vé hoặc email xác nhận
-              </p>
-            </div>
-
-            {/* Input 2: Họ Và Tên */}
-            <div className="space-y-2.5">
-              <label htmlFor="passenger-name" className="block text-sm md:text-base font-bold text-slate-800">
-                Họ Và Tên <span className="text-red-500">*</span>
-              </label>
-              <div className="relative flex items-center">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-slate-100/90 flex items-center justify-center text-slate-500 border border-slate-200/60">
-                  <User size={22} weight="bold" />
-                </div>
-                <input
-                  id="passenger-name"
-                  type="text"
-                  placeholder="Ví dụ: Nguyễn Văn A"
-                  value={passengerName}
-                  onChange={(e) => setPassengerName(e.target.value)}
-                  disabled={loading}
-                  className="w-full pl-16 pr-5 py-4 bg-white border border-slate-200 rounded-2xl text-slate-900 font-semibold placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all text-base md:text-lg"
-                  required
-                />
-              </div>
-              <p className="text-xs md:text-sm text-slate-500 font-medium pl-1">
-                Tên phải trùng khớp với hộ chiếu hoặc giấy tờ tùy thân
-              </p>
-            </div>
-
-            {/* Input 3: Email nhận vé */}
-            <div className="space-y-2.5">
-              <label htmlFor="checkin-email" className="block text-sm md:text-base font-bold text-slate-800">
-                Email nhận Thẻ lên máy bay
-              </label>
-              <div className="relative flex items-center">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-slate-100/90 flex items-center justify-center text-slate-500 border border-slate-200/60">
-                  <EnvelopeSimple size={22} weight="bold" />
-                </div>
-                <input
-                  id="checkin-email"
-                  type="email"
-                  placeholder="email@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                  className="w-full pl-16 pr-5 py-4 bg-white border border-slate-200 rounded-2xl text-slate-900 font-semibold placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all text-base md:text-lg"
-                />
-              </div>
-              <p className="text-xs md:text-sm text-slate-500 font-medium pl-1">
-                Thẻ lên máy bay và mã QR sẽ tự động được gửi tới email này ngay sau khi hoàn tất
-              </p>
-            </div>
-
-            {/* Box 1: Cam Kết An Toàn Bay */}
-            <div className="p-6 md:p-8 bg-[#f0f4ff] rounded-3xl border border-blue-100/90 space-y-5">
-              <div className="flex items-center gap-3 text-blue-900 font-extrabold text-lg md:text-xl">
-                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/20">
-                  <ShieldCheck size={22} weight="fill" />
-                </div>
-                <h3>Cam Kết An Toàn Bay</h3>
-              </div>
-
-              <p className="text-sm md:text-base text-slate-600 leading-relaxed font-medium">
-                Theo quy định của hãng hàng không, vui lòng xác nhận rằng bạn không mang theo các vật phẩm sau:
-              </p>
-
-              <ul className="space-y-3 text-sm md:text-base text-slate-700 pl-1 font-semibold">
-                <li className="flex items-center gap-3.5">
-                  <span className="w-3.5 h-3.5 rounded-full bg-red-500 shrink-0 shadow-sm shadow-red-500/30"></span>
-                  <span>Chất nổ, lửa pháo, hoặc vật phẩm dễ cháy</span>
-                </li>
-                <li className="flex items-center gap-3.5">
-                  <div className="w-5 text-center shrink-0 text-emerald-600 font-extrabold text-lg">🔋</div>
-                  <span>Pin dự phòng có công suất cao (trên 100Wh)</span>
-                </li>
-                <li className="flex items-center gap-3.5">
-                  <div className="w-5 text-center shrink-0 text-blue-600 font-extrabold text-lg">🔧</div>
-                  <span>Lưỡi dao, cạo, dao bỏ túi, hoặc dụng cụ sắc nhọn</span>
-                </li>
-                <li className="flex items-center gap-3.5">
-                  <div className="w-5 text-center shrink-0 text-purple-600 font-extrabold text-lg">🧪</div>
-                  <span>Chất hóa học, axit, hay chất nguy hiểm khác</span>
-                </li>
-                <li className="flex items-center gap-3.5">
-                  <div className="w-5 text-center shrink-0 text-amber-600 font-extrabold text-lg">🎯</div>
-                  <span>Vũ khí bất kỳ loại nào</span>
-                </li>
-              </ul>
-
-              <label htmlFor="safety-commitment" className="flex items-start gap-3.5 pt-3 cursor-pointer group">
-                <input
-                  id="safety-commitment"
-                  type="checkbox"
-                  checked={safetyCommitment}
-                  onChange={(e) => setSafetyCommitment(e.target.checked)}
-                  disabled={loading}
-                  className="mt-1 w-5 h-5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 shrink-0 cursor-pointer"
-                  required
-                />
-                <span className="text-sm md:text-base font-bold text-slate-700 group-hover:text-slate-900 transition-colors leading-relaxed">
-                  Tôi xác nhận rằng tôi không mang theo các vật phẩm cấm và cam kết tuân thủ các quy định an toàn bay
-                </span>
-              </label>
-            </div>
-
-            {/* Box 2: Điều khoản & Điều kiện */}
-            <div className="p-5 bg-[#f4f7ff] rounded-2xl border border-blue-100/80">
-              <label htmlFor="terms-agreed" className="flex items-center gap-3.5 cursor-pointer group">
-                <input
-                  id="terms-agreed"
-                  type="checkbox"
-                  checked={termsAgreed}
-                  onChange={(e) => setTermsAgreed(e.target.checked)}
-                  disabled={loading}
-                  className="w-5 h-5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 shrink-0 cursor-pointer"
-                  required
-                />
-                <span className="text-sm md:text-base font-bold text-slate-700 group-hover:text-slate-900 transition-colors">
-                  Tôi đồng ý với{' '}
-                  <a 
-                    href="#terms" 
-                    onClick={(e) => { e.preventDefault(); alert("Điều khoản dịch vụ SkyLink Airlines: Hành khách tuân thủ quy định giờ làm thủ tục và mang theo giấy tờ tùy thân hợp lệ."); }} 
-                    className="text-blue-600 underline font-black hover:text-blue-700 inline-flex items-center gap-0.5"
-                  >
-                    các điều khoản và điều kiện <ArrowUpRight size={15} weight="bold" />
-                  </a>{' '}
-                  của SkyLink Airlines
-                </span>
-              </label>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-4 md:py-5 px-8 bg-gradient-to-r from-[#5351e8] via-[#6366f1] to-[#7c3aed] hover:from-[#4338ca] hover:to-[#6d28d9] text-white font-black text-lg md:text-xl rounded-2xl shadow-xl shadow-indigo-500/30 transition-all duration-200 flex items-center justify-center gap-3 active:scale-[0.99] disabled:opacity-50 cursor-pointer"
+        <div className="relative z-10 mx-auto max-w-[1140px] px-4 sm:px-6">
+          {/* Hero Header */}
+          <header className="mb-7">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 bg-white/95 px-4 py-2 text-xs font-extrabold text-[#163d7a] shadow-sm transition hover:bg-white"
+              style={{ borderRadius: 9999, border: "1px solid #d5e6fc", textDecoration: "none" }}
             >
-              <PaperPlaneTilt size={24} weight="fill" />
-              <span>{loading ? 'Đang xử lý...' : 'Check-in Ngay'}</span>
-              <ArrowRight size={22} weight="bold" />
-            </button>
+              <ArrowLeft size={14} weight="bold" />
+              Quay lại trang chủ
+            </Link>
 
-          </form>
+            <div className="mt-4 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+              <div>
+                <p
+                  className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em]"
+                  style={{ color: "#0b57d0", margin: "0 0 4px 0" }}
+                >
+                  <PaperPlaneTilt size={15} weight="fill" />
+                  SKYLINK AIRLINES • ONLINE CHECK-IN
+                </p>
+                <h1
+                  className="font-black tracking-tight"
+                  style={{
+                    fontSize: "clamp(1.9rem, 3.5vw, 2.75rem)",
+                    color: "#091e47",
+                    lineHeight: 1.12,
+                    margin: "0 0 6px 0",
+                  }}
+                >
+                  Check-in Điện Tử SkyLink Airlines
+                </h1>
+                <p
+                  className="max-w-2xl text-xs font-semibold text-[#2d4b7a] sm:text-sm"
+                  style={{ margin: 0 }}
+                >
+                  Làm thủ tục trực tuyến từ <strong>24 giờ đến 60 phút</strong> trước giờ khởi hành,
+                  nhận Thẻ lên máy bay điện tử (QR) ngay lập tức hoặc tải lại thẻ đã Check-in.
+                </p>
+              </div>
 
+              <div
+                className="inline-flex w-fit items-center gap-2 bg-white/95 px-4 py-2.5 shadow-sm"
+                style={{ borderRadius: 9999, border: "1px solid #d5e6fc" }}
+              >
+                <Sparkle size={16} className="text-blue-600" weight="fill" />
+                <span className="text-xs font-bold text-[#163d7a]">
+                  Mở cửa: <strong className="font-black text-[#0b4fd0]">24h – 1h trước giờ bay</strong>
+                </span>
+              </div>
+            </div>
+          </header>
+
+          {/* 3-Step Visual Strip */}
+          <div
+            className="mb-6 grid grid-cols-1 gap-3 p-3 sm:grid-cols-3"
+            style={{
+              background: "rgba(255, 255, 255, 0.92)",
+              border: "1px solid rgba(255, 255, 255, 0.98)",
+              boxShadow: "0 10px 26px rgba(18, 60, 130, 0.07)",
+              borderRadius: 24,
+            }}
+          >
+            {[
+              { step: "01", title: "Nhập PNR & Họ tên", desc: "Hoặc chọn nhanh từ vé đã đặt" },
+              { step: "02", title: "Cam kết an toàn bay", desc: "Xác nhận quy định hành lý IATA" },
+              { step: "03", title: "Nhận Boarding Pass QR", desc: "In PDF hoặc quét mã trên điện thoại" },
+            ].map((item) => (
+              <div
+                key={item.step}
+                className="flex items-center gap-3 rounded-2xl bg-[#f4f9ff] px-4 py-3"
+                style={{ border: "1px solid #dcebff" }}
+              >
+                <span
+                  className="flex h-8 w-8 shrink-0 items-center justify-center text-xs font-black text-white"
+                  style={{
+                    background: "linear-gradient(135deg, #0b5ed7 0%, #1d75f2 100%)",
+                    borderRadius: 9999,
+                  }}
+                >
+                  {item.step}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-black text-[#091e47]">{item.title}</p>
+                  <p className="truncate text-[11px] font-semibold text-[#476494]">{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 2-Column Main Content */}
+          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
+            {/* Left Column (8 cols): Main Check-in Form Card */}
+            <div
+              className="overflow-hidden bg-white lg:col-span-8"
+              style={{
+                borderRadius: 28,
+                border: "1px solid #d5e6fc",
+                boxShadow: "0 18px 42px rgba(13, 62, 145, 0.10)",
+              }}
+            >
+              <form className="space-y-6 p-6 md:p-9" onSubmit={handleCheckIn}>
+                {/* Quick-Select Paid Bookings (if logged in & has bookings) */}
+                {eligibleBookings.length > 0 && (
+                  <div
+                    className="rounded-2xl p-4"
+                    style={{ background: "#f2f8ff", border: "1px solid #cde2fd" }}
+                  >
+                    <p className="mb-2.5 flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#0b4fd0]">
+                      <AirplaneTilt size={15} weight="fill" />
+                      Chọn nhanh từ chuyến bay đã thanh toán của bạn
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {eligibleBookings.map((b) => {
+                        const dep = b.flight?.departure_airport?.code || "SGN";
+                        const arr = b.flight?.arrival_airport?.code || "HAN";
+                        const paxName = b.tickets?.[0]?.passenger_name || "";
+                        const isSelected = pnrCode === (b.pnr_code || "").toUpperCase();
+                        return (
+                          <button
+                            key={b.id}
+                            type="button"
+                            onClick={() => handleQuickFill(b)}
+                            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-extrabold transition"
+                            style={{
+                              borderRadius: 9999,
+                              background: isSelected
+                                ? "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)"
+                                : "#ffffff",
+                              color: isSelected ? "#ffffff" : "#123975",
+                              border: isSelected ? "1px solid #0b5ed7" : "1px solid #c6defd",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <span className="font-mono font-black">{b.pnr_code}</span>
+                            <span>
+                              ({dep} → {arr})
+                            </span>
+                            {paxName && <span className="opacity-80">• {paxName}</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Error Banner */}
+                {error && (
+                  <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+                    <WarningCircle size={20} weight="fill" className="mt-0.5 shrink-0 text-red-500" />
+                    <span className="leading-relaxed">{error}</span>
+                  </div>
+                )}
+
+                {/* Section Title */}
+                <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                  <div
+                    className="flex h-10 w-10 items-center justify-center text-white shadow-sm"
+                    style={{
+                      background: "linear-gradient(135deg, #0b5ed7 0%, #1d75f2 100%)",
+                      borderRadius: 9999,
+                    }}
+                  >
+                    <Ticket size={20} weight="fill" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black tracking-tight text-[#091e47]">
+                      Thông tin hành khách &amp; Đặt chỗ
+                    </h2>
+                    <p className="text-xs font-semibold text-slate-500">
+                      Nhập chính xác mã PNR và họ tên ghi trên vé điện tử
+                    </p>
+                  </div>
+                </div>
+
+                {/* Input Row: PNR & Passenger Name */}
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  {/* Input 1: Mã Đặt Chỗ (PNR) */}
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="pnr-code"
+                      className="block text-xs font-extrabold uppercase tracking-wider text-[#163d7a]"
+                    >
+                      Mã Đặt Chỗ (PNR) <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative flex items-center">
+                      <div className="absolute left-3.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-blue-600">
+                        <Ticket size={18} weight="bold" />
+                      </div>
+                      <input
+                        id="pnr-code"
+                        type="text"
+                        placeholder="Ví dụ: BQCV0E"
+                        value={pnrCode}
+                        onChange={(e) => setPnrCode(e.target.value.toUpperCase())}
+                        maxLength={12}
+                        disabled={loading}
+                        className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-15 pr-4 font-mono text-base font-black uppercase tracking-wider text-[#091e47] placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        style={{ paddingLeft: 56 }}
+                        required
+                      />
+                    </div>
+                    <p className="pl-1 text-[11px] font-medium text-slate-500">
+                      Mã 6–12 ký tự ghi trên vé hoặc email xác nhận
+                    </p>
+                  </div>
+
+                  {/* Input 2: Họ Và Tên */}
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="passenger-name"
+                      className="block text-xs font-extrabold uppercase tracking-wider text-[#163d7a]"
+                    >
+                      Họ Và Tên Hành Khách <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative flex items-center">
+                      <div className="absolute left-3.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-blue-600">
+                        <User size={18} weight="bold" />
+                      </div>
+                      <input
+                        id="passenger-name"
+                        type="text"
+                        placeholder="Ví dụ: Nguyễn Văn A"
+                        value={passengerName}
+                        onChange={(e) => setPassengerName(e.target.value)}
+                        disabled={loading}
+                        className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pr-4 text-base font-bold text-[#091e47] placeholder:font-normal placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        style={{ paddingLeft: 56 }}
+                        required
+                      />
+                    </div>
+                    <p className="pl-1 text-[11px] font-medium text-slate-500">
+                      Trùng khớp với CCCD/Hộ chiếu khi đặt vé
+                    </p>
+                  </div>
+                </div>
+
+                {/* Input 3: Email nhận vé */}
+                <div className="space-y-2">
+                  <label
+                    htmlFor="checkin-email"
+                    className="block text-xs font-extrabold uppercase tracking-wider text-[#163d7a]"
+                  >
+                    Email nhận Thẻ lên máy bay (Tuỳ chọn)
+                  </label>
+                  <div className="relative flex items-center">
+                    <div className="absolute left-3.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-blue-600">
+                      <EnvelopeSimple size={18} weight="bold" />
+                    </div>
+                    <input
+                      id="checkin-email"
+                      type="email"
+                      placeholder="email@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={loading}
+                      className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pr-4 text-base font-semibold text-[#091e47] placeholder:font-normal placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                      style={{ paddingLeft: 56 }}
+                    />
+                  </div>
+                  <p className="pl-1 text-[11px] font-medium text-slate-500">
+                    Bản sao Thẻ lên máy bay &amp; mã QR sẽ tự động gửi tới email này
+                  </p>
+                </div>
+
+                {/* Box 1: Cam Kết An Toàn Bay */}
+                <div
+                  className="space-y-4 rounded-2xl p-5 md:p-6"
+                  style={{ background: "#f4f9ff", border: "1px solid #d5e6fc" }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-xs">
+                      <ShieldCheck size={20} weight="fill" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black text-[#091e47]">
+                        Cam Kết An Toàn Bay (Quy định IATA / ICAO)
+                      </h3>
+                      <p className="text-xs font-medium text-[#476494]">
+                        Xác nhận hành lý của bạn không chứa các vật phẩm nguy hiểm sau:
+                      </p>
+                    </div>
+                  </div>
+
+                  <ul className="space-y-2.5 text-xs font-semibold text-[#1e3a6b] sm:text-sm">
+                    {PROHIBITED_ITEMS.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <li key={item.text} className="flex items-center gap-3">
+                          <span
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                            style={{ background: item.bg, color: item.color }}
+                          >
+                            <Icon size={16} weight="fill" />
+                          </span>
+                          <span>{item.text}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                  <label
+                    htmlFor="safety-commitment"
+                    className="flex cursor-pointer items-start gap-3 border-t border-blue-200/70 pt-3.5"
+                  >
+                    <input
+                      id="safety-commitment"
+                      type="checkbox"
+                      checked={safetyCommitment}
+                      onChange={(e) => setSafetyCommitment(e.target.checked)}
+                      disabled={loading}
+                      className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      required
+                    />
+                    <span className="text-xs font-bold leading-relaxed text-[#091e47] sm:text-sm">
+                      Tôi xác nhận không mang theo các vật phẩm cấm và cam kết tuân thủ nghiêm quy
+                      định an ninh, an toàn hàng không.
+                    </span>
+                  </label>
+                </div>
+
+                {/* Box 2: Điều khoản & Điều kiện */}
+                <div
+                  className="rounded-2xl p-4"
+                  style={{ background: "#f8fbff", border: "1px solid #dcebff" }}
+                >
+                  <label
+                    htmlFor="terms-agreed"
+                    className="flex cursor-pointer items-start gap-3 sm:items-center"
+                  >
+                    <input
+                      id="terms-agreed"
+                      type="checkbox"
+                      checked={termsAgreed}
+                      onChange={(e) => setTermsAgreed(e.target.checked)}
+                      disabled={loading}
+                      className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 text-blue-600 focus:ring-blue-500 sm:mt-0"
+                      required
+                    />
+                    <span className="text-xs font-bold text-[#163d7a] sm:text-sm">
+                      Tôi đồng ý với{" "}
+                      <button
+                        type="button"
+                        onClick={() => setShowTermsModal(true)}
+                        className="inline-flex cursor-pointer items-center gap-0.5 border-0 bg-transparent p-0 font-black text-blue-600 underline hover:text-blue-800"
+                      >
+                        điều khoản Check-in trực tuyến <ArrowUpRight size={14} weight="bold" />
+                      </button>{" "}
+                      của SkyLink Airlines
+                    </span>
+                  </label>
+                </div>
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex w-full items-center justify-center gap-3 py-4 text-base font-black text-white shadow-lg transition hover:brightness-105 disabled:opacity-60 md:text-lg"
+                  style={{
+                    background: "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
+                    borderRadius: 9999,
+                    border: "none",
+                    cursor: loading ? "wait" : "pointer",
+                    boxShadow: "0 12px 28px rgba(13, 97, 225, 0.30)",
+                  }}
+                >
+                  <PaperPlaneTilt size={22} weight="fill" />
+                  <span>{loading ? "Đang xác thực & xuất thẻ..." : "Xác nhận Check-in Ngay"}</span>
+                  <ArrowRight size={20} weight="bold" />
+                </button>
+              </form>
+            </div>
+
+            {/* Right Column (4 cols): Real-world Airport Check-in Guide */}
+            <aside className="space-y-4 lg:sticky lg:top-24 lg:col-span-4">
+              {/* Card 1: Khung giờ tiêu chuẩn */}
+              <div
+                className="bg-white p-5"
+                style={{
+                  borderRadius: 24,
+                  border: "1px solid #d5e6fc",
+                  boxShadow: "0 12px 28px rgba(18, 60, 130, 0.07)",
+                }}
+              >
+                <div className="mb-3 flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                    <Clock size={20} weight="bold" />
+                  </div>
+                  <h3 className="text-sm font-black text-[#091e47]">Mốc thời gian cần nhớ</h3>
+                </div>
+                <div className="space-y-2.5 text-xs font-semibold text-[#33507f]">
+                  <div className="flex items-center justify-between rounded-xl bg-[#f4f9ff] px-3.5 py-2.5">
+                    <span>Mở Check-in trực tuyến</span>
+                    <strong className="font-black text-[#0b4fd0]">Trước 24 giờ</strong>
+                  </div>
+                  <div className="flex items-center justify-between rounded-xl bg-[#f4f9ff] px-3.5 py-2.5">
+                    <span>Đóng Check-in trực tuyến</span>
+                    <strong className="font-black text-[#0b4fd0]">Trước 60 phút</strong>
+                  </div>
+                  <div className="flex items-center justify-between rounded-xl bg-[#fff7ed] px-3.5 py-2.5 text-amber-900">
+                    <span>Đóng cửa lên máy bay</span>
+                    <strong className="font-black text-amber-700">Trước 15 phút</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Hướng dẫn tại sân bay */}
+              <div
+                className="bg-white p-5"
+                style={{
+                  borderRadius: 24,
+                  border: "1px solid #d5e6fc",
+                  boxShadow: "0 12px 28px rgba(18, 60, 130, 0.07)",
+                }}
+              >
+                <div className="mb-3 flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                    <SuitcaseRolling size={20} weight="bold" />
+                  </div>
+                  <h3 className="text-sm font-black text-[#091e47]">Khi đến sân bay</h3>
+                </div>
+                <ul className="space-y-3 text-xs font-medium leading-relaxed text-[#33507f]">
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle size={16} weight="fill" className="mt-0.5 shrink-0 text-emerald-600" />
+                    <span>
+                      <strong>Chỉ có hành lý xách tay:</strong> Đi thẳng tới cửa kiểm tra an ninh và
+                      có mặt tại cửa lên tàu trước giờ bay <strong>30–40 phút</strong>.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle size={16} weight="fill" className="mt-0.5 shrink-0 text-blue-600" />
+                    <span>
+                      <strong>Có hành lý ký gửi:</strong> Gửi hành lý tại quầy{" "}
+                      <strong>Bag Drop</strong> của SkyLink trước giờ bay <strong>60–90 phút</strong>.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <IdentificationCard size={16} weight="fill" className="mt-0.5 shrink-0 text-amber-600" />
+                    <span>
+                      <strong>Giấy tờ tùy thân:</strong> Mang theo CCCD bản gốc / VNeID mức 2 (bay
+                      nội địa) hoặc Hộ chiếu còn hạn ≥ 6 tháng (bay quốc tế).
+                    </span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Card 3: Hỗ trợ nhanh */}
+              <div
+                className="p-5 text-white"
+                style={{
+                  background: "linear-gradient(135deg, #0b4fd0 0%, #1d75f2 100%)",
+                  borderRadius: 24,
+                  boxShadow: "0 14px 30px rgba(13, 97, 225, 0.22)",
+                }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Headset size={22} weight="fill" className="text-sky-200" />
+                  <h3 className="text-sm font-black">Cần hỗ trợ làm thủ tục?</h3>
+                </div>
+                <p className="mt-2 text-xs font-medium leading-relaxed text-blue-100">
+                  Quên mã đặt chỗ (PNR) hoặc đi cùng trẻ nhỏ, hành khách cần hỗ trợ đặc biệt? Đội
+                  ngũ SkyLink 24/7 luôn sẵn sàng hỗ trợ.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Link
+                    to="/my-bookings"
+                    className="inline-flex items-center gap-1 bg-white px-3.5 py-2 text-xs font-extrabold text-[#0b4fd0] transition hover:bg-blue-50"
+                    style={{ borderRadius: 9999, textDecoration: "none" }}
+                  >
+                    Tra cứu PNR
+                  </Link>
+                  <Link
+                    to="/support"
+                    className="inline-flex items-center gap-1 px-3.5 py-2 text-xs font-extrabold text-white transition hover:bg-white/20"
+                    style={{
+                      borderRadius: 9999,
+                      border: "1px solid rgba(255,255,255,0.4)",
+                      textDecoration: "none",
+                    }}
+                  >
+                    Liên hệ 24/7
+                  </Link>
+                </div>
+              </div>
+            </aside>
+          </div>
         </div>
+      </main>
 
-        {/* Footer Feature Badges Below Main Card */}
-        <div className="relative z-20 max-w-3xl lg:max-w-4xl w-full mt-10 flex flex-col sm:flex-row items-center justify-around gap-6 text-slate-800 text-sm md:text-base font-extrabold pt-2">
-          <div className="flex items-center gap-3 bg-white/50 backdrop-blur-md px-5 py-2.5 rounded-full border border-white/70 shadow-sm">
-            <Clock size={22} className="text-blue-700" weight="bold" />
-            <span>Nhanh chóng & Tiện lợi</span>
-          </div>
-          <div className="flex items-center gap-3 bg-white/50 backdrop-blur-md px-5 py-2.5 rounded-full border border-white/70 shadow-sm">
-            <ShieldCheck size={22} className="text-emerald-700" weight="bold" />
-            <span>An toàn & Bảo mật</span>
-          </div>
-          <div className="flex items-center gap-3 bg-white/50 backdrop-blur-md px-5 py-2.5 rounded-full border border-white/70 shadow-sm">
-            <Headset size={22} className="text-purple-700" weight="bold" />
-            <span>Hỗ trợ 24/7</span>
+      {/* Modal Điều khoản Check-in trực tuyến */}
+      {showTermsModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="checkin-terms-title"
+        >
+          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <ShieldCheck size={20} weight="fill" />
+                </div>
+                <h3 id="checkin-terms-title" className="text-base font-black text-[#091e47]">
+                  Điều khoản Check-in trực tuyến SkyLink
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(false)}
+                className="cursor-pointer rounded-xl p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Đóng"
+              >
+                <X size={20} weight="bold" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs font-medium leading-relaxed text-slate-600 sm:text-sm">
+              <p>
+                <strong>1. Thời gian làm thủ tục:</strong> Mở từ <strong>24 giờ</strong> và đóng{" "}
+                <strong>60 phút</strong> trước giờ khởi hành dự kiến.
+              </p>
+              <p>
+                <strong>2. Giấy tờ tùy thân:</strong> Hành khách bắt buộc mang theo bản gốc CCCD /
+                tài khoản VNeID định danh mức 2 (chuyến nội địa) hoặc Hộ chiếu hợp lệ kèm thị thực
+                nếu có (chuyến quốc tế).
+              </p>
+              <p>
+                <strong>3. Hành lý &amp; Cửa lên tàu:</strong> Hành khách có hành lý ký gửi cần hoàn
+                tất gửi đồ tại quầy Bag Drop tối thiểu <strong>60 phút</strong> trước giờ bay. Cửa
+                lên tàu (Boarding Gate) đóng trước giờ khởi hành <strong>15 phút</strong>.
+              </p>
+              <p>
+                <strong>4. Trường hợp cần làm thủ tục tại quầy:</strong> Hành khách đi cùng em bé
+                dưới 2 tuổi, phụ nữ mang thai hoặc cần dịch vụ xe lăn vui lòng làm thủ tục trực tiếp
+                tại quầy sân bay để được ưu tiên hỗ trợ.
+              </p>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setTermsAgreed(true);
+                  setShowTermsModal(false);
+                }}
+                className="px-5 py-2.5 text-xs font-extrabold text-white transition hover:brightness-105"
+                style={{
+                  background: "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
+                  borderRadius: 9999,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Tôi đã hiểu &amp; Đồng ý
+              </button>
+            </div>
           </div>
         </div>
-
-      </div>
+      )}
 
       <Footer />
     </div>

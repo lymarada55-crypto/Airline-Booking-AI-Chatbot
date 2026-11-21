@@ -26,6 +26,8 @@ import {
   ClipboardText,
   ShieldCheck,
   Wrench,
+  Crown,
+  AirplaneTilt,
 } from "@phosphor-icons/react";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -40,8 +42,9 @@ const NAV_LINKS = [
       {
         title: "Trải nghiệm",
         items: [
-          { icon: Coffee, label: "Bữa ăn đặc biệt", desc: "14 loại thực đơn tinh hoa", href: "/services/meals" },
+          { icon: Coffee, label: "Bữa ăn đặc biệt", desc: "Thông tin suất ăn trên chuyến bay", href: "/services/meals" },
           { icon: Car, label: "Đưa đón sân bay", desc: "Hệ thống xe sang trọng", href: "/services/transfer" },
+          { icon: Crown, label: "eSIM & Phòng chờ VIP", desc: "eSIM quốc tế 5G & SkyLounge", href: "/services/esim-lounge" },
         ],
       },
       {
@@ -49,6 +52,7 @@ const NAV_LINKS = [
         items: [
           { icon: Shield, label: "Bảo hiểm du lịch", desc: "An tâm trọn vẹn mọi hành trình", href: "/services/insurance" },
           { icon: Globe, label: "Visa & Hỗ trợ", desc: "Thủ tục nhanh gọn, chuẩn xác", href: "/services/visa" },
+          { icon: AirplaneTilt, label: "Tình trạng chuyến bay", desc: "Tra cứu giờ bay, cổng & băng chuyền", href: "/flight-status" },
         ],
       },
       {

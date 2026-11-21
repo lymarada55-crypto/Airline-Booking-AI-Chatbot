@@ -11,7 +11,34 @@ const formatTime = (timestamp) => {
   if (typeof timestamp === "string" && timestamp.includes(":") && timestamp.length <= 5) {
     return timestamp;
   }
-  return new Date(timestamp).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return new Date(timestamp).toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+};
+
+const renderFormattedText = (text) => {
+  if (!text) return null;
+  const lines = String(text).split("\n");
+  return lines.map((line, lineIdx) => {
+    const parts = line.split(/(\*\*[^*]+\*\*)/g);
+    return (
+      <React.Fragment key={lineIdx}>
+        {parts.map((part, partIdx) => {
+          if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+            return (
+              <strong key={partIdx} className="font-extrabold text-[#091e47]">
+                {part.slice(2, -2)}
+              </strong>
+            );
+          }
+          return <React.Fragment key={partIdx}>{part}</React.Fragment>;
+        })}
+        {lineIdx < lines.length - 1 && <br />}
+      </React.Fragment>
+    );
+  });
 };
 
 export default function MessageBubble({ message, onQuickReply, onSelectFlight, onEditMessage, disabled }) {
@@ -136,12 +163,12 @@ export default function MessageBubble({ message, onQuickReply, onSelectFlight, o
           </div>
           <div className="flex flex-col gap-0.5 min-w-0">
             <div
-              className={`px-4.5 py-2.5 rounded-2xl rounded-bl-xs text-[13.5px] leading-relaxed ${message.isError
+              className={`px-4 py-2.5 rounded-2xl rounded-bl-xs text-[13.5px] leading-relaxed whitespace-pre-line ${message.isError
                   ? "bg-rose-50 border border-rose-200 text-rose-700"
-                  : "bg-[#ecf3fe] border border-blue-200/20 text-slate-800 shadow-[0_2px_8px_rgba(37,99,235,0.02)]"
+                  : "bg-white border border-blue-100/90 text-slate-800 shadow-[0_2px_10px_rgba(13,62,145,0.06)]"
                 }`}
             >
-              {message.text}
+              {renderFormattedText(message.text)}
             </div>
 
             {timeLabel && <span className="text-[9.5px] text-slate-400 px-1.5 mt-0.5">{timeLabel}</span>}
@@ -179,7 +206,7 @@ export default function MessageBubble({ message, onQuickReply, onSelectFlight, o
             className="inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-medium rounded-full border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
           >
             <ArrowClockwise size={12} weight="bold" />
-            Retry
+            Thử lại
           </button>
         </div>
       )}

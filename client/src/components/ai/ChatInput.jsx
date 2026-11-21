@@ -110,15 +110,18 @@ export const ChatInput = ({ onSendMessage, onSend, isLoading, disabled, placehol
         />
 
         {/* Unified Capsule Control */}
-        <div className="flex-1 flex items-center gap-2 bg-slate-100/70 hover:bg-slate-100/90 border border-slate-200/40 focus-within:border-blue-400 focus-within:bg-white rounded-full px-2 py-1 transition-all duration-200 shadow-2xs">
-          
+        <div
+          className="flex-1 flex items-center gap-2 bg-[#f4f8ff] hover:bg-[#edf4ff] focus-within:bg-white px-2 py-1.5 transition-all duration-200 shadow-2xs"
+          style={{ borderRadius: 9999, border: "1px solid #d5e6fc" }}
+        >
           {/* Left paperclip button */}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isBlocked}
             title="Đính kèm ảnh hoặc tài liệu"
-            className="w-8 h-8 rounded-full text-slate-400 hover:text-blue-600 hover:bg-slate-200/50 flex items-center justify-center cursor-pointer transition-colors shrink-0"
+            className="w-8 h-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center cursor-pointer transition-colors shrink-0"
+            style={{ borderRadius: 9999, border: "none", background: "transparent" }}
           >
             <Paperclip size={18} weight="bold" />
           </button>
@@ -131,19 +134,23 @@ export const ChatInput = ({ onSendMessage, onSend, isLoading, disabled, placehol
             onPaste={handlePaste}
             placeholder={files.length > 0 ? "Thêm mô tả..." : placeholder}
             disabled={isBlocked}
-            className="flex-1 bg-transparent text-[13px] text-slate-800 placeholder-slate-400 focus:outline-none py-1.5 px-0.5 select-text"
+            className="flex-1 bg-transparent text-[13px] font-medium text-slate-800 placeholder-slate-400 focus:outline-none py-1 px-0.5 select-text"
           />
 
           {/* Send button on the right */}
           <button
             type="submit"
             disabled={(!text.trim() && files.length === 0) || isBlocked}
-            aria-label="Send message"
-            className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-750 disabled:opacity-30 disabled:bg-slate-300 text-white flex items-center justify-center cursor-pointer transition-all active:scale-95 shadow-md resize-none shrink-0"
+            aria-label="Gửi tin nhắn"
+            className="w-8 h-8 disabled:opacity-35 text-white flex items-center justify-center cursor-pointer transition-all active:scale-95 shadow-sm shrink-0"
+            style={{
+              borderRadius: 9999,
+              border: "none",
+              background: "linear-gradient(135deg, #0b5ed7 0%, #1d75f2 100%)",
+            }}
           >
             <PaperPlaneTilt size={14} weight="fill" />
           </button>
-
         </div>
       </form>
     </div>

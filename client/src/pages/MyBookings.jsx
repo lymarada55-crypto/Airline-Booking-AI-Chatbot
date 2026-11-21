@@ -1,33 +1,35 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   AirplaneTilt,
   AirplaneTakeoff,
   AirplaneLanding,
+  ArrowLeft,
   Ticket,
   CircleNotch,
   CalendarBlank,
   UserCircle,
-  CurrencyCircleDollar,
   Clock,
   Armchair,
-  Hash,
   CheckCircle,
-  XCircle,
   Copy,
   Check,
-  Funnel,
   Sparkle,
   ArrowRight,
   Buildings,
   Binoculars,
-  CarProfile
+  CarProfile,
+  ForkKnife,
+  Hash,
+  X
 } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "motion/react";
-import BackButton from "../components/BackButton";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import CountdownTimer from "../components/CountdownTimer";
+
+const HERO_BOOKINGS_BG_URL =
+  "https://static.vecteezy.com/system/resources/previews/035/719/664/non_2x/ai-generated-image-of-a-large-airliner-flying-in-the-sky-free-photo.jpg";
 
 // ─── Airline Config ─────────────────────────────────────────────────────────
 
@@ -131,7 +133,7 @@ const STATUS_TEXT = {
 
 // ─── BookingCard Component ───────────────────────────────────────────────────
 
-function BookingCard({ booking, idx }) {
+function BookingCard({ booking, idx, onRequestCancel }) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
@@ -139,6 +141,14 @@ function BookingCard({ booking, idx }) {
   const airline = getAirline(flight?.flight_number ?? "");
   const status = booking.status;
   const serviceStartDate = flight?.arrival_time?.slice(0, 10) || flight?.departure_time?.slice(0, 10) || "";
+
+  let attachedSpecialMeal = null;
+  try {
+    const mealMap = JSON.parse(localStorage.getItem("skylink_flight_special_meals") || "{}");
+    attachedSpecialMeal = mealMap[booking.pnr_code] || mealMap[`VE-${booking.id}`] || null;
+  } catch {
+    attachedSpecialMeal = null;
+  }
 
   const getNextDate = (date) => {
     if (!date) return "";
@@ -336,10 +346,42 @@ function BookingCard({ booking, idx }) {
           <div className="text-right">
             <span className="text-[11px] text-slate-400 font-medium block">Tổng cộng:</span>
             <span className="text-xl font-black text-blue-600 tracking-tight">
-              {formatCurrency(booking.total_amount)}
+              {formatCurrency(booking.total_amount ?? booking.total_price ?? 0)}
             </span>
           </div>
         </div>
+
+        {/* Attached Special Meal Detail Strip (when user registered a special meal for this PNR) */}
+        {attachedSpecialMeal && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
+                <ForkKnife size={18} weight="fill" />
+              </span>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-black text-emerald-950">
+                    Suất ăn đặc biệt: {attachedSpecialMeal.code} – {attachedSpecialMeal.title}
+                  </span>
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800 border border-emerald-200">
+                    Miễn phí kèm vé
+                  </span>
+                </div>
+                <p className="mt-0.5 text-[11px] font-medium text-emerald-800">
+                  Danh mục: {attachedSpecialMeal.category || "Tiêu chuẩn IATA"} • Phục vụ theo số ghế trên chuyến bay này.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => navigate("/services/meals")}
+              className="rounded-xl border border-emerald-300 bg-white px-3 py-1.5 text-xs font-extrabold text-emerald-800 transition hover:bg-emerald-100 cursor-pointer"
+            >
+              Đổi suất ăn
+            </button>
+          </div>
+        )}
 
         {/* Expandable Tickets Details Drawer */}
         <AnimatePresence>
@@ -441,26 +483,7 @@ function BookingCard({ booking, idx }) {
 
               <button
                 type="button"
-                onClick={async () => {
-                  if (!confirm("Bạn có chắc chắn muốn hủy đặt vé này?")) return;
-                  try {
-                    const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
-                    const res = await fetch(`/api/bookings/${booking.id}/cancel`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                    });
-                    const data = await res.json();
-                    if (res.ok && data.status === "success") {
-                      alert(data.message || "Hủy vé thành công");
-                      window.location.reload();
-                    } else {
-                      alert(data.message || "Không thể hủy vé");
-                    }
-                  } catch (err) {
-                    console.error(err);
-                    alert("Lỗi khi kết nối tới máy chủ.");
-                  }
-                }}
+                onClick={() => onRequestCancel(booking)}
                 className="py-3 px-4 rounded-2xl text-xs font-extrabold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition-all duration-200 cursor-pointer"
               >
                 Hủy vé
@@ -488,13 +511,24 @@ function BookingCard({ booking, idx }) {
                   key={type}
                   type="button"
                   onClick={() => openTravelService(type)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-3.5 py-2.5 text-xs font-extrabold text-blue-800 transition hover:border-blue-400 hover:bg-blue-100"
+                  className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-3.5 py-2.5 text-xs font-extrabold text-blue-800 transition hover:border-blue-400 hover:bg-blue-100 cursor-pointer"
                 >
                   <Icon size={16} weight="bold" />
                   {label}
                   <ArrowRight size={14} weight="bold" />
                 </button>
               ))}
+              {!attachedSpecialMeal && (
+                <button
+                  type="button"
+                  onClick={() => navigate("/services/meals")}
+                  className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs font-extrabold text-emerald-800 transition hover:border-emerald-400 hover:bg-emerald-100 cursor-pointer"
+                >
+                  <ForkKnife size={16} weight="fill" />
+                  Suất ăn đặc biệt (Miễn phí)
+                  <ArrowRight size={14} weight="bold" />
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -510,38 +544,70 @@ export default function MyBookings() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [statusNotice, setStatusNotice] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
   const navigate = useNavigate();
 
+  const loadBookings = async () => {
+    const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/bookings", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok && data.status === "success") {
+        const list = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
+        setBookings(list);
+      } else {
+        setError(data.message || "Lỗi khi tải lịch sử vé.");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Không thể kết nối tới máy chủ.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchBookings = async () => {
-      const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
-      if (!token) {
-        navigate("/login");
-        return;
-      }
-
-      try {
-        const res = await fetch("/api/bookings", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (res.ok && data.status === "success") {
-          const list = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
-          setBookings(list);
-        } else {
-          setError(data.message || "Lỗi khi tải lịch sử vé.");
-        }
-      } catch (err) {
-        console.error(err);
-        setError("Không thể kết nối tới máy chủ.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBookings();
+    loadBookings();
   }, [navigate]);
+
+  const handleConfirmCancel = async () => {
+    if (!cancelTarget) return;
+    setCancelling(true);
+    setError("");
+    setStatusNotice("");
+    try {
+      const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
+      const res = await fetch(`/api/bookings/${cancelTarget.id}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok && data.status === "success") {
+        setStatusNotice(data.message || `Đã hủy vé mã ${cancelTarget.pnr_code} thành công.`);
+        setCancelTarget(null);
+        await loadBookings();
+      } else {
+        setError(data.message || "Không thể hủy vé lúc này.");
+        setCancelTarget(null);
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Lỗi khi kết nối tới máy chủ.");
+      setCancelTarget(null);
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   // Filter Bookings by activeTab
   const filteredBookings = bookings.filter((b) => {
@@ -557,125 +623,319 @@ export default function MyBookings() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -12 }}
-      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-      className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans pt-24 pb-20 selection:bg-blue-600 selection:text-white"
+    <div
+      className="min-h-screen font-sans text-slate-900"
+      style={{
+        background:
+          "linear-gradient(180deg, #b8dcff 0%, #dceeff 26%, #eef6ff 64%, #d6eaff 100%)",
+      }}
     >
       <Navbar />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6">
-
-        {/* Back Button */}
-        <div className="mb-4">
-          <BackButton />
+      <main className="relative overflow-hidden pb-16 pt-20">
+        {/* HERO BACKGROUND LAYER */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 overflow-hidden"
+          style={{ height: 315 }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(90deg, rgba(188,223,255,0.96) 0%, rgba(210,234,255,0.85) 46%, rgba(225,241,255,0.20) 100%)",
+            }}
+          />
+          <img
+            src={HERO_BOOKINGS_BG_URL}
+            alt=""
+            className="absolute right-0 top-0 h-full object-cover"
+            style={{
+              width: "62%",
+              objectPosition: "center 32%",
+              opacity: 0.9,
+              WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 34%)",
+              maskImage: "linear-gradient(to right, transparent 0%, black 34%)",
+            }}
+          />
+          <div
+            className="absolute inset-x-0 bottom-0"
+            style={{
+              height: 92,
+              background: "linear-gradient(180deg, rgba(220,238,255,0) 0%, #dceeff 100%)",
+            }}
+          />
         </div>
 
-        {/* Hero Page Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-4 border-b border-slate-200/80">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
-                <Ticket size={22} weight="fill" />
-              </div>
-              <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-                Chuyến bay của tôi
-              </h1>
-            </div>
-            <p className="text-sm text-slate-500 font-medium pl-1">
-              Quản lý lịch sử đặt vé, làm thủ tục trực tuyến (Check-in) và chi tiết vé máy bay SkyLink.
-            </p>
-          </div>
-
-          {/* Quick Stats Pill */}
-          <div className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2.5 rounded-2xl shadow-xs self-start md:self-auto">
-            <Sparkle size={18} className="text-blue-600" weight="fill" />
-            <span className="text-xs font-bold text-slate-700">
-              Tổng số vé: <strong className="text-blue-600 font-black">{bookings.length}</strong>
-            </span>
-          </div>
-        </div>
-
-        {/* Filter Tabs Bar */}
-        <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2 scrollbar-none">
-          {[
-            { id: "all", label: "Tất cả chuyến bay" },
-            { id: "paid", label: "Đã thanh toán" },
-            { id: "pending", label: "Chờ thanh toán" },
-            { id: "cancelled", label: "Đã hủy" }
-          ].map((tab) => {
-            const isSelected = activeTab === tab.id;
-            const count = getTabCount(tab.id);
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all duration-200 whitespace-nowrap cursor-pointer flex items-center gap-2 ${
-                  isSelected
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-                    : "bg-white text-slate-600 border border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-              >
-                <span>{tab.label}</span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                    isSelected ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
-                  }`}
-                >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Content Body */}
-        {loading ? (
-          <div className="py-24 flex flex-col items-center justify-center text-slate-400 gap-3">
-            <CircleNotch size={38} className="animate-spin text-blue-600" />
-            <p className="text-sm font-bold text-slate-500">Đang tải lịch sử đặt vé của bạn...</p>
-          </div>
-        ) : error ? (
-          <div className="bg-rose-50 text-rose-700 border border-rose-200 p-8 rounded-3xl text-center font-bold text-sm">
-            {error}
-          </div>
-        ) : filteredBookings.length === 0 ? (
-          <div className="bg-white border border-slate-200/80 p-12 sm:p-16 rounded-3xl text-center shadow-xs">
-            <div className="w-16 h-16 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-5 shadow-inner">
-              <AirplaneTilt size={32} weight="fill" />
-            </div>
-            <h3 className="text-xl font-extrabold text-slate-900 mb-2">
-              {activeTab === "all" ? "Chưa có chuyến bay nào" : "Không có vé phù hợp với bộ lọc"}
-            </h3>
-            <p className="text-sm text-slate-500 mb-6 max-w-md mx-auto font-medium leading-relaxed">
-              {activeTab === "all"
-                ? "Bạn chưa thực hiện giao dịch đặt vé nào. Hãy bắt đầu tìm chuyến bay đầu tiên để nhận ưu đãi từ SkyLink!"
-                : "Không tìm thấy vé nào thuộc danh mục này. Anh/chị có thể chuyển về tất cả chuyến bay."}
-            </p>
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold px-6 py-3.5 rounded-2xl shadow-md shadow-blue-500/25 transition-all duration-200 cursor-pointer active:scale-95 text-xs inline-flex items-center gap-2"
+        <div className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6">
+          {/* Top Hero Header */}
+          <header className="pb-6 pt-2">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 bg-white/90 px-4 py-1.5 text-xs font-extrabold text-[#16428b] shadow-sm transition hover:bg-white"
+              style={{
+                border: "1px solid rgba(255,255,255,0.96)",
+                borderRadius: 9999,
+                textDecoration: "none",
+              }}
             >
-              Tìm chuyến bay ngay <ArrowRight size={16} weight="bold" />
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {filteredBookings.map((booking, idx) => (
-              <BookingCard key={booking.id} booking={booking} idx={idx} />
-            ))}
-          </div>
-        )}
+              <ArrowLeft size={14} weight="bold" />
+              Quay lại trang chủ
+            </Link>
 
-      </div>
+            <div className="mt-4 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+              <div>
+                <p
+                  className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em]"
+                  style={{ color: "#0b57d0", margin: "0 0 4px 0" }}
+                >
+                  <Ticket size={15} weight="fill" />
+                  SKYLINK AIRLINES • QUẢN LÝ ĐẶT CHỖ
+                </p>
+                <h1
+                  className="font-black tracking-tight"
+                  style={{
+                    fontSize: "clamp(2rem, 3.5vw, 2.8rem)",
+                    color: "#091e47",
+                    lineHeight: 1.12,
+                    margin: "0 0 6px 0",
+                  }}
+                >
+                  Chuyến bay của tôi
+                </h1>
+                <p className="text-xs font-semibold text-[#2d4b7a] sm:text-sm" style={{ margin: 0 }}>
+                  Quản lý mã đặt chỗ (PNR), đăng ký suất ăn đặc biệt, làm thủ tục trực tuyến
+                  (Check-in) và đặt thêm dịch vụ.
+                </p>
+              </div>
 
-      <div className="mt-20">
-        <Footer />
-      </div>
-    </motion.div>
+              <div
+                className="inline-flex w-fit items-center gap-2 bg-white/95 px-4 py-2.5 shadow-sm"
+                style={{ borderRadius: 9999, border: "1px solid #d5e6fc" }}
+              >
+                <Sparkle size={17} className="text-blue-600" weight="fill" />
+                <span className="text-xs font-bold text-[#163d7a]">
+                  Tổng số vé: <strong className="font-black text-[#0b4fd0]">{bookings.length}</strong>
+                </span>
+              </div>
+            </div>
+          </header>
+
+          {/* Filter Tabs Pill Bar */}
+          <div
+            className="mb-6 flex flex-wrap items-center justify-between gap-2"
+            style={{
+              background: "rgba(255, 255, 255, 0.92)",
+              border: "1px solid rgba(255, 255, 255, 0.98)",
+              boxShadow: "0 12px 28px rgba(18, 60, 130, 0.08)",
+              borderRadius: 9999,
+              padding: "8px 10px",
+            }}
+          >
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[
+                { id: "all", label: "Tất cả" },
+                { id: "paid", label: "Đã thanh toán" },
+                { id: "pending", label: "Chờ thanh toán" },
+                { id: "cancelled", label: "Đã hủy" },
+              ].map((tab) => {
+                const isSelected = activeTab === tab.id;
+                const count = getTabCount(tab.id);
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className="inline-flex items-center gap-2 text-xs font-extrabold transition"
+                    style={
+                      isSelected
+                        ? {
+                            background: "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
+                            color: "#ffffff",
+                            boxShadow: "0 6px 16px rgba(13, 97, 225, 0.28)",
+                            borderRadius: 9999,
+                            border: "none",
+                            cursor: "pointer",
+                            padding: "8px 14px",
+                            whiteSpace: "nowrap",
+                          }
+                        : {
+                            background: "transparent",
+                            color: "#1e3f77",
+                            borderRadius: 9999,
+                            border: "none",
+                            cursor: "pointer",
+                            padding: "8px 14px",
+                            whiteSpace: "nowrap",
+                          }
+                    }
+                  >
+                    <span>{tab.label}</span>
+                    <span
+                      className="rounded-full px-2 py-0.5 text-[10px] font-black"
+                      style={{
+                        background: isSelected ? "rgba(255,255,255,0.22)" : "#e8f1fe",
+                        color: isSelected ? "#ffffff" : "#0b4fd0",
+                      }}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <Link
+              to="/my-travel-services"
+              className="hidden items-center gap-1.5 text-xs font-extrabold text-[#0b4fd0] transition hover:bg-blue-50 sm:inline-flex"
+              style={{
+                borderRadius: 9999,
+                textDecoration: "none",
+                padding: "8px 14px",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <span>Dịch vụ đã đặt</span>
+              <ArrowRight size={13} weight="bold" />
+            </Link>
+          </div>
+
+          {statusNotice && (
+            <div
+              role="status"
+              className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-800"
+            >
+              {statusNotice}
+            </div>
+          )}
+
+          {/* Content Body */}
+          {loading ? (
+            <div className="flex flex-col items-center justify-center gap-3 rounded-3xl bg-white/90 py-20 text-slate-400">
+              <CircleNotch size={36} className="animate-spin text-blue-600" />
+              <p className="text-xs font-bold text-slate-500">Đang tải lịch sử đặt vé của bạn...</p>
+            </div>
+          ) : error ? (
+            <div className="rounded-3xl border border-rose-200 bg-rose-50 p-8 text-center text-sm font-bold text-rose-700">
+              {error}
+            </div>
+          ) : filteredBookings.length === 0 ? (
+            <div
+              className="rounded-3xl bg-white/95 p-12 text-center shadow-sm sm:p-16"
+              style={{ border: "1px solid rgba(255,255,255,0.98)" }}
+            >
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-50 text-blue-600 shadow-inner">
+                <AirplaneTilt size={32} weight="fill" />
+              </div>
+              <h3 className="mb-2 text-xl font-black text-[#092152]">
+                {activeTab === "all" ? "Chưa có chuyến bay nào" : "Không có vé phù hợp với bộ lọc"}
+              </h3>
+              <p className="mx-auto mb-6 max-w-md text-xs font-medium leading-relaxed text-slate-500 sm:text-sm">
+                {activeTab === "all"
+                  ? "Bạn chưa thực hiện giao dịch đặt vé nào. Hãy bắt đầu tìm chuyến bay đầu tiên để trải nghiệm dịch vụ 5 sao từ SkyLink!"
+                  : "Không tìm thấy vé nào thuộc danh mục này. Bạn có thể chuyển về tab Tất cả chuyến bay."}
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate("/flights")}
+                className="inline-flex items-center gap-2 px-6 py-3 text-xs font-extrabold text-white shadow-md transition hover:opacity-95"
+                style={{
+                  background: "linear-gradient(90deg, #0b5ed7 0%, #1d78f0 100%)",
+                  borderRadius: 9999,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Tìm chuyến bay ngay <ArrowRight size={15} weight="bold" />
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {filteredBookings.map((booking, idx) => (
+                <BookingCard
+                  key={booking.id}
+                  booking={booking}
+                  idx={idx}
+                  onRequestCancel={(b) => setCancelTarget(b)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Clean Confirmation Modal for Ticket Cancellation (Replaces window.confirm) */}
+      {cancelTarget && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center p-4"
+          style={{ background: "rgba(9, 25, 58, 0.52)", backdropFilter: "blur(6px)" }}
+          onClick={() => !cancelling && setCancelTarget(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-md bg-white p-6 shadow-2xl"
+            style={{ borderRadius: 24, border: "1px solid #dbe9fe" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-extrabold uppercase tracking-wider text-rose-600" style={{ margin: 0 }}>
+                  Xác nhận hủy đặt vé
+                </p>
+                <h2 className="mt-1 text-lg font-black text-[#092152]" style={{ margin: "4px 0 0 0" }}>
+                  Hủy vé mã {cancelTarget.pnr_code}?
+                </h2>
+              </div>
+              <button
+                type="button"
+                disabled={cancelling}
+                onClick={() => setCancelTarget(null)}
+                className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100"
+                style={{ border: "none", background: "transparent", cursor: "pointer" }}
+              >
+                <X size={18} weight="bold" />
+              </button>
+            </div>
+            <p className="mt-3 text-xs font-medium leading-relaxed text-slate-600">
+              Bạn có chắc chắn muốn hủy đặt chỗ chuyến bay này? Sau khi hủy, ghế sẽ được mở lại cho
+              hành khách khác và thao tác không thể hoàn tác.
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                disabled={cancelling}
+                onClick={() => setCancelTarget(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100"
+                style={{
+                  borderRadius: 9999,
+                  border: "1px solid #e2e8f0",
+                  background: "#ffffff",
+                  cursor: "pointer",
+                }}
+              >
+                Giữ lại vé
+              </button>
+              <button
+                type="button"
+                disabled={cancelling}
+                onClick={handleConfirmCancel}
+                className="px-5 py-2 text-xs font-extrabold text-white transition hover:opacity-95 disabled:opacity-50"
+                style={{
+                  background: "#e11d48",
+                  borderRadius: 9999,
+                  border: "none",
+                  cursor: cancelling ? "wait" : "pointer",
+                }}
+              >
+                {cancelling ? "Đang hủy vé..." : "Xác nhận hủy vé"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Footer />
+    </div>
   );
 }

@@ -1,320 +1,690 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Copy, Gift, EnvelopeSimple, ArrowRight, CheckCircle, Trophy, Clock } from "@phosphor-icons/react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  AirplaneTilt,
+  ArrowLeft,
+  ArrowRight,
+  Bed,
+  CarProfile,
+  CheckCircle,
+  Clock,
+  Copy,
+  Crown,
+  EnvelopeSimple,
+  Fire,
+  Gift,
+  Percent,
+  Sparkle,
+  Tag,
+  Ticket,
+  Trophy,
+} from "@phosphor-icons/react";
 import { motion } from "motion/react";
-import BackButton from "../components/BackButton";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
-/**
- * Promotions Bento Page
- * Taste Skill: Variance 6, Motion 7, Density 5
- */
+const HERO_PROMO_BG_URL =
+  "https://static.vecteezy.com/system/resources/previews/035/719/664/non_2x/ai-generated-image-of-a-large-airliner-flying-in-the-sky-free-photo.jpg";
+
+const PROMO_LIST = [
+  {
+    id: "winter-26",
+    code: "SKYLINK500",
+    category: "Vé máy bay",
+    title: "Chào Mùa Lễ Hội Cuối Năm 2026",
+    discount: "Giảm 500.000 ₫",
+    badge: "HOT DEAL",
+    badgeBg: "#ef4444",
+    badgeColor: "#ffffff",
+    expiry: "31/12/2026",
+    minOrder: "Áp dụng đơn vé khứ hồi từ 2.500.000 ₫",
+    desc: "Ưu đãi đặc biệt cho tất cả đường bay nội địa Hà Nội, TP.HCM, Đà Nẵng, Nha Trang & Phú Quốc.",
+    image:
+      "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=85",
+    actionTo: "/",
+    actionLabel: "Đặt vé ngay",
+  },
+  {
+    id: "welcome-20",
+    code: "WELCOME20",
+    category: "Thành viên mới",
+    title: "Ưu Đãi Thành Viên Mới SkyClub",
+    discount: "Giảm 20%",
+    badge: "Mới đăng ký",
+    badgeBg: "#0b5ed7",
+    badgeColor: "#ffffff",
+    expiry: "31/12/2026",
+    minOrder: "Tối đa 400.000 ₫ cho lần đặt đầu tiên",
+    desc: "Dành riêng cho tài khoản mới đăng ký và đặt vé trực tuyến lần đầu trên hệ thống SkyLink Airlines.",
+    image:
+      "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=900&q=85",
+    actionTo: "/",
+    actionLabel: "Áp dụng ngay",
+  },
+  {
+    id: "hotel-combo",
+    code: "STAY300",
+    category: "Khách sạn",
+    title: "Combo Bay & Nghỉ Dưỡng 5 Sao",
+    discount: "Giảm 300.000 ₫",
+    badge: "SkyLink Travel",
+    badgeBg: "#16a34a",
+    badgeColor: "#ffffff",
+    expiry: "15/01/2027",
+    minOrder: "Áp dụng đặt phòng khách sạn từ 2 đêm",
+    desc: "Tiết kiệm thêm khi đặt phòng khách sạn tại Đà Nẵng, Nha Trang, Phú Quốc kèm mã vé SkyLink.",
+    image:
+      "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=900&q=85",
+    actionTo: "/travel/hotel",
+    actionLabel: "Đặt phòng ngay",
+  },
+  {
+    id: "car-rental",
+    code: "DRIVE15",
+    category: "Thuê xe & Đưa đón",
+    title: "Thuê Xe Tự Lái & Đưa Đón Sân Bay",
+    discount: "Giảm 15%",
+    badge: "Tiện lợi",
+    badgeBg: "#7c3aed",
+    badgeColor: "#ffffff",
+    expiry: "31/12/2026",
+    minOrder: "Áp dụng mọi dòng xe 4 – 16 chỗ",
+    desc: "Giảm ngay 15% cho dịch vụ thuê xe tự lái theo ngày hoặc xe đưa đón tận cửa tại 5 sân bay lớn.",
+    image:
+      "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=900&q=85",
+    actionTo: "/travel/car",
+    actionLabel: "Chọn xe ngay",
+  },
+  {
+    id: "intl-asia",
+    code: "ASIA800",
+    category: "Vé máy bay",
+    title: "Bay Quốc Tế Singapore – Hàn – Nhật",
+    discount: "Giảm 800.000 ₫",
+    badge: "Quốc tế",
+    badgeBg: "#0284c7",
+    badgeColor: "#ffffff",
+    expiry: "28/02/2027",
+    minOrder: "Áp dụng chặng quốc tế khứ hồi",
+    desc: "Ưu đãi giá vé khứ hồi đi Singapore, Malaysia, Campuchia, Seoul, Tokyo cùng 23kg hành lý ký gửi.",
+    image:
+      "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=900&q=85",
+    actionTo: "/",
+    actionLabel: "Tìm chuyến bay",
+  },
+  {
+    id: "business-vip",
+    code: "BIZVIP15",
+    category: "Thành viên mới",
+    title: "Nâng Hạng Thương Gia SkyClub",
+    discount: "Giảm 15% + ×1.5 điểm",
+    badge: "Thương gia",
+    badgeBg: "#b45309",
+    badgeColor: "#ffffff",
+    expiry: "31/03/2027",
+    minOrder: "Áp dụng hạng ghế Business Class",
+    desc: "Trải nghiệm khoang Thương gia, Phòng chờ VIP SkyClub Lounge & nhân 1.5 lần điểm thưởng SkyClub.",
+    image:
+      "https://images.unsplash.com/photo-1569154941061-e231b4725ef1?auto=format&fit=crop&w=900&q=85",
+    actionTo: "/skyclub",
+    actionLabel: "Xem SkyClub",
+  },
+];
+
+const PROMO_CATEGORIES = [
+  "Tất cả",
+  "Vé máy bay",
+  "Khách sạn",
+  "Thuê xe & Đưa đón",
+  "Thành viên mới",
+];
+
 export default function Promotions() {
   const navigate = useNavigate();
+  const [activeCategory, setActiveCategory] = useState("Tất cả");
   const [copiedCode, setCopiedCode] = useState("");
+  const [newsletterEmail, setNewsletterEmail] = useState("");
+  const [subscribed, setSubscribed] = useState(false);
+
+  const visiblePromos =
+    activeCategory === "Tất cả"
+      ? PROMO_LIST
+      : PROMO_LIST.filter((p) => p.category === activeCategory);
 
   const handleCopy = (code) => {
-    navigator.clipboard.writeText(code);
+    try {
+      navigator.clipboard.writeText(code);
+    } catch {
+      // ignore clipboard errors
+    }
     setCopiedCode(code);
-    setTimeout(() => setCopiedCode(""), 2000);
+    window.setTimeout(() => setCopiedCode(""), 2200);
+  };
+
+  const handleSubscribe = (e) => {
+    e.preventDefault();
+    if (!newsletterEmail.trim()) return;
+    setSubscribed(true);
+    setNewsletterEmail("");
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -15 }}
-      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      className="min-h-[100dvh] bg-zinc-50 text-zinc-900 font-sans pb-24 pt-24 selection:bg-blue-600 selection:text-white"
+    <div
+      className="min-h-screen font-sans text-slate-900"
+      style={{
+        background:
+          "linear-gradient(180deg, #b8dcff 0%, #dceeff 26%, #eef6ff 64%, #d6eaff 100%)",
+      }}
     >
       <Navbar />
-      <div className="max-w-7xl mx-auto px-6 md:px-12">
-        
-        {/* Quay lại trang chủ */}
-        <div className="mb-8 -ml-3">
-          <BackButton />
+
+      <main className="relative overflow-hidden pb-16 pt-20">
+        {/* HERO BACKGROUND LAYER */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 overflow-hidden"
+          style={{ height: 325 }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(90deg, rgba(188,223,255,0.96) 0%, rgba(210,234,255,0.85) 46%, rgba(225,241,255,0.20) 100%)",
+            }}
+          />
+          <img
+            src={HERO_PROMO_BG_URL}
+            alt=""
+            className="absolute right-0 top-0 h-full object-cover"
+            style={{
+              width: "62%",
+              objectPosition: "center 30%",
+              opacity: 0.9,
+              WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 34%)",
+              maskImage: "linear-gradient(to right, transparent 0%, black 34%)",
+            }}
+          />
+          <div
+            className="absolute inset-x-0 bottom-0"
+            style={{
+              height: 92,
+              background: "linear-gradient(180deg, rgba(220,238,255,0) 0%, #dceeff 100%)",
+            }}
+          />
         </div>
 
-        {/* Header */}
-        <div className="mb-16 flex flex-col md:flex-row justify-between items-end gap-6">
-          <div className="max-w-2xl">
-            <div className="flex items-center gap-3 mb-4">
-               <span className="bg-zinc-200 text-zinc-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-1.5">
-                 <Gift size={14} weight="bold" /> Ưu đãi độc quyền
-               </span>
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          {/* TOP HERO HEADER */}
+          <header className="pb-6 pt-2">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 bg-white/90 px-4 py-1.5 text-xs font-extrabold text-[#16428b] shadow-sm transition hover:bg-white"
+              style={{
+                border: "1px solid rgba(255,255,255,0.96)",
+                borderRadius: 9999,
+                textDecoration: "none",
+              }}
+            >
+              <ArrowLeft size={14} weight="bold" />
+              Quay lại trang chủ
+            </Link>
+
+            <div className="mt-4 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+              <div style={{ maxWidth: 560 }}>
+                <p
+                  className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em]"
+                  style={{ color: "#0b57d0", margin: "0 0 4px 0" }}
+                >
+                  <Gift size={15} weight="fill" />
+                  SKYLINK DEALS • ƯU ĐÃI ĐỘC QUYỀN
+                </p>
+                <motion.h1
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="font-black tracking-tight"
+                  style={{
+                    fontSize: "clamp(2.05rem, 3.5vw, 2.85rem)",
+                    color: "#091e47",
+                    lineHeight: 1.12,
+                    margin: "0 0 8px 0",
+                  }}
+                >
+                  Ưu Đãi & Khuyến Mãi
+                </motion.h1>
+                <p
+                  className="text-sm font-semibold sm:text-[15px]"
+                  style={{ color: "#2d4b7a", margin: 0 }}
+                >
+                  Săn mã giảm giá vé máy bay, khách sạn, thuê xe và đặc quyền tích dặm thưởng dành
+                  riêng cho hành khách SkyLink Airlines.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => navigate("/skyclub")}
+                className="inline-flex w-fit items-center gap-2 px-5 py-3 text-xs font-extrabold text-white transition hover:-translate-y-0.5"
+                style={{
+                  background: "linear-gradient(90deg, #0a58ca 0%, #1d75f2 100%)",
+                  boxShadow: "0 10px 24px rgba(13, 97, 225, 0.34)",
+                  borderRadius: 9999,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <Crown size={17} weight="fill" className="text-amber-300" />
+                <span>Khám phá đặc quyền SkyClub</span>
+                <ArrowRight size={14} weight="bold" />
+              </button>
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-950 bg-clip-text text-transparent">
-              Ưu đãi dành riêng cho bạn
-            </h1>
-            <p className="text-zinc-500 font-medium text-lg leading-relaxed">
-              Tiết kiệm hơn cho mỗi hành trình bay. Mở khóa đặc quyền với mã ưu đãi dưới đây.
-            </p>
-          </div>
-        </div>
+          </header>
 
-        {/* Promo Bento Grid (Bố cục Bento Grid bất đối xứng cao cấp) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
-          {/* Card 1: Chào đón mùa hè (Featured, md:col-span-2) */}
-          <motion.div 
-            whileHover={{ y: -6, scale: 1.01 }}
-            className="md:col-span-2 bg-gradient-to-br from-zinc-900 to-zinc-950 text-white rounded-[2rem] overflow-hidden border border-zinc-800 shadow-xl flex flex-col justify-between group relative min-h-[340px]"
-          >
-            <div className="absolute inset-0 opacity-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9IiNmZmYiLz48L3N2Zz4=')]"></div>
-            
-            <div className="p-8 md:p-10 flex-1 flex flex-col md:flex-row justify-between gap-6 relative z-10">
-              <div className="flex-1 flex flex-col justify-between">
+          {/* FEATURED BANNER + SKYCLUB LOYALTY CARD */}
+          <section className="mb-7 grid grid-cols-1 gap-6 lg:grid-cols-12">
+            {/* Featured Hot Deal (Left 8 cols) */}
+            <div
+              className="relative overflow-hidden p-6 text-white sm:p-8 lg:col-span-8"
+              style={{
+                borderRadius: 26,
+                background: "linear-gradient(125deg, #082052 0%, #0b4fd0 55%, #1e88e5 100%)",
+                boxShadow: "0 16px 38px rgba(13, 94, 215, 0.24)",
+              }}
+            >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -right-12 -top-12 h-52 w-52 rounded-full"
+                style={{ background: "rgba(255,255,255,0.10)" }}
+              />
+              <div className="relative flex h-full flex-col justify-between gap-5">
                 <div>
-                  <span className="bg-amber-500/10 text-amber-400 border border-amber-500/25 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest w-fit mb-6 inline-block">
-                    Mã: SUMMER26 • Hạn: 15/05/2026
-                  </span>
-                  <h3 className="text-xl font-medium mb-1 text-zinc-400">Chào đón mùa hè</h3>
-                  <div className="text-4xl md:text-5xl font-extrabold tracking-tighter mb-4 bg-gradient-to-r from-amber-200 via-yellow-100 to-orange-200 bg-clip-text text-transparent">
-                    Giảm 500.000đ
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-black"
+                      style={{ background: "#f59e0b", color: "#091e47" }}
+                    >
+                      <Fire size={13} weight="fill" />
+                      ƯU ĐÃI NỔI BẬT MÙA LỄ HỘI
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold text-blue-100">
+                      <Clock size={13} weight="bold" />
+                      Hạn dùng: 31/12/2026
+                    </span>
                   </div>
-                  <p className="text-zinc-400 text-sm max-w-md leading-relaxed mb-6">
-                    Dành cho các chuyến bay nội địa khởi hành từ Hà Nội và TP.HCM. Trải nghiệm hành trình mùa hè rực rỡ cùng gia đình.
+
+                  <h2
+                    className="font-black tracking-tight text-white"
+                    style={{ fontSize: "clamp(1.6rem, 2.8vw, 2.3rem)", margin: "0 0 6px 0" }}
+                  >
+                    Giảm ngay 500.000 ₫ cho vé khứ hồi
+                  </h2>
+                  <p className="max-w-xl text-xs font-medium leading-relaxed text-blue-100 sm:text-sm" style={{ margin: 0 }}>
+                    Áp dụng cho mọi chuyến bay nội địa khởi hành từ Hà Nội, TP. Hồ Chí Minh, Đà Nẵng,
+                    Nha Trang và Phú Quốc. Đặt sớm để giữ chỗ giá tốt nhất!
                   </p>
                 </div>
 
-                {/* Copy Code Section */}
-                <div className="flex items-center justify-between bg-zinc-800/40 p-4 rounded-xl border border-zinc-700/60 max-w-sm">
-                  <div>
-                    <p className="text-[10px] text-zinc-500 font-bold uppercase mb-0.5 tracking-widest">Mã ưu đãi</p>
-                    <span className="font-mono text-lg font-bold tracking-wider text-amber-300">
-                      SUMMER26
-                    </span>
-                  </div>
-                  <button 
-                    onClick={() => handleCopy("SUMMER26")}
-                    className="p-3 bg-zinc-800 border border-zinc-700 hover:border-zinc-650 hover:bg-zinc-700 text-white rounded-lg transition-all active:scale-95 shadow-sm cursor-pointer"
-                    title="Sao chép"
+                {/* Copy Code + Book Now Row */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <div
+                    className="inline-flex items-center gap-3 px-4 py-2.5"
+                    style={{
+                      background: "rgba(255, 255, 255, 0.14)",
+                      border: "1px dashed rgba(255, 255, 255, 0.55)",
+                      borderRadius: 14,
+                    }}
                   >
-                    {copiedCode === "SUMMER26" ? <CheckCircle size={20} weight="fill" className="text-green-400" /> : <Copy size={20} weight="bold" />}
+                    <div>
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-blue-200">
+                        Mã giảm giá
+                      </span>
+                      <strong className="font-mono text-base font-black tracking-wider text-amber-300">
+                        SKYLINK500
+                      </strong>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy("SKYLINK500")}
+                      className="inline-flex items-center gap-1 rounded-xl bg-white px-3 py-1.5 text-xs font-extrabold text-[#0b4fd0] transition hover:bg-blue-50"
+                      style={{ border: "none", cursor: "pointer" }}
+                    >
+                      {copiedCode === "SKYLINK500" ? (
+                        <>
+                          <CheckCircle size={15} weight="fill" className="text-emerald-600" />
+                          Đã sao chép
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={14} weight="bold" />
+                          Sao chép
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate("/")}
+                    className="inline-flex items-center gap-1.5 bg-white px-5 py-3 text-xs font-extrabold text-[#0b4fd0] shadow-sm transition hover:bg-blue-50"
+                    style={{ borderRadius: 9999, border: "none", cursor: "pointer" }}
+                  >
+                    <AirplaneTilt size={15} weight="fill" />
+                    <span>Đặt vé áp dụng mã</span>
+                    <ArrowRight size={13} weight="bold" />
                   </button>
                 </div>
               </div>
-
-              {/* Graphic element */}
-              <div className="hidden md:flex flex-col items-center justify-center pr-6 opacity-30 group-hover:opacity-45 transition-opacity duration-300">
-                <span className="text-8xl font-extrabold tracking-tighter text-zinc-800 select-none">HOT</span>
-              </div>
             </div>
-          </motion.div>
 
-          {/* Card 2: Loyalty Widget (SkyLink Loyalty - md:col-span-1) */}
-          <motion.div
-            whileHover={{ y: -6, scale: 1.01 }}
-            className="md:col-span-1 bg-gradient-to-br from-blue-950 via-slate-900 to-zinc-950 text-white rounded-[2rem] p-8 border border-blue-900/30 shadow-xl flex flex-col justify-between relative overflow-hidden group min-h-[340px]"
-          >
-            {/* Glow background */}
-            <div className="absolute -right-20 -top-20 w-40 h-40 bg-blue-500/10 blur-2xl rounded-full" />
-            <div className="relative z-10 flex flex-col h-full justify-between gap-6">
-              <div className="flex justify-between items-start">
-                <span className="bg-blue-500/15 border border-blue-500/30 text-blue-300 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
-                  Thành viên Platinum
-                </span>
-                <Trophy size={28} className="text-amber-400" weight="fill" />
-              </div>
-
+            {/* SkyClub Loyalty Card (Right 4 cols) */}
+            <div
+              className="flex flex-col justify-between bg-white p-6 lg:col-span-4"
+              style={{
+                borderRadius: 26,
+                border: "1px solid rgba(255,255,255,0.98)",
+                boxShadow: "0 14px 34px rgba(20, 62, 132, 0.10)",
+              }}
+            >
               <div>
-                <p className="text-xs text-zinc-400 font-semibold mb-1 uppercase tracking-wider">Điểm tích lũy hiện tại</p>
-                <div className="text-4xl font-extrabold tracking-tight text-white mb-2 flex items-baseline gap-1">
-                  2,500 <span className="text-sm font-bold text-blue-400">PTS</span>
+                <div className="mb-3 flex items-center justify-between">
+                  <span
+                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-extrabold"
+                    style={{ background: "#eef6ff", color: "#0b4fd0" }}
+                  >
+                    <Sparkle size={13} weight="fill" />
+                    SkyClub Platinum
+                  </span>
+                  <Trophy size={24} weight="fill" className="text-amber-500" />
                 </div>
-                <div className="w-full bg-zinc-800 h-2 rounded-full overflow-hidden mb-2">
-                  <div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full w-[70%]" />
+
+                <p className="text-[11px] font-bold uppercase tracking-wider text-[#5a749b]" style={{ margin: 0 }}>
+                  Điểm thưởng tích lũy
+                </p>
+                <div className="mt-1 flex items-baseline gap-1.5">
+                  <span className="text-3xl font-black tracking-tight text-[#092152]">2,500</span>
+                  <span className="text-xs font-extrabold text-[#0b5ed7]">PTS</span>
                 </div>
-                <div className="flex justify-between text-[10px] text-zinc-500 font-bold uppercase">
+
+                <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-blue-100">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: "72%",
+                      background: "linear-gradient(90deg, #0b5ed7 0%, #38bdf8 100%)",
+                    }}
+                  />
+                </div>
+                <div className="mt-1.5 flex justify-between text-[11px] font-bold text-[#556f96]">
                   <span>2,500 / 3,500 PTS</span>
-                  <span>Còn 1,000 PTS đến Hạng Diamond</span>
+                  <span className="text-[#0b5ed7]">Còn 1,000 PTS lên Diamond</span>
                 </div>
               </div>
 
-              <div className="text-xs text-blue-300 bg-blue-500/10 border border-blue-500/10 rounded-xl p-3 font-medium">
-                ★ Tự động nhân 1.5 lần điểm thưởng khi đặt vé hạng Thương gia.
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Card 3: Ưu đãi thành viên mới (WELCOM20 - md:col-span-1) */}
-          <motion.div 
-            whileHover={{ y: -6, scale: 1.01 }}
-            className="bg-white border border-zinc-200 rounded-[2rem] overflow-hidden hover:shadow-md transition-all group flex flex-col min-h-[380px]"
-          >
-            <div className="h-24 bg-blue-650 relative overflow-hidden flex items-center justify-center">
-              <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9IiNmZmYiLz48L3N2Zz4=')]"></div>
-              <span className="text-4xl font-bold tracking-tighter opacity-20 text-white">WELCOME</span>
-            </div>
-            
-            <div className="p-8 flex-1 flex flex-col justify-between relative z-10 -mt-6">
-              <div>
-                <div className="bg-white border border-zinc-200 text-zinc-500 font-bold text-[10px] uppercase tracking-widest px-4 py-1.5 rounded-full w-fit mb-6 shadow-sm">
-                  Hạn dùng: 30/04/2026
-                </div>
-                <h3 className="text-lg font-semibold mb-1 text-zinc-655">Ưu đãi thành viên mới</h3>
-                <div className="text-3xl font-extrabold tracking-tighter mb-4 text-zinc-900">
-                  Giảm 20%
-                </div>
-                <p className="text-zinc-500 text-sm mb-6 leading-relaxed">
-                  Áp dụng cho lần đặt vé đầu tiên trên hệ thống trực tuyến của Skylink.
-                </p>
-              </div>
-
-              {/* Copy Code & Action */}
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between bg-zinc-50 p-4 rounded-xl border border-zinc-200 group-hover:border-blue-200 transition-colors">
-                  <div>
-                    <p className="text-[10px] text-zinc-400 font-bold uppercase mb-0.5 tracking-widest">Mã ưu đãi</p>
-                    <span className="font-mono text-lg font-bold tracking-wider text-zinc-900">
-                      WELCOME20
-                    </span>
-                  </div>
-                  <button 
-                    onClick={() => handleCopy("WELCOME20")}
-                    className="p-3 bg-white border border-zinc-200 text-zinc-900 rounded-lg hover:bg-zinc-100 hover:text-blue-600 transition-all active:scale-95 shadow-sm cursor-pointer"
-                    title="Sao chép"
-                  >
-                    {copiedCode === "WELCOME20" ? <CheckCircle size={20} weight="fill" className="text-green-600" /> : <Copy size={20} weight="bold" />}
-                  </button>
-                </div>
-                <button 
-                  onClick={() => navigate("/flights")}
-                  className="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold py-3.5 px-4 rounded-xl text-sm transition-all cursor-pointer"
-                >
-                  Tìm chuyến bay
-                </button>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Card 4: Đặc quyền thẻ Platinum (PLATINUMUP - md:col-span-1) */}
-          <motion.div 
-            whileHover={{ y: -6, scale: 1.01 }}
-            className="bg-white border border-zinc-200 rounded-[2rem] overflow-hidden hover:shadow-md transition-all group flex flex-col min-h-[380px]"
-          >
-            <div className="h-24 bg-zinc-200 relative overflow-hidden flex items-center justify-center">
-              <span className="text-4xl font-bold tracking-tighter opacity-20 text-zinc-900">PLATINUM</span>
-            </div>
-            
-            <div className="p-8 flex-1 flex flex-col justify-between relative z-10 -mt-6">
-              <div>
-                <div className="bg-white border border-zinc-200 text-zinc-500 font-bold text-[10px] uppercase tracking-widest px-4 py-1.5 rounded-full w-fit mb-6 shadow-sm">
-                  Hạn dùng: Vô thời hạn
-                </div>
-                <h3 className="text-lg font-semibold mb-1 text-zinc-655">Đặc quyền thẻ Platinum</h3>
-                <div className="text-3xl font-extrabold tracking-tighter mb-4 text-zinc-900">
-                  Nâng hạng ghế
-                </div>
-                <p className="text-zinc-500 text-sm mb-6 leading-relaxed">
-                  Tự động nâng lên hạng Thương gia cho thành viên thân thiết khi còn chỗ trống.
-                </p>
-              </div>
-
-              {/* Copy Code & Action */}
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between bg-zinc-50 p-4 rounded-xl border border-zinc-200 group-hover:border-blue-200 transition-colors">
-                  <div>
-                    <p className="text-[10px] text-zinc-400 font-bold uppercase mb-0.5 tracking-widest">Mã ưu đãi</p>
-                    <span className="font-mono text-lg font-bold tracking-wider text-zinc-900">
-                      PLATINUMUP
-                    </span>
-                  </div>
-                  <button 
-                    onClick={() => handleCopy("PLATINUMUP")}
-                    className="p-3 bg-white border border-zinc-200 text-zinc-900 rounded-lg hover:bg-zinc-100 hover:text-blue-600 transition-all active:scale-95 shadow-sm cursor-pointer"
-                    title="Sao chép"
-                  >
-                    {copiedCode === "PLATINUMUP" ? <CheckCircle size={20} weight="fill" className="text-green-600" /> : <Copy size={20} weight="bold" />}
-                  </button>
-                </div>
-                <button 
-                  onClick={() => navigate("/flights")}
-                  className="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold py-3.5 px-4 rounded-xl text-sm transition-all cursor-pointer"
-                >
-                  Tìm chuyến bay
-                </button>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Card 5: Countdown Widget (md:col-span-1) */}
-          <motion.div
-            whileHover={{ y: -6, scale: 1.01 }}
-            className="md:col-span-1 bg-gradient-to-br from-red-950 via-rose-950 to-zinc-950 text-white rounded-[2rem] p-8 border border-red-900/30 shadow-xl flex flex-col justify-between relative overflow-hidden group min-h-[380px]"
-          >
-            {/* Glow background */}
-            <div className="absolute -left-20 -bottom-20 w-40 h-40 bg-rose-500/10 blur-2xl rounded-full" />
-            <div className="relative z-10 flex flex-col h-full justify-between gap-6">
-              <div className="flex justify-between items-start">
-                <span className="bg-red-500/15 border border-red-500/30 text-rose-300 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 animate-pulse">
-                  <Clock size={12} weight="bold" /> Ưu đãi sắp kết thúc
-                </span>
-              </div>
-
-              <div>
-                <p className="text-xs text-rose-300/80 font-bold mb-2 uppercase tracking-wider">Mã SUMMER26 hết hạn sau:</p>
-                <div className="flex gap-3 text-center mb-6">
-                  <div className="bg-zinc-900/60 backdrop-blur-sm px-3 py-2 rounded-xl border border-zinc-800 min-w-[54px]">
-                    <div className="text-2xl font-black text-white">02</div>
-                    <div className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider">Ngày</div>
-                  </div>
-                  <div className="bg-zinc-900/60 backdrop-blur-sm px-3 py-2 rounded-xl border border-zinc-800 min-w-[54px]">
-                    <div className="text-2xl font-black text-white">14</div>
-                    <div className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider">Giờ</div>
-                  </div>
-                  <div className="bg-zinc-900/60 backdrop-blur-sm px-3 py-2 rounded-xl border border-zinc-800 min-w-[54px]">
-                    <div className="text-2xl font-black text-white">45</div>
-                    <div className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider">Phút</div>
-                  </div>
-                </div>
-              </div>
-
-              <button 
-                onClick={() => navigate("/flights")}
-                className="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-rose-900/20"
+              <div
+                className="mt-4 rounded-2xl p-3.5 text-xs font-semibold text-[#1e3f77]"
+                style={{ background: "#f4f9ff", border: "1px solid #d9e8fd" }}
               >
-                Đặt vé ngay <ArrowRight size={14} weight="bold" />
-              </button>
+                ★ Tự động nhân <strong>1.5× điểm thưởng</strong> khi đặt vé hạng Thương gia & đổi
+                voucher khách sạn miễn phí.
+              </div>
             </div>
-          </motion.div>
-        </div>
+          </section>
 
-        {/* Newsletter Banner */}
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-24 bg-blue-650 text-white rounded-[2.5rem] p-10 md:p-16 text-center relative overflow-hidden shadow-xl shadow-blue-900/10"
-        >
-          {/* Decorative graphic */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
-          
-          <div className="relative z-10 max-w-2xl mx-auto">
-            <EnvelopeSimple size={48} weight="duotone" className="mx-auto mb-6 text-blue-200" />
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              Cập nhật ưu đãi mới nhất
-            </h2>
-            <p className="text-blue-100 mb-10 font-medium">
-              Đăng ký nhận bản tin để nhận mã giảm giá độc quyền và thông tin về các chặng bay mới của Skylink.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-              <input 
-                type="email" 
-                placeholder="Nhập email của bạn..." 
-                className="flex-1 bg-white/10 border border-white/20 text-white placeholder-blue-200 px-6 py-4 rounded-xl outline-none focus:bg-white/20 transition-colors font-medium"
-              />
-              <button className="bg-white text-blue-600 font-bold px-8 py-4 rounded-xl hover:bg-blue-50 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
-                Đăng ký <ArrowRight size={18} weight="bold" />
-              </button>
+          {/* CATEGORY FILTER PILLS */}
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {PROMO_CATEGORIES.map((cat) => {
+                const count =
+                  cat === "Tất cả"
+                    ? PROMO_LIST.length
+                    : PROMO_LIST.filter((p) => p.category === cat).length;
+                const isActive = activeCategory === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setActiveCategory(cat)}
+                    className="px-4 py-2 text-xs font-extrabold transition"
+                    style={
+                      isActive
+                        ? {
+                            background: "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
+                            color: "#ffffff",
+                            boxShadow: "0 6px 16px rgba(13, 97, 225, 0.28)",
+                            borderRadius: 9999,
+                            border: "none",
+                            cursor: "pointer",
+                          }
+                        : {
+                            background: "rgba(255, 255, 255, 0.90)",
+                            color: "#1e3f77",
+                            border: "1px solid #d4e4fb",
+                            borderRadius: 9999,
+                            cursor: "pointer",
+                          }
+                    }
+                  >
+                    {cat} ({count})
+                  </button>
+                );
+              })}
             </div>
+            <span className="text-xs font-bold text-[#355586]">
+              Hiển thị <strong>{visiblePromos.length}</strong> chương trình ưu đãi đang áp dụng
+            </span>
           </div>
-        </motion.div>
 
-      </div>
-      <div className="mt-20">
-        <Footer />
-      </div>
-    </motion.div>
+          {/* 3-COLUMN PROMO CARDS GRID */}
+          <section aria-label="Danh sách mã ưu đãi" className="mb-8">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              {visiblePromos.map((promo, idx) => {
+                const isCopied = copiedCode === promo.code;
+                return (
+                  <motion.article
+                    key={promo.id}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.06 }}
+                    className="flex flex-col overflow-hidden bg-white transition duration-300 hover:-translate-y-1"
+                    style={{
+                      borderRadius: 24,
+                      border: "1px solid rgba(255,255,255,0.98)",
+                      boxShadow: "0 14px 34px rgba(21, 64, 138, 0.09)",
+                    }}
+                  >
+                    {/* Card Image Banner */}
+                    <div className="relative overflow-hidden" style={{ height: 170 }}>
+                      <img
+                        src={promo.image}
+                        alt={promo.title}
+                        className="h-full w-full object-cover transition duration-500 hover:scale-105"
+                      />
+                      <div
+                        className="pointer-events-none absolute inset-0"
+                        style={{
+                          background:
+                            "linear-gradient(180deg, rgba(8,22,52,0.12) 0%, rgba(8,22,52,0.68) 100%)",
+                        }}
+                      />
+                      <span
+                        className="absolute left-3.5 top-3.5 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-extrabold shadow-sm"
+                        style={{ background: promo.badgeBg, color: promo.badgeColor }}
+                      >
+                        <Tag size={12} weight="fill" />
+                        {promo.badge}
+                      </span>
+                      <span
+                        className="absolute bottom-3 left-3.5 text-xl font-black tracking-tight text-white"
+                        style={{ textShadow: "0 2px 10px rgba(0,0,0,0.35)" }}
+                      >
+                        {promo.discount}
+                      </span>
+                    </div>
+
+                    {/* Card Content */}
+                    <div className="flex flex-1 flex-col p-5">
+                      <div className="mb-1.5 flex items-center justify-between text-[11px] font-bold text-[#5a749b]">
+                        <span className="text-[#0b5ed7]">{promo.category}</span>
+                        <span className="inline-flex items-center gap-1">
+                          <Clock size={12} weight="bold" />
+                          HSD: {promo.expiry}
+                        </span>
+                      </div>
+
+                      <h3
+                        className="text-base font-black text-[#092152]"
+                        style={{ margin: "0 0 6px 0" }}
+                      >
+                        {promo.title}
+                      </h3>
+                      <p
+                        className="mb-3 flex-1 text-xs font-medium leading-relaxed text-[#4f6891]"
+                        style={{ margin: "0 0 12px 0" }}
+                      >
+                        {promo.desc}
+                      </p>
+                      <p
+                        className="mb-4 text-[11px] font-bold text-[#2b4c7e]"
+                        style={{ margin: "0 0 14px 0" }}
+                      >
+                        • {promo.minOrder}
+                      </p>
+
+                      {/* Dashed Voucher Code Strip + CTA */}
+                      <div className="mt-auto space-y-2.5">
+                        <div
+                          className="flex items-center justify-between px-3.5 py-2"
+                          style={{
+                            background: "#f4f9ff",
+                            border: "1px dashed #8ab4f8",
+                            borderRadius: 12,
+                          }}
+                        >
+                          <div>
+                            <span className="block text-[10px] font-bold uppercase text-[#5a749b]">
+                              Mã ưu đãi
+                            </span>
+                            <strong className="font-mono text-sm font-black tracking-wider text-[#0b4fd0]">
+                              {promo.code}
+                            </strong>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(promo.code)}
+                            className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[11px] font-extrabold text-[#0b4fd0] shadow-xs transition hover:bg-blue-50"
+                            style={{ border: "1px solid #cde0fc", cursor: "pointer" }}
+                          >
+                            {isCopied ? (
+                              <>
+                                <CheckCircle size={13} weight="fill" className="text-emerald-600" />
+                                Đã chép
+                              </>
+                            ) : (
+                              <>
+                                <Copy size={13} weight="bold" />
+                                Sao chép
+                              </>
+                            )}
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => navigate(promo.actionTo)}
+                          className="inline-flex w-full items-center justify-center gap-1.5 py-2.5 text-xs font-extrabold text-white transition hover:opacity-95"
+                          style={{
+                            background: "linear-gradient(90deg, #0b5ed7 0%, #1d78f0 100%)",
+                            borderRadius: 9999,
+                            border: "none",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <span>{promo.actionLabel}</span>
+                          <ArrowRight size={13} weight="bold" />
+                        </button>
+                      </div>
+                    </div>
+                  </motion.article>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* NEWSLETTER SUBSCRIPTION BANNER */}
+          <section
+            aria-label="Đăng ký nhận bản tin ưu đãi"
+            className="overflow-hidden bg-white p-6 sm:p-8"
+            style={{
+              borderRadius: 26,
+              border: "1px solid rgba(255,255,255,0.98)",
+              boxShadow: "0 14px 36px rgba(20, 62, 132, 0.09)",
+            }}
+          >
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-4">
+                <span
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+                  style={{ background: "#eaf3ff", color: "#0b5ed7" }}
+                >
+                  <EnvelopeSimple size={24} weight="fill" />
+                </span>
+                <div>
+                  <h2 className="text-lg font-black text-[#092152]" style={{ margin: 0 }}>
+                    Đăng ký nhận mã giảm giá vé 0 ₫ mỗi tuần
+                  </h2>
+                  <p className="mt-1 text-xs font-semibold text-[#556f96]" style={{ margin: "4px 0 0 0" }}>
+                    Nhận thông báo sớm nhất về các đợt Flash Sale nội địa, quốc tế và combo khách
+                    sạn SkyLink Travel.
+                  </p>
+                </div>
+              </div>
+
+              {subscribed ? (
+                <div
+                  className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-xs font-extrabold"
+                  style={{
+                    background: "#ecfdf5",
+                    color: "#065f46",
+                    border: "1px solid #a7f3d0",
+                  }}
+                >
+                  <CheckCircle size={17} weight="fill" className="text-emerald-600" />
+                  Đăng ký thành công! Mã ưu đãi mới sẽ gửi tới email của bạn.
+                </div>
+              ) : (
+                <form
+                  onSubmit={handleSubscribe}
+                  className="flex w-full flex-col gap-2.5 sm:flex-row lg:w-auto"
+                >
+                  <input
+                    type="email"
+                    required
+                    value={newsletterEmail}
+                    onChange={(e) => setNewsletterEmail(e.target.value)}
+                    placeholder="Nhập địa chỉ email của bạn..."
+                    className="rounded-full border border-blue-200 bg-[#f7faff] px-4 py-2.5 text-xs font-semibold text-[#0b2559] focus:border-blue-500 focus:outline-none sm:w-64"
+                  />
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 text-xs font-extrabold text-white transition hover:opacity-95"
+                    style={{
+                      background: "linear-gradient(90deg, #0b5ed7 0%, #1d78f0 100%)",
+                      borderRadius: 9999,
+                      border: "none",
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <Percent size={14} weight="bold" />
+                    <span>Nhận ưu đãi</span>
+                  </button>
+                </form>
+              )}
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <Footer />
+    </div>
   );
 }

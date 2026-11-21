@@ -19,10 +19,249 @@ import {
   Buildings,
   Compass,
   Car,
-  AirplaneInFlight
+  AirplaneInFlight,
+  WarningCircle,
+  X,
+  Ticket,
+  Crown,
+  ForkKnife,
+  QrCode,
 } from "@phosphor-icons/react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+
+const TOP_DESTINATIONS = [
+  // ─── 10 ĐIỂM ĐẾN NỘI ĐỊA VIỆT NAM ───
+  {
+    city: "Hà Nội",
+    code: "HAN",
+    from: "SGN",
+    country: "Việt Nam",
+    region: "domestic",
+    featured: true,
+    badge: "Thủ đô nghìn năm",
+    price: "850.000đ",
+    image:
+      "https://images.unsplash.com/photo-1555921015-5532091f6026?q=80&w=1000&auto=format&fit=crop",
+  },
+  {
+    city: "TP. Hồ Chí Minh",
+    code: "SGN",
+    from: "HAN",
+    country: "Việt Nam",
+    region: "domestic",
+    featured: true,
+    badge: "Thành phố năng động",
+    price: "850.000đ",
+    image:
+      "https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=1000&auto=format&fit=crop",
+  },
+  {
+    city: "Đà Nẵng",
+    code: "DAD",
+    from: "HAN",
+    country: "Việt Nam",
+    region: "domestic",
+    featured: true,
+    badge: "Điểm đến Hot",
+    price: "550.000đ",
+    image:
+      "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?q=80&w=1000&auto=format&fit=crop",
+  },
+  {
+    city: "Phú Quốc",
+    code: "PQC",
+    from: "SGN",
+    country: "Việt Nam",
+    region: "domestic",
+    featured: true,
+    badge: "Đảo ngọc nghỉ dưỡng",
+    price: "590.000đ",
+    image:
+      "https://images.unsplash.com/photo-1516815231560-8f41ec531527?q=80&w=1000&auto=format&fit=crop",
+  },
+  {
+    city: "Đà Lạt",
+    code: "DLI",
+    from: "SGN",
+    country: "Việt Nam",
+    region: "domestic",
+    featured: true,
+    badge: "Thành phố ngàn hoa",
+    price: "550.000đ",
+    image:
+      "https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1000&auto=format&fit=crop",
+  },
+  {
+    city: "Nha Trang",
+    code: "CXR",
+    from: "HAN",
+    country: "Việt Nam",
+    region: "domestic",
+    featured: false,
+    badge: "Thiên đường biển ngọc",
+    price: "650.000đ",
+    image:
+      "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1000&auto=format&fit=crop",
+  },
+  {
+    city: "Huế",
+    code: "HUI",
+    from: "HAN",
+    country: "Việt Nam",
+    region: "domestic",
+    featured: false,
+    badge: "Cố đô di sản",
+    price: "550.000đ",
+    image:
+      "https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1000&auto=format&fit=crop",
+  },
+  {
+    city: "Hải Phòng",
+    code: "HPH",
+    from: "SGN",
+    country: "Việt Nam",
+    region: "domestic",
+    featured: false,
+    badge: "Cửa ngõ Vịnh Lan Hạ",
+    price: "850.000đ",
+    image:
+      "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?q=80&w=1000&auto=format&fit=crop",
+  },
+  {
+    city: "Cần Thơ",
+    code: "VCA",
+    from: "HAN",
+    country: "Việt Nam",
+    region: "domestic",
+    featured: false,
+    badge: "Thủ phủ Miền Tây",
+    price: "850.000đ",
+    image:
+      "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1000&auto=format&fit=crop",
+  },
+  {
+    city: "Quy Nhơn",
+    code: "UIH",
+    from: "SGN",
+    country: "Việt Nam",
+    region: "domestic",
+    featured: false,
+    badge: "Kỳ Co – Eo Gió",
+    price: "590.000đ",
+    image:
+      "https://images.unsplash.com/photo-1519046904884-53103b34b206?q=80&w=1000&auto=format&fit=crop",
+  },
+  // ─── 9 ĐIỂM ĐẾN QUỐC TẾ (ĐNA, ĐBA & TRUNG QUỐC) ───
+  {
+    city: "Singapore",
+    code: "SIN",
+    from: "SGN",
+    country: "Singapore",
+    region: "international",
+    featured: true,
+    badge: "Quốc đảo sư tử",
+    price: "2.150.000đ",
+    image:
+      "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&w=1000&q=85",
+  },
+  {
+    city: "Seoul",
+    code: "ICN",
+    from: "HAN",
+    country: "Hàn Quốc",
+    region: "international",
+    featured: true,
+    badge: "Xứ sở Kim Chi",
+    price: "4.650.000đ",
+    image:
+      "https://images.unsplash.com/photo-1538485399081-7191377e8241?auto=format&fit=crop&w=1000&q=85",
+  },
+  {
+    city: "Tokyo",
+    code: "NRT",
+    from: "SGN",
+    country: "Nhật Bản",
+    region: "international",
+    featured: true,
+    badge: "Xứ sở Hoa Anh Đào",
+    price: "5.450.000đ",
+    image:
+      "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1000&q=85",
+  },
+  {
+    city: "Thượng Hải",
+    code: "PVG",
+    from: "HAN",
+    country: "Trung Quốc",
+    region: "international",
+    featured: true,
+    badge: "Bến Thượng Hải",
+    price: "3.840.000đ",
+    image:
+      "https://images.unsplash.com/photo-1548919973-5cef591cdbc9?auto=format&fit=crop&w=1000&q=85",
+  },
+  {
+    city: "Bắc Kinh",
+    code: "PEK",
+    from: "HAN",
+    country: "Trung Quốc",
+    region: "international",
+    featured: false,
+    badge: "Vạn Lý Trường Thành",
+    price: "4.150.000đ",
+    image:
+      "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=1000&q=85",
+  },
+  {
+    city: "Quảng Châu",
+    code: "CAN",
+    from: "SGN",
+    country: "Trung Quốc",
+    region: "international",
+    featured: false,
+    badge: "Thủ phủ thương mại",
+    price: "2.650.000đ",
+    image:
+      "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=1000&q=85",
+  },
+  {
+    city: "Thâm Quyến",
+    code: "SZX",
+    from: "SGN",
+    country: "Trung Quốc",
+    region: "international",
+    featured: false,
+    badge: "Thung lũng công nghệ",
+    price: "2.750.000đ",
+    image:
+      "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1000&q=85",
+  },
+  {
+    city: "Kuala Lumpur",
+    code: "KUL",
+    from: "SGN",
+    country: "Malaysia",
+    region: "international",
+    featured: false,
+    badge: "Tháp đôi Petronas",
+    price: "2.190.000đ",
+    image:
+      "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=1000&q=85",
+  },
+  {
+    city: "Phnom Penh",
+    code: "PNH",
+    from: "SGN",
+    country: "Campuchia",
+    region: "international",
+    featured: false,
+    badge: "Đường bay ngắn 55 phút",
+    price: "1.750.000đ",
+    image:
+      "https://images.unsplash.com/photo-1563492065599-3520f775eeed?auto=format&fit=crop&w=1000&q=85",
+  },
+];
 
 function ServiceCityPicker({ icon: Icon, value, options, placeholder, onChange }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -171,6 +410,7 @@ export default function HomePage() {
 
   const [airports, setAirports] = useState([]);
   const [activeTab, setActiveTab] = useState("flights");
+  const [destFilter, setDestFilter] = useState("featured"); // "featured" | "domestic" | "international"
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
   const [serviceSearch, setServiceSearch] = useState({
@@ -183,19 +423,22 @@ export default function HomePage() {
   const [searchData, setSearchData] = useState({
     departure: "",
     arrival: "",
-    date: "",
-    returnDate: "",
+    date: dateAfterDays(1),
+    returnDate: dateAfterDays(3),
     tripType: "one-way",
     flightClass: "economy",
     passengers: { adults: 1, children: 0 }
   });
   const [showPassengerDropdown, setShowPassengerDropdown] = useState(false);
+  const [searchError, setSearchError] = useState("");
 
   const handleUpdatePassengers = (type, change) => {
     setSearchData(prev => {
+      const total = prev.passengers.adults + prev.passengers.children;
+      if (change > 0 && total >= 9) return prev;
       const current = prev.passengers[type];
       const next = Math.max(0, current + change);
-      if (type === 'adults' && next < 1) return prev;
+      if (type === "adults" && next < 1) return prev;
       return {
         ...prev,
         passengers: {
@@ -207,11 +450,29 @@ export default function HomePage() {
   };
 
   const handleSwap = () => {
+    setSearchError("");
     setSearchData(prev => ({
       ...prev,
       departure: prev.arrival,
       arrival: prev.departure
     }));
+  };
+
+  const handleBookDestination = (fromCode, toCode) => {
+    const departDate = searchData.date || dateAfterDays(1);
+    localStorage.setItem(
+      "search_params",
+      JSON.stringify({
+        departure: fromCode,
+        arrival: toCode,
+        date: departDate,
+        returnDate: "",
+        tripType: "one-way",
+        flightClass: searchData.flightClass || "economy",
+        passengers: searchData.passengers || { adults: 1, children: 0 },
+      })
+    );
+    navigate("/flights");
   };
 
   useEffect(() => {
@@ -227,6 +488,7 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    setSearchError("");
     if (activeTab === "flights") return;
 
     const type = activeTab === "hotels" ? "hotel" : activeTab === "experiences" ? "experience" : "car";
@@ -243,16 +505,17 @@ export default function HomePage() {
   }, [activeTab]);
 
   const handleSearch = () => {
+    setSearchError("");
     if (activeTab !== "flights") {
       const type = activeTab === "hotels" ? "hotel" : activeTab === "experiences" ? "experience" : "car";
       const search = serviceSearch[type];
 
       if (!search.start_date) {
-        alert("Vui lòng chọn ngày bắt đầu.");
+        setSearchError("Vui lòng chọn ngày bắt đầu.");
         return;
       }
       if (type !== "experience" && (!search.end_date || search.end_date <= search.start_date)) {
-        alert("Ngày trả phải sau ngày bắt đầu.");
+        setSearchError("Ngày trả phải sau ngày bắt đầu.");
         return;
       }
 
@@ -265,19 +528,27 @@ export default function HomePage() {
     }
 
     if (!searchData.departure || !searchData.arrival) {
-      alert("Vui lòng chọn đầy đủ điểm đi và điểm đến.");
+      setSearchError("Vui lòng chọn đầy đủ điểm đi và điểm đến.");
+      return;
+    }
+    if (searchData.departure === searchData.arrival) {
+      setSearchError("Điểm đi và điểm đến không được trùng nhau. Vui lòng chọn lại.");
       return;
     }
     if (!searchData.date) {
-      alert("Vui lòng chọn ngày đi.");
+      setSearchError("Vui lòng chọn ngày đi.");
       return;
     }
-    if (searchData.tripType === 'round-trip' && !searchData.returnDate) {
-      alert("Vui lòng chọn ngày về.");
+    if (searchData.date < today) {
+      setSearchError("Ngày đi không thể ở trong quá khứ.");
       return;
     }
-    if (searchData.tripType === 'round-trip' && searchData.returnDate < searchData.date) {
-      alert("Ngày về phải sau hoặc cùng ngày với ngày đi.");
+    if (searchData.tripType === "round-trip" && !searchData.returnDate) {
+      setSearchError("Vui lòng chọn ngày về cho chuyến khứ hồi.");
+      return;
+    }
+    if (searchData.tripType === "round-trip" && searchData.returnDate < searchData.date) {
+      setSearchError("Ngày về phải sau hoặc cùng ngày với ngày đi.");
       return;
     }
     localStorage.setItem("search_params", JSON.stringify(searchData));
@@ -327,46 +598,66 @@ export default function HomePage() {
           {/* Golden Sunset Ambient Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/30 to-black/40"></div>
 
-          {/* Hero Typography Matching Model Image 2 */}
-          <div className="absolute top-[20%] left-1/2 -translate-x-1/2 text-center text-white z-10 w-full max-w-4xl px-4">
+          {/* Hero Typography */}
+          <div className="absolute top-[19%] left-1/2 -translate-x-1/2 text-center text-white z-10 w-full max-w-4xl px-4">
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/15 backdrop-blur-md text-white/95 text-[11px] font-bold uppercase tracking-[0.2em] mb-3 border border-white/20 shadow-md"
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/15 backdrop-blur-md text-white/95 text-[11px] font-extrabold uppercase tracking-[0.18em] mb-3 border border-white/25 shadow-md"
             >
-              <PaperPlaneTilt size={13} weight="fill" className="text-cyan-400" />
-              YOUR JOURNEY BEGINS HERE <ArrowRight size={11} weight="bold" />
+              <PaperPlaneTilt size={13} weight="fill" className="text-sky-300" />
+              HÀNH TRÌNH 5 SAO BẮT ĐẦU TỪ ĐÂY <ArrowRight size={11} weight="bold" />
             </motion.div>
 
             <motion.h1
               initial={{ opacity: 0, y: 25 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="font-extrabold text-4xl md:text-6xl tracking-tight leading-none mb-2 drop-shadow-2xl text-white font-sans"
+              className="font-black text-4xl md:text-6xl tracking-tight leading-none mb-2.5 drop-shadow-2xl text-white font-sans"
             >
-              SkyLink
+              SkyLink Airlines
             </motion.h1>
 
             <motion.p
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="text-sm md:text-base text-slate-200 font-medium max-w-md mx-auto drop-shadow-md tracking-wide"
+              className="text-sm md:text-base text-slate-100 font-medium max-w-xl mx-auto drop-shadow-md tracking-wide"
             >
-              More than a destination, it's an experience.
+              Trải nghiệm bay đẳng cấp, kết nối mọi điểm đến Việt Nam &amp; quốc tế
             </motion.p>
           </div>
         </div>
 
-        {/* 3. FLOATING SEARCH ENGINE CARD matching Image 2 */}
-        <div className="relative z-20 w-full max-w-5xl px-4 -mt-20 md:-mt-28 mb-10">
+        {/* 3. FLOATING SEARCH ENGINE CARD */}
+        <div className="relative z-20 w-full max-w-5xl px-4 -mt-20 md:-mt-28 mb-6">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: "spring", stiffness: 180, damping: 22, delay: 0.4 }}
-            className="w-full bg-white rounded-3xl p-6 md:p-8 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.18)] border border-slate-200/80"
+            className="w-full bg-white rounded-3xl p-6 md:p-8 shadow-[0_25px_70px_-15px_rgba(13,62,145,0.20)] border border-blue-100/90"
           >
+            {/* Inline Validation Error Banner */}
+            {searchError && (
+              <div
+                role="alert"
+                className="mb-5 flex items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold text-red-700"
+              >
+                <div className="flex items-center gap-2">
+                  <WarningCircle size={18} weight="fill" className="shrink-0 text-red-500" />
+                  <span>{searchError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSearchError("")}
+                  className="cursor-pointer rounded-lg p-1 text-red-400 transition hover:bg-red-100 hover:text-red-700"
+                  aria-label="Đóng thông báo lỗi"
+                >
+                  <X size={15} weight="bold" />
+                </button>
+              </div>
+            )}
             {/* Top Category Tabs matching Image 2 */}
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5 mb-6">
               
@@ -425,28 +716,68 @@ export default function HomePage() {
                 </button>
               </div>
 
-              {/* Trip Type Toggle Buttons matching Image 2 (Only for Flights) */}
+              {/* Trip Type Toggle Buttons (Only for Flights) */}
               {activeTab === "flights" && (
-                <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-full border border-slate-200/80">
+                <div
+                  className="flex items-center gap-1 border border-blue-100 bg-[#f0f6ff] p-1"
+                  style={{ borderRadius: 9999 }}
+                >
                   <button
                     type="button"
-                    onClick={() => setSearchData(prev => ({ ...prev, tripType: "one-way" }))}
-                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    onClick={() => {
+                      setSearchError("");
+                      setSearchData((prev) => ({ ...prev, tripType: "one-way" }));
+                    }}
+                    className="cursor-pointer px-4 py-1.5 text-xs font-extrabold transition-all"
+                    style={
                       searchData.tripType === "one-way"
-                        ? "bg-[#12234e] text-white shadow-xs"
-                        : "text-slate-600 hover:text-slate-900"
-                    }`}
+                        ? {
+                            background: "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
+                            color: "#ffffff",
+                            boxShadow: "0 4px 12px rgba(13, 97, 225, 0.25)",
+                            borderRadius: 9999,
+                            border: "none",
+                          }
+                        : {
+                            background: "transparent",
+                            color: "#33507f",
+                            borderRadius: 9999,
+                            border: "none",
+                          }
+                    }
                   >
                     Một chiều
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSearchData(prev => ({ ...prev, tripType: "round-trip" }))}
-                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    onClick={() => {
+                      setSearchError("");
+                      setSearchData((prev) => ({
+                        ...prev,
+                        tripType: "round-trip",
+                        returnDate:
+                          prev.returnDate && prev.returnDate >= (prev.date || today)
+                            ? prev.returnDate
+                            : dateAfterDays(3),
+                      }));
+                    }}
+                    className="cursor-pointer px-4 py-1.5 text-xs font-extrabold transition-all"
+                    style={
                       searchData.tripType === "round-trip"
-                        ? "bg-[#12234e] text-white shadow-xs"
-                        : "text-slate-600 hover:text-slate-900"
-                    }`}
+                        ? {
+                            background: "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
+                            color: "#ffffff",
+                            boxShadow: "0 4px 12px rgba(13, 97, 225, 0.25)",
+                            borderRadius: 9999,
+                            border: "none",
+                          }
+                        : {
+                            background: "transparent",
+                            color: "#33507f",
+                            borderRadius: 9999,
+                            border: "none",
+                          }
+                    }
                   >
                     Khứ hồi
                   </button>
@@ -486,7 +817,8 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={handleSwap}
-                    className="w-8 h-8 rounded-full bg-white border border-slate-300 shadow-xs flex items-center justify-center text-slate-600 hover:text-blue-600 hover:border-blue-400 cursor-pointer transition-all transform hover:rotate-180"
+                    className="w-9 h-9 bg-white border border-slate-300 shadow-xs flex items-center justify-center text-slate-600 hover:text-blue-600 hover:border-blue-400 cursor-pointer transition-all transform hover:rotate-180"
+                    style={{ borderRadius: 9999 }}
                     title="Đổi điểm đi & đến"
                   >
                     <ArrowsLeftRight size={14} weight="bold" />
@@ -503,9 +835,12 @@ export default function HomePage() {
                         searchData.arrival ? "text-slate-900" : "text-slate-400"
                       }`}
                       value={searchData.arrival}
-                      onChange={(e) => setSearchData({ ...searchData, arrival: e.target.value })}
+                      onChange={(e) => {
+                        setSearchError("");
+                        setSearchData({ ...searchData, arrival: e.target.value });
+                      }}
                     >
-                      <option value="">Bạn muốn đến đâu?</option>
+                      <option value="">Chọn điểm đến</option>
                       {(Array.isArray(airports) ? airports : []).map(ap => (
                         <option key={ap.id || ap.code} value={ap.code} className="text-slate-900 font-medium">
                           {ap.city} ({ap.code}) - {ap.name}
@@ -687,49 +1022,53 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* Bottom Form Row: Passengers + Search Button */}
+            {/* Bottom Form Row: Passengers & Cabin + Search Button */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100 mt-4">
               
-              {/* Passengers Picker */}
+              {/* Passengers & Cabin Picker */}
               <div className="relative w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setShowPassengerDropdown(!showPassengerDropdown)}
-                  className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer w-full sm:w-auto justify-between"
+                  className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-[#f4f8ff] border border-blue-100 text-xs font-extrabold text-[#123975] hover:bg-blue-50 transition-colors cursor-pointer w-full sm:w-auto justify-between"
                 >
                   <div className="flex items-center gap-2">
-                    <Users size={16} className="text-slate-500" />
+                    <Users size={16} className="text-blue-600" weight="bold" />
                     <span>
-                      {activeTab === "flights" ? "Hành khách" : "Số khách"}: {searchData.passengers.adults + searchData.passengers.children} Người
-                      {activeTab === "flights" && " • Phổ thông"}
+                      {activeTab === "flights" ? "Hành khách" : "Số khách"}:{" "}
+                      {searchData.passengers.adults + searchData.passengers.children} Người
+                      {activeTab === "flights" &&
+                        ` • ${searchData.flightClass === "business" ? "Thương gia" : "Phổ thông"}`}
                     </span>
                   </div>
-                  <span className="text-slate-400">˅</span>
+                  <span className="text-blue-500">˅</span>
                 </button>
 
                 {showPassengerDropdown && (
                   <>
                     <div className="fixed inset-0 z-20" onClick={() => setShowPassengerDropdown(false)} />
-                    <div className="absolute left-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl p-4 shadow-xl z-30">
+                    <div className="absolute left-0 mt-2 w-72 bg-white border border-blue-100 rounded-2xl p-4 shadow-2xl z-30">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <div className="text-sm font-bold text-slate-900">Người lớn</div>
+                            <div className="text-sm font-extrabold text-slate-900">Người lớn</div>
                             <div className="text-xs text-slate-400">Từ 12 tuổi trở lên</div>
                           </div>
                           <div className="flex items-center gap-3">
                             <button
                               type="button"
-                              onClick={() => handleUpdatePassengers('adults', -1)}
-                              className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center hover:border-slate-400 text-slate-600 transition-colors cursor-pointer font-bold"
+                              onClick={() => handleUpdatePassengers("adults", -1)}
+                              className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center hover:border-blue-400 text-slate-600 transition-colors cursor-pointer font-bold"
                             >
                               -
                             </button>
-                            <span className="text-sm font-bold text-slate-900 w-4 text-center">{searchData.passengers.adults}</span>
+                            <span className="text-sm font-black text-slate-900 w-4 text-center">
+                              {searchData.passengers.adults}
+                            </span>
                             <button
                               type="button"
-                              onClick={() => handleUpdatePassengers('adults', 1)}
-                              className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center hover:border-slate-400 text-slate-600 transition-colors cursor-pointer font-bold"
+                              onClick={() => handleUpdatePassengers("adults", 1)}
+                              className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center hover:border-blue-400 text-slate-600 transition-colors cursor-pointer font-bold"
                             >
                               +
                             </button>
@@ -738,26 +1077,80 @@ export default function HomePage() {
 
                         <div className="flex items-center justify-between">
                           <div>
-                            <div className="text-sm font-bold text-slate-900">Trẻ em</div>
-                            <div className="text-xs text-slate-400">Dưới 12 tuổi</div>
+                            <div className="text-sm font-extrabold text-slate-900">Trẻ em</div>
+                            <div className="text-xs text-slate-400">2 – 11 tuổi</div>
                           </div>
                           <div className="flex items-center gap-3">
                             <button
                               type="button"
-                              onClick={() => handleUpdatePassengers('children', -1)}
-                              className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center hover:border-slate-400 text-slate-600 transition-colors cursor-pointer font-bold"
+                              onClick={() => handleUpdatePassengers("children", -1)}
+                              className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center hover:border-blue-400 text-slate-600 transition-colors cursor-pointer font-bold"
                             >
                               -
                             </button>
-                            <span className="text-sm font-bold text-slate-900 w-4 text-center">{searchData.passengers.children}</span>
+                            <span className="text-sm font-black text-slate-900 w-4 text-center">
+                              {searchData.passengers.children}
+                            </span>
                             <button
                               type="button"
-                              onClick={() => handleUpdatePassengers('children', 1)}
-                              className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center hover:border-slate-400 text-slate-600 transition-colors cursor-pointer font-bold"
+                              onClick={() => handleUpdatePassengers("children", 1)}
+                              className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center hover:border-blue-400 text-slate-600 transition-colors cursor-pointer font-bold"
                             >
                               +
                             </button>
                           </div>
+                        </div>
+
+                        {activeTab === "flights" && (
+                          <div className="border-t border-slate-100 pt-3">
+                            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+                              Hạng ghế
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              {[
+                                { id: "economy", label: "Phổ thông" },
+                                { id: "business", label: "Thương gia" },
+                              ].map((cabin) => {
+                                const isActive = searchData.flightClass === cabin.id;
+                                return (
+                                  <button
+                                    key={cabin.id}
+                                    type="button"
+                                    onClick={() =>
+                                      setSearchData((prev) => ({ ...prev, flightClass: cabin.id }))
+                                    }
+                                    className="cursor-pointer rounded-xl py-2 text-xs font-extrabold transition"
+                                    style={
+                                      isActive
+                                        ? {
+                                            background: "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
+                                            color: "#ffffff",
+                                            border: "1px solid #0b5ed7",
+                                          }
+                                        : {
+                                            background: "#f4f8ff",
+                                            color: "#1e3f77",
+                                            border: "1px solid #d5e6fc",
+                                          }
+                                    }
+                                  >
+                                    {cabin.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between border-t border-slate-100 pt-2.5 text-[11px] text-slate-400 font-semibold">
+                          <span>Tối đa 9 hành khách / lần đặt</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowPassengerDropdown(false)}
+                            className="cursor-pointer font-extrabold text-blue-600 hover:underline"
+                          >
+                            Xong
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -765,11 +1158,17 @@ export default function HomePage() {
                 )}
               </div>
 
-              {/* Search Button matching Image 2 */}
+              {/* Search Button */}
               <button
                 type="button"
                 onClick={handleSearch}
-                className="w-full sm:w-auto bg-[#172c60] hover:bg-[#11224d] active:bg-[#0c1839] text-white font-bold px-8 py-3 rounded-full text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full sm:w-auto text-white font-black px-8 py-3.5 text-sm shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer hover:brightness-105"
+                style={{
+                  background: "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
+                  boxShadow: "0 10px 24px rgba(13, 97, 225, 0.30)",
+                  borderRadius: 9999,
+                  border: "none",
+                }}
               >
                 <span>
                   {activeTab === "flights" && "Tìm chuyến bay"}
@@ -783,13 +1182,88 @@ export default function HomePage() {
             </div>
 
           </motion.div>
+
+          {/* Quick Actions Bar for Returning Passengers */}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
+            {[
+              {
+                label: "Check-in trực tuyến",
+                sub: "Nhận thẻ QR",
+                icon: QrCode,
+                to: "/check-in",
+                accent: "#0b57d0",
+                bg: "#eff6ff",
+              },
+              {
+                label: "Tình trạng chuyến bay",
+                sub: "Giờ bay & Cửa Gate",
+                icon: AirplaneInFlight,
+                to: "/flight-status",
+                accent: "#0284c7",
+                bg: "#f0f9ff",
+              },
+              {
+                label: "Quản lý đặt chỗ (PNR)",
+                sub: "Đổi / Hủy vé",
+                icon: Ticket,
+                to: "/my-bookings",
+                accent: "#059669",
+                bg: "#ecfdf5",
+              },
+              {
+                label: "eSIM 5G & SkyLounge",
+                sub: "Tiện ích quốc tế",
+                icon: Crown,
+                to: "/services/esim-lounge",
+                accent: "#d97706",
+                bg: "#fffbeb",
+              },
+              {
+                label: "Suất ăn đặc biệt",
+                sub: "Đăng ký miễn phí",
+                icon: ForkKnife,
+                to: "/services/meals",
+                accent: "#7c3aed",
+                bg: "#f5f3ff",
+              },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.to}
+                  type="button"
+                  onClick={() => navigate(item.to)}
+                  className="inline-flex cursor-pointer items-center gap-2.5 bg-white px-4 py-2.5 text-left shadow-xs transition hover:-translate-y-0.5 hover:shadow-md"
+                  style={{
+                    borderRadius: 9999,
+                    border: "1px solid #d5e6fc",
+                  }}
+                >
+                  <span
+                    className="flex h-7 w-7 items-center justify-center rounded-full"
+                    style={{ background: item.bg, color: item.accent }}
+                  >
+                    <Icon size={15} weight="fill" />
+                  </span>
+                  <span className="leading-tight">
+                    <span className="block text-xs font-extrabold text-[#091e47]">
+                      {item.label}
+                    </span>
+                    <span className="block text-[10px] font-semibold text-slate-500">
+                      {item.sub}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* 4. VALUE PROPOSITION FEATURE STRIP - EXACT REFERENCE DESIGN REPLICA */}
+        {/* 4. VALUE PROPOSITION FEATURE STRIP (Clickable) */}
         <div className="w-full max-w-6xl px-6 mx-auto mb-16">
           <div className="relative bg-gradient-to-r from-[#edf4ff] via-[#e6f1fe] to-[#edf4ff] border border-blue-100/90 rounded-[28px] p-4 sm:p-5 shadow-xs overflow-hidden">
             
-            {/* Background dashed flight path & plane illustration matching reference */}
+            {/* Background dashed flight path & plane illustration */}
             <div className="absolute right-6 top-3 pointer-events-none hidden sm:flex items-center gap-1 opacity-40">
               <svg width="120" height="30" viewBox="0 0 120 30" fill="none" className="text-blue-400">
                 <path d="M0 25 C 40 25, 80 5, 120 10" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4" />
@@ -800,26 +1274,34 @@ export default function HomePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 relative z-10">
               
               {/* Card 1: Giá tốt nhất */}
-              <div className="group bg-white rounded-2xl p-3.5 border border-slate-100/90 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between gap-3 cursor-default">
+              <button
+                type="button"
+                onClick={() => navigate("/promotions")}
+                className="group bg-white rounded-2xl p-3.5 border border-slate-100/90 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between gap-3 cursor-pointer text-left"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-13 h-13 rounded-2xl bg-[#eaf2ff] border border-blue-100 flex items-center justify-center text-blue-600 shrink-0 shadow-inner">
-                    <Tag size={24} weight="fill" className="text-blue-600 drop-shadow-xs" />
+                  <div className="w-12 h-12 rounded-2xl bg-[#eaf2ff] border border-blue-100 flex items-center justify-center text-blue-600 shrink-0 shadow-inner">
+                    <Tag size={22} weight="fill" className="text-blue-600" />
                   </div>
                   <div>
                     <h4 className="text-xs font-black text-[#13234d] leading-snug">Đảm bảo giá tốt nhất</h4>
-                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">Cam kết ưu đãi hàng đầu</p>
+                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">Xem ưu đãi mới nhất</p>
                   </div>
                 </div>
                 <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
                   <ArrowRight size={11} weight="bold" />
                 </div>
-              </div>
+              </button>
 
               {/* Card 2: Hỗ trợ 24/7 */}
-              <div className="group bg-white rounded-2xl p-3.5 border border-slate-100/90 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between gap-3 cursor-default">
+              <button
+                type="button"
+                onClick={() => navigate("/support")}
+                className="group bg-white rounded-2xl p-3.5 border border-slate-100/90 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between gap-3 cursor-pointer text-left"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-13 h-13 rounded-2xl bg-[#e8faee] border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0 shadow-inner">
-                    <Headset size={24} weight="fill" className="text-emerald-600 drop-shadow-xs" />
+                  <div className="w-12 h-12 rounded-2xl bg-[#e8faee] border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0 shadow-inner">
+                    <Headset size={22} weight="fill" className="text-emerald-600" />
                   </div>
                   <div>
                     <h4 className="text-xs font-black text-[#13234d] leading-snug">Hỗ trợ 24/7</h4>
@@ -829,39 +1311,47 @@ export default function HomePage() {
                 <div className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
                   <ArrowRight size={11} weight="bold" />
                 </div>
-              </div>
+              </button>
 
               {/* Card 3: Đặt vé an toàn */}
-              <div className="group bg-white rounded-2xl p-3.5 border border-slate-100/90 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between gap-3 cursor-default">
+              <button
+                type="button"
+                onClick={() => navigate("/flight-safety/policy")}
+                className="group bg-white rounded-2xl p-3.5 border border-slate-100/90 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between gap-3 cursor-pointer text-left"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-13 h-13 rounded-2xl bg-[#e6f4ff] border border-sky-100 flex items-center justify-center text-blue-600 shrink-0 shadow-inner">
-                    <ShieldCheck size={24} weight="fill" className="text-blue-600 drop-shadow-xs" />
+                  <div className="w-12 h-12 rounded-2xl bg-[#e6f4ff] border border-sky-100 flex items-center justify-center text-blue-600 shrink-0 shadow-inner">
+                    <ShieldCheck size={22} weight="fill" className="text-blue-600" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-black text-[#13234d] leading-snug">Đặt vé an toàn</h4>
-                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">Bảo mật thông tin 100%</p>
+                    <h4 className="text-xs font-black text-[#13234d] leading-snug">An toàn chuẩn 5 sao</h4>
+                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">Tiêu chuẩn IOSA / ICAO</p>
                   </div>
                 </div>
                 <div className="w-6 h-6 rounded-full bg-sky-50 text-blue-500 flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
                   <ArrowRight size={11} weight="bold" />
                 </div>
-              </div>
+              </button>
 
               {/* Card 4: Linh hoạt đổi vé */}
-              <div className="group bg-white rounded-2xl p-3.5 border border-slate-100/90 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between gap-3 cursor-default">
+              <button
+                type="button"
+                onClick={() => navigate("/my-bookings")}
+                className="group bg-white rounded-2xl p-3.5 border border-slate-100/90 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between gap-3 cursor-pointer text-left"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-13 h-13 rounded-2xl bg-[#fff2e8] border border-orange-100 flex items-center justify-center text-orange-600 shrink-0 shadow-inner">
-                    <ArrowsClockwise size={24} weight="bold" className="text-orange-500 drop-shadow-xs" />
+                  <div className="w-12 h-12 rounded-2xl bg-[#fff2e8] border border-orange-100 flex items-center justify-center text-orange-600 shrink-0 shadow-inner">
+                    <ArrowsClockwise size={22} weight="bold" className="text-orange-500" />
                   </div>
                   <div>
                     <h4 className="text-xs font-black text-[#13234d] leading-snug">Linh hoạt đổi vé</h4>
-                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">Dễ dàng đổi lịch trình</p>
+                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">Quản lý &amp; đổi lịch trình</p>
                   </div>
                 </div>
                 <div className="w-6 h-6 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center shrink-0 group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
                   <ArrowRight size={11} weight="bold" />
                 </div>
-              </div>
+              </button>
 
             </div>
           </div>
@@ -870,209 +1360,112 @@ export default function HomePage() {
 
       {/* 5. POPULAR DESTINATIONS & EXCLUSIVE OFFERS GRID */}
       <section className="max-w-6xl mx-auto px-6 mb-24">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-7">
           <div>
-            <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Điểm đến hàng đầu</h2>
-            <p className="text-sm text-slate-500 font-medium mt-1">Khám phá những thành phố du lịch hấp dẫn nhất cùng SkyLink</p>
+            <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+              Điểm đến hàng đầu
+            </h2>
+            <p className="text-sm text-slate-500 font-medium mt-1">
+              Khám phá trọn bộ 19 điểm đến Nội địa Việt Nam &amp; Quốc tế cùng SkyLink Airlines
+            </p>
           </div>
-          <button 
-            onClick={() => navigate("/flights")} 
-            className="hidden sm:flex items-center gap-1.5 text-xs font-extrabold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
-          >
-            <span>Xem tất cả chuyến bay</span>
-            <ArrowRight size={14} weight="bold" />
-          </button>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div
+              className="inline-flex items-center gap-1 border border-blue-100 bg-[#f0f6ff] p-1"
+              style={{ borderRadius: 9999 }}
+            >
+              {[
+                { id: "featured", label: "Nổi bật (9)" },
+                { id: "domestic", label: "Nội địa (10)" },
+                { id: "international", label: "Quốc tế (9)" },
+              ].map((tab) => {
+                const active = destFilter === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setDestFilter(tab.id)}
+                    className="cursor-pointer px-4 py-1.5 text-xs font-extrabold transition"
+                    style={
+                      active
+                        ? {
+                            background: "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
+                            color: "#ffffff",
+                            borderRadius: 9999,
+                            border: "none",
+                            boxShadow: "0 4px 12px rgba(13, 97, 225, 0.24)",
+                          }
+                        : {
+                            background: "transparent",
+                            color: "#33507f",
+                            borderRadius: 9999,
+                            border: "none",
+                          }
+                    }
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
-        {/* 6 Top City Destination Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          
-          {/* Card 1: Hà Nội */}
-          <div className="relative rounded-3xl overflow-hidden shadow-lg group h-[320px] border border-slate-200/80 cursor-pointer">
-            <img
-              src="https://images.unsplash.com/photo-1555921015-5532091f6026?q=80&w=1000&auto=format&fit=crop"
-              alt="Hà Nội"
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent"></div>
-            <div className="absolute top-4 left-4">
-              <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-extrabold uppercase px-3 py-1 rounded-full border border-white/30">
-                Thủ đô nghìn năm
-              </span>
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 p-6 text-white space-y-1">
-              <h3 className="text-2xl font-black">Hà Nội (HAN)</h3>
-              <p className="text-xs text-slate-300 font-medium">Việt Nam</p>
-              <div className="flex items-center justify-between pt-3">
-                <div>
-                  <span className="text-[10px] text-slate-400 block uppercase">Giá từ</span>
-                  <span className="text-lg font-black text-white">599.000đ <span className="text-xs font-medium text-slate-300">/Vé</span></span>
+        {/* Dynamic Destination Cards Grid (Featured 9 / Domestic 10 / International 9) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+          {TOP_DESTINATIONS.filter((d) =>
+            destFilter === "featured" ? d.featured : d.region === destFilter
+          ).map((dest) => (
+            <div
+              key={dest.code}
+              onClick={() => handleBookDestination(dest.from, dest.code)}
+              className="relative rounded-3xl overflow-hidden shadow-lg group h-[320px] border border-blue-100/80 cursor-pointer"
+            >
+              <img
+                src={dest.image}
+                alt={dest.city}
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/35 to-transparent" />
+              <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-2">
+                <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-extrabold uppercase px-3 py-1 rounded-full border border-white/30">
+                  {dest.badge}
+                </span>
+                <span className="bg-blue-600/85 backdrop-blur-md text-white font-mono text-[10px] font-black px-2.5 py-1 rounded-full border border-white/25">
+                  {dest.from} → {dest.code}
+                </span>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 p-6 text-white space-y-1">
+                <h3 className="text-2xl font-black">
+                  {dest.city} ({dest.code})
+                </h3>
+                <p className="text-xs text-slate-300 font-medium">{dest.country}</p>
+                <div className="flex items-center justify-between pt-3">
+                  <div>
+                    <span className="text-[10px] text-slate-300 block uppercase font-bold">
+                      Giá từ
+                    </span>
+                    <span className="text-lg font-black text-white">
+                      {dest.price}{" "}
+                      <span className="text-xs font-medium text-slate-300">/Vé</span>
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleBookDestination(dest.from, dest.code);
+                    }}
+                    className="inline-flex items-center gap-1.5 bg-white text-[#0b4fd0] hover:bg-blue-50 font-extrabold text-xs px-4 py-2 rounded-full transition-all cursor-pointer shadow-sm"
+                  >
+                    <span>Đặt vé ngay</span>
+                    <ArrowRight size={12} weight="bold" />
+                  </button>
                 </div>
-                <button 
-                  onClick={() => navigate("/flights?from=SGN&to=HAN")}
-                  className="bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer"
-                >
-                  Đặt vé ngay
-                </button>
               </div>
             </div>
-          </div>
-
-          {/* Card 2: TP. Hồ Chí Minh */}
-          <div className="relative rounded-3xl overflow-hidden shadow-lg group h-[320px] border border-slate-200/80 cursor-pointer">
-            <img
-              src="https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=1000&auto=format&fit=crop"
-              alt="TP. Hồ Chí Minh"
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent"></div>
-            <div className="absolute top-4 left-4">
-              <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-extrabold uppercase px-3 py-1 rounded-full border border-white/30">
-                Thành phố năng động
-              </span>
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 p-6 text-white space-y-1">
-              <h3 className="text-2xl font-black">TP. Hồ Chí Minh (SGN)</h3>
-              <p className="text-xs text-slate-300 font-medium">Việt Nam</p>
-              <div className="flex items-center justify-between pt-3">
-                <div>
-                  <span className="text-[10px] text-slate-400 block uppercase">Giá từ</span>
-                  <span className="text-lg font-black text-white">550.000đ <span className="text-xs font-medium text-slate-300">/Vé</span></span>
-                </div>
-                <button 
-                  onClick={() => navigate("/flights?from=HAN&to=SGN")}
-                  className="bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer"
-                >
-                  Đặt vé ngay
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 3: Nha Trang - Cam Ranh */}
-          <div className="relative rounded-3xl overflow-hidden shadow-lg group h-[320px] border border-slate-200/80 cursor-pointer">
-            <img
-              src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1000&auto=format&fit=crop"
-              alt="Nha Trang"
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent"></div>
-            <div className="absolute top-4 left-4">
-              <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-extrabold uppercase px-3 py-1 rounded-full border border-white/30">
-                Thiên đường Biển ngọc
-              </span>
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 p-6 text-white space-y-1">
-              <h3 className="text-2xl font-black">Nha Trang (CXR)</h3>
-              <p className="text-xs text-slate-300 font-medium">Việt Nam</p>
-              <div className="flex items-center justify-between pt-3">
-                <div>
-                  <span className="text-[10px] text-slate-400 block uppercase">Giá từ</span>
-                  <span className="text-lg font-black text-white">450.000đ <span className="text-xs font-medium text-slate-300">/Vé</span></span>
-                </div>
-                <button 
-                  onClick={() => navigate("/flights?from=HAN&to=CXR")}
-                  className="bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer"
-                >
-                  Đặt vé ngay
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 4: Đà Nẵng */}
-          <div className="relative rounded-3xl overflow-hidden shadow-lg group h-[320px] border border-slate-200/80 cursor-pointer">
-            <img
-              src="https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?q=80&w=1000&auto=format&fit=crop"
-              alt="Đà Nẵng"
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent"></div>
-            <div className="absolute top-4 left-4">
-              <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-extrabold uppercase px-3 py-1 rounded-full border border-white/30">
-                Điểm đến Hot
-              </span>
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 p-6 text-white space-y-1">
-              <h3 className="text-2xl font-black">Đà Nẵng (DAD)</h3>
-              <p className="text-xs text-slate-300 font-medium">Việt Nam</p>
-              <div className="flex items-center justify-between pt-3">
-                <div>
-                  <span className="text-[10px] text-slate-400 block uppercase">Giá từ</span>
-                  <span className="text-lg font-black text-white">499.000đ <span className="text-xs font-medium text-slate-300">/Vé</span></span>
-                </div>
-                <button 
-                  onClick={() => navigate("/flights?from=HAN&to=DAD")}
-                  className="bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer"
-                >
-                  Đặt vé ngay
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 5: Phú Quốc */}
-          <div className="relative rounded-3xl overflow-hidden shadow-lg group h-[320px] border border-slate-200/80 cursor-pointer">
-            <img
-              src="https://images.unsplash.com/photo-1516815231560-8f41ec531527?q=80&w=1000&auto=format&fit=crop"
-              alt="Phú Quốc"
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent"></div>
-            <div className="absolute top-4 left-4">
-              <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-extrabold uppercase px-3 py-1 rounded-full border border-white/30">
-                Ưu đãi tốt nhất
-              </span>
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 p-6 text-white space-y-1">
-              <h3 className="text-2xl font-black">Phú Quốc (PQC)</h3>
-              <p className="text-xs text-slate-300 font-medium">Việt Nam</p>
-              <div className="flex items-center justify-between pt-3">
-                <div>
-                  <span className="text-[10px] text-slate-400 block uppercase">Giá từ</span>
-                  <span className="text-lg font-black text-white">649.000đ <span className="text-xs font-medium text-slate-300">/Vé</span></span>
-                </div>
-                <button 
-                  onClick={() => navigate("/flights?from=SGN&to=PQC")}
-                  className="bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer"
-                >
-                  Đặt vé ngay
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 6: Đà Lạt */}
-          <div className="relative rounded-3xl overflow-hidden shadow-lg group h-[320px] border border-slate-200/80 cursor-pointer">
-            <img
-              src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1000&auto=format&fit=crop"
-              alt="Đà Lạt"
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent"></div>
-            <div className="absolute top-4 left-4">
-              <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-extrabold uppercase px-3 py-1 rounded-full border border-white/30">
-                Thành phố ngàn hoa
-              </span>
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 p-6 text-white space-y-1">
-              <h3 className="text-2xl font-black">Đà Lạt (DLI)</h3>
-              <p className="text-xs text-slate-300 font-medium">Việt Nam</p>
-              <div className="flex items-center justify-between pt-3">
-                <div>
-                  <span className="text-[10px] text-slate-400 block uppercase">Giá từ</span>
-                  <span className="text-lg font-black text-white">399.000đ <span className="text-xs font-medium text-slate-300">/Vé</span></span>
-                </div>
-                <button 
-                  onClick={() => navigate("/flights?from=SGN&to=DLI")}
-                  className="bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer"
-                >
-                  Đặt vé ngay
-                </button>
-              </div>
-            </div>
-          </div>
-
+          ))}
         </div>
 
         {/* Full-width Exclusive Offers Banner Card */}

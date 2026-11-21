@@ -44,22 +44,34 @@ export default function ChatWidget() {
               animate={{ scale: 1 }}
               className="absolute -top-1 -right-1 flex h-4 w-4"
             >
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-white" />
+              <span
+                className="animate-ping absolute inline-flex h-full w-full bg-emerald-400 opacity-75"
+                style={{ borderRadius: 9999 }}
+              />
+              <span
+                className="relative inline-flex h-4 w-4 bg-emerald-500 border-2 border-white"
+                style={{ borderRadius: 9999 }}
+              />
             </motion.span>
           )}
 
           <motion.button
             type="button"
             onClick={toggle}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.92 }}
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.94 }}
             aria-label={isOpen ? "Đóng trợ lý AI" : "Mở trợ lý AI"}
-            className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-shadow ${
-              isOpen
-                ? "bg-zinc-800 text-white shadow-zinc-900/30 hover:shadow-2xl"
-                : "bg-gradient-to-br from-blue-700 to-blue-500 text-white shadow-blue-600/35 hover:shadow-2xl hover:shadow-blue-600/40"
-            }`}
+            className="flex h-14 w-14 cursor-pointer items-center justify-center text-white shadow-xl transition-shadow"
+            style={{
+              borderRadius: 9999,
+              border: "none",
+              background: isOpen
+                ? "linear-gradient(135deg, #1e293b 0%, #334155 100%)"
+                : "linear-gradient(135deg, #0b5ed7 0%, #1d75f2 100%)",
+              boxShadow: isOpen
+                ? "0 12px 28px rgba(15, 23, 42, 0.35)"
+                : "0 12px 28px rgba(13, 97, 225, 0.40)",
+            }}
           >
             {isOpen ? (
               <X size={24} weight="bold" />

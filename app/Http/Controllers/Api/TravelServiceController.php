@@ -201,11 +201,12 @@ class TravelServiceController extends Controller
 
     public function reservations(Request $request): JsonResponse
     {
+        $perPage = max(1, min((int) $request->query('per_page', 50), 100));
         $reservations = TravelServiceReservation::query()
             ->with(['product', 'booking:id,pnr_code', 'payments'])
             ->where('user_id', $request->user()->id)
             ->latest()
-            ->paginate(10);
+            ->paginate($perPage);
 
         return response()->json([
             'status' => 'success',

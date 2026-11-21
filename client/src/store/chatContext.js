@@ -9,21 +9,29 @@ export const WELCOME_MESSAGE = {
   role: "assistant",
 
   text:
-    "Xin chào! Mình là trợ lý AI của SkyLink. Bạn muốn bay đi đâu?",
+    "Xin chào! Mình là **SkyLink AI Assistant** — trợ lý bay 24/7 của bạn.\nMình có thể hỗ trợ tìm chuyến bay giá tốt, tra cứu mã PNR, hướng dẫn Check-in và giải đáp quy định hành lý.",
 
   flights: [],
 
   quickReplies: [
     {
-      label: "✈️ Tìm chuyến bay HN → DN",
+      label: "Tìm chuyến bay HN → ĐN",
       payload: "Tìm chuyến bay từ Hà Nội đi Đà Nẵng ngày mai",
     },
     {
-      label: "🧳 Quy định hành lý",
-      payload: "Mức hành lý kí gửi miễn phí là bao nhiêu?",
+      label: "Check-in trực tuyến",
+      payload: "open:/check-in",
     },
     {
-      label: "🎫 Tra cứu mã đặt chỗ",
+      label: "Chuyến bay của tôi",
+      payload: "open:/my-bookings",
+    },
+    {
+      label: "Quy định hành lý",
+      payload: "Mức hành lý ký gửi và xách tay miễn phí là bao nhiêu?",
+    },
+    {
+      label: "Tra cứu mã đặt chỗ",
       payload: "Tôi muốn kiểm tra thông tin mã đặt chỗ",
     },
   ],

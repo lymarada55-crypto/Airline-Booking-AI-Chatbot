@@ -27,6 +27,8 @@ import SpecialMeals from "./pages/services/SpecialMeals";
 import TravelInsurance from "./pages/services/TravelInsurance";
 import VisaSupport from "./pages/services/VisaSupport";
 import CorporateGifts from "./pages/services/CorporateGifts";
+import EsimLounge from "./pages/services/EsimLounge";
+import FlightStatus from "./pages/FlightStatus";
 
 import RequireAdmin from "./components/admin/RequireAdmin";
 
@@ -69,6 +71,8 @@ function PageTitleUpdater() {
       "/services/insurance": "Bảo hiểm du lịch toàn diện - SkyLink Airlines",
       "/services/visa": "Dịch vụ hỗ trợ Visa - SkyLink Airlines",
       "/services/corporate": "Quà tặng doanh nghiệp - SkyLink Airlines",
+      "/services/esim-lounge": "eSIM Du lịch 5G & Phòng chờ SkyLounge - SkyLink Airlines",
+      "/flight-status": "Tra cứu Tình trạng chuyến bay - SkyLink Airlines",
       "/promotions": "Ưu đãi & Khuyến mãi chuyến bay - SkyLink Airlines",
       "/support": "Trung tâm hỗ trợ khách hàng - SkyLink Airlines",
       "/checkout": "Thanh toán đặt vé máy bay - SkyLink Airlines",
@@ -143,6 +147,8 @@ function App() {
           <Route path="/services/insurance" element={<TravelInsurance />} />
           <Route path="/services/visa" element={<VisaSupport />} />
           <Route path="/services/corporate" element={<CorporateGifts />} />
+          <Route path="/services/esim-lounge" element={<EsimLounge />} />
+          <Route path="/flight-status" element={<FlightStatus />} />
 
           <Route path="/promotions" element={<Promotions />} />
           <Route path="/support" element={<Support />} />

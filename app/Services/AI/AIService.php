@@ -69,10 +69,15 @@ Huế / Phú Bài = HUI
 Đà Lạt / Liên Khương = DLI
 Cần Thơ = VCA
 Quy Nhơn / Phù Cát = UIH
-Bangkok / Thái Lan = BKK
-Singapore = SIN
-Tokyo / Nhật Bản = NRT / HND
+Singapore / Changi = SIN
+Phnom Penh / Campuchia = PNH
+Kuala Lumpur / Malaysia = KUL
+Tokyo / Nhật Bản = NRT
 Seoul / Incheon / Hàn Quốc = ICN
+Bắc Kinh / Beijing / Trung Quốc = PEK
+Thượng Hải / Shanghai / Trung Quốc = PVG
+Quảng Châu / Guangzhou / Trung Quốc = CAN
+Thâm Quyến / Shenzhen / Trung Quốc = SZX
 
 AIRLINE POLICIES & KNOWLEDGE BASE:
 1. Hành lý:
@@ -81,7 +86,7 @@ AIRLINE POLICIES & KNOWLEDGE BASE:
    - Mua thêm hành lý: Các gói 15kg, 20kg, 25kg, 30kg có thể chọn trực tiếp tại Bước chọn dịch vụ (Services) với giá ưu đãi rẻ hơn nhiều so với mua tại sân bay.
 2. Suất ăn & Chỗ ngồi:
    - Có thể chọn chỗ ngồi ưa thích (cửa sổ, lối đi, hàng đầu) ngay tại Bước chọn ghế (Seat Selection).
-   - Suất ăn nóng, đồ uống và suất ăn chay (Vegetarian) có thể đặt trước tại Bước chọn dịch vụ trước giờ bay ít nhất 24 giờ.
+   - Trong luồng đặt vé SkyLink hiện có thể chọn gói Suất ăn nóng ở Bước chọn dịch vụ. Không khẳng định có loại suất ăn đặc biệt hoặc thời hạn đăng ký chung; danh mục và hạn chót phụ thuộc hãng khai thác, chuyến bay và chặng bay.
 3. Giá vé Trẻ em:
    - Trẻ sơ sinh (dưới 2 tuổi): 10% giá vé người lớn (ngồi chung ghế với người lớn).
    - Trẻ em (từ 2 đến dưới 12 tuổi): 75% giá vé người lớn (có ghế riêng).

@@ -25,6 +25,15 @@ const AIRPORT_CITY_MAP = {
   VKG: "Rạch Giá",
   DIN: "Điện Biên",
   CAH: "Cà Mau",
+  SIN: "Singapore",
+  PNH: "Phnom Penh",
+  KUL: "Kuala Lumpur",
+  ICN: "Seoul",
+  NRT: "Tokyo",
+  PEK: "Bắc Kinh",
+  PVG: "Thượng Hải",
+  CAN: "Quảng Châu",
+  SZX: "Thâm Quyến",
 };
 
 const AirlineLogo = ({ airlineName, flightNumber }) => {
@@ -81,7 +90,7 @@ const AirlineLogo = ({ airlineName, flightNumber }) => {
   );
 };
 
-export const FlightCardMessage = ({ flight }) => {
+export const FlightCardMessage = ({ flight, onSelect }) => {
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -223,31 +232,28 @@ export const FlightCardMessage = ({ flight }) => {
       base_price: price,
     };
 
-    // Khởi tạo search_params mặc định nếu chưa có
+    // Nếu ChatWindow truyền onSelect (đã có kiểm tra đăng nhập & đóng khung chat), ưu tiên gọi onSelect
+    if (typeof onSelect === "function") {
+      onSelect(selectedFlight);
+      return;
+    }
+
+    // Fallback khi dùng độc lập: khởi tạo search_params chuẩn
     if (!localStorage.getItem("search_params")) {
       localStorage.setItem(
         "search_params",
         JSON.stringify({
-          trip_type: "one_way",
-          passengers: { adults: 1, children: 0, infants: 0 },
-          seat_class: "economy",
+          tripType: "one-way",
+          passengers: { adults: 1, children: 0 },
+          flightClass: "economy",
         })
       );
     }
 
-    // Chuyến bay được chọn từ AI
-    localStorage.setItem(
-      "selected_flights",
-      JSON.stringify([selectedFlight])
-    );
-
-    // Xóa ghế cũ nếu user chọn flight mới
+    localStorage.setItem("selected_flights", JSON.stringify([selectedFlight]));
     localStorage.removeItem("selected_seats");
 
-    // Đi thẳng tới màn hình chọn ghế
-    navigate(
-      `/seat-selection?flight_id=${encodeURIComponent(flightId)}`
-    );
+    navigate(`/seat-selection?flight_id=${encodeURIComponent(flightId)}`);
   };
 
   const resolveAirlineName = () => {

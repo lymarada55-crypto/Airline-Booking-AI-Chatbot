@@ -1,78 +1,91 @@
-# ✈️ Hệ Thống Quản Lý Và Đặt Vé Máy Bay Trực Tuyến (Flight Booking System)
+# SkyLink Airline Booking System
 
-> **Mô hình kiến trúc:** Web API (Decoupled Architecture) 
-> **Công nghệ lõi:** Laravel 11 (Backend) + ReactJS Vite (Frontend) + MySQL
-> **Design Pattern:** Service - Repository Pattern
+Đồ án xây dựng hệ thống đặt vé máy bay và quản lý các dịch vụ du lịch bổ trợ theo mô hình web API, với giao diện React và backend Laravel.
 
-## 📖 1. Giới Thiệu Dự Án
-Dự án được xây dựng nhằm tối ưu hóa quy trình đặt chỗ, quản lý chuyến bay và các dịch vụ hàng không đi kèm. Hệ thống tách biệt hoàn toàn Frontend và Backend để đảm bảo tính mở rộng, hiệu suất cao và chuẩn hóa quy trình làm việc nhóm theo mô hình doanh nghiệp.
+## Công nghệ
 
-### 🌟 Tính năng cốt lõi:
-- **Người dùng:** Tìm kiếm chuyến bay thời gian thực, chọn chỗ ngồi trực quan (Seat Map), mua dịch vụ bổ trợ, thanh toán và làm thủ tục trực tuyến (Check-in).
-- **Quản trị viên:** Quản lý đội bay, lên lịch trình chuyến bay, thiết lập sơ đồ ghế ngồi và thống kê doanh thu.
+- Backend: PHP 8.2+, Laravel 12
+- Frontend: React 18, Vite 6
+- Cơ sở dữ liệu: cấu hình qua `.env` (SQLite/MySQL); bộ test dùng SQLite in-memory
 
----
+## Chức năng chính
 
-## 🛠️ 2. Quy Trình Cài Đặt Môi Trường (Local Setup)
+- Tìm chuyến bay, xem sơ đồ ghế và giữ ghế tạm thời.
+- Đặt vé cho một hoặc nhiều hành khách, thanh toán, xem mã đặt chỗ và quản lý vé.
+- Hủy/đổi chuyến và làm thủ tục trực tuyến.
+- Chatbot AI hỗ trợ tìm chuyến bay và trả lời câu hỏi.
+- Tìm và đặt khách sạn, trải nghiệm, thuê xe; có khu vực quản lý cho admin.
 
-**Yêu cầu hệ thống:** PHP >= 8.2, Composer, Node.js (v18+), MySQL (v8.0+).
+## Chạy dự án local (Windows PowerShell)
 
-### 2.1. Cài đặt Backend (Laravel)
-```bash
-# Di chuyển vào thư mục backend
-cd airline-backend
+### Backend
 
-# Cài đặt thư viện PHP
+Từ thư mục gốc của repository:
+
+```powershell
 composer install
-
-# Khởi tạo file môi trường
-cp .env.example .env
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 php artisan key:generate
-///////////////////////////////////////////////////////////////////////////////////
-Cấu hình Database: Mở file .env, tìm và sửa các dòng sau cho khớp với máy cá nhân:
+```
 
-DB_DATABASE=airline_db (Nhớ tạo database này trong phpMyAdmin trước)
+Điền cấu hình cơ sở dữ liệu và các khóa dịch vụ cần thiết vào `.env`, sau đó chạy:
 
-DB_USERNAME=root
-
-DB_PASSWORD= (Để trống nếu dùng XAMPP mặc định)
-/////////////////////////////////////////////////////////////////////////////
-# Khởi tạo bảng và đổ 50 chuyến bay mẫu
-php artisan migrate:fresh --seed
-
-# Chạy Server
+```powershell
+php artisan migrate --seed
 php artisan serve
+```
 
+### Frontend
 
-Cài đặt Frontend (ReactJS)
-# Mở terminal mới và di chuyển vào thư mục frontend
-cd airline-frontend
+Mở terminal riêng:
 
-# Cài đặt thư viện Node
+```powershell
+Set-Location client
 npm install
-
-# Chạy Server Frontend
 npm run dev
+```
 
+## Kiểm thử
 
-3. Quy trình làm việc với Git (BẮT BUỘC TUÂN THỦ)
-Bước 1: Cập nhật code mới nhất từ Lead
-git checkout develop
-git pull origin develop
+Chạy toàn bộ backend tests:
 
-Bước 2: Tạo nhánh riêng để làm tính năng
-# Ví dụ: feature/api-login
-git checkout -b feature/ten-chuc-nang
+```powershell
+php artisan test
+```
 
-Bước 3: Đẩy code lên để Review
-git add .
-git commit -m "Feat: Hoàn thành API [Tên chức năng]"
-git push origin feature/ten-chuc-nang
+Chạy riêng kịch bản API đặt vé đầu-cuối:
 
-Bước 4: Lên GitHub tạo Pull Request (PR) vào nhánh develop và nhờ thành viên trong nhóm vào để check code.
+```powershell
+php artisan test --filter=FlightBookingJourneyTest
+```
 
+`FlightBookingJourneyTest` kiểm tra luồng API sau:
 
+1. Tìm chuyến bay theo sân bay đi, sân bay đến và ngày bay.
+2. Tải sơ đồ ghế và xác nhận ghế ban đầu chưa bị khóa.
+3. Giữ ghế bằng tài khoản người dùng.
+4. Tạo đơn đặt vé và kiểm tra mã đặt chỗ, thông tin hành khách, ghế và trạng thái chờ thanh toán.
+5. Thanh toán qua adapter mô phỏng, rồi xác nhận đơn chuyển sang `paid` và bản ghi thanh toán được lưu.
+6. Tải lại chi tiết đặt chỗ và kiểm tra ghế đã được giữ sau thanh toán.
 
+Đây là kiểm thử tích hợp qua HTTP API trong Laravel, không phải kiểm thử trình duyệt tự động. Thanh toán trong test sử dụng adapter mô phỏng, không gọi cổng thanh toán thật.
 
+Kiểm tra frontend:
 
-Admin: admin@skylink.com / Pass: 123456
+```powershell
+npm run lint --prefix client
+npm run build --prefix client
+```
+
+## Phạm vi dữ liệu demo
+
+- Chuyến bay mẫu được seed hoặc sinh trong hệ thống; hiện chưa lấy lịch bay, giá và tình trạng ghế trực tiếp từ hãng hàng không.
+- Khách sạn, trải nghiệm và xe thuộc catalog nội bộ; hiện chưa kết nối hệ thống đặt chỗ của nhà cung cấp.
+- VNPAY và MoMo trong dự án sử dụng adapter mô phỏng. Thanh toán không trừ tiền thật và mã giao dịch không phải giao dịch từ cổng thanh toán.
+
+Các giới hạn trên thuộc phạm vi demo hiện tại; không xem đơn trong hệ thống là xác nhận đặt chỗ với hãng bay hoặc nhà cung cấp bên ngoài.
+
+## Lưu ý bảo mật
+
+- Không commit `.env`, khóa API, mật khẩu hoặc thông tin thanh toán thật.
+- Seeder có tài khoản demo; đổi hoặc vô hiệu hóa thông tin mặc định trước khi triển khai ra môi trường dùng chung.

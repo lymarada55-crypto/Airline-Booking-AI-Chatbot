@@ -1,80 +1,188 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  CreditCard,
-  CheckCircle,
   AirplaneTilt,
+  Armchair,
+  ArrowLeft,
   ArrowRight,
-  ShieldCheck,
-  LockKey,
-  Timer,
-  User,
-  IdentificationCard,
-  Sparkle,
-  Wallet,
   Bank,
   Check,
+  CheckCircle,
   Clock,
-  SuitcaseRolling,
-  ForkKnife
+  Copy,
+  ForkKnife,
+  House,
+  Printer,
+  ShieldCheck,
+  Sparkle,
+  Ticket,
+  Timer,
+  User,
+  Wallet,
 } from "@phosphor-icons/react";
-import { motion } from "motion/react";
-import BackButton from "../components/BackButton";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
-// Real Brand Payment Logos
+const HERO_CHECKOUT_BG_URL =
+  "https://static.vecteezy.com/system/resources/previews/035/719/664/non_2x/ai-generated-image-of-a-large-airliner-flying-in-the-sky-free-photo.jpg";
+
 const VnpayBrandLogo = () => (
-  <svg className="h-7 w-auto" viewBox="0 0 76 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg
+    className="h-7 w-auto"
+    viewBox="0 0 76 22"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
     <rect width="76" height="22" rx="4" fill="#005BAA" />
-    <text x="7" y="16" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="13" fill="#FFFFFF" letterSpacing="0.5">VN</text>
-    <text x="31" y="16" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="13" fill="#E31837" letterSpacing="0.5">PAY</text>
+    <text
+      x="7"
+      y="16"
+      fontFamily="Arial, sans-serif"
+      fontWeight="900"
+      fontSize="13"
+      fill="#FFFFFF"
+      letterSpacing="0.5"
+    >
+      VN
+    </text>
+    <text
+      x="31"
+      y="16"
+      fontFamily="Arial, sans-serif"
+      fontWeight="900"
+      fontSize="13"
+      fill="#E31837"
+      letterSpacing="0.5"
+    >
+      PAY
+    </text>
     <path d="M60 4L66 11L60 18H65L71 11L65 4H60Z" fill="#E31837" />
-    <path d="M66 4L72 11L66 18H71L77 11L71 4H66Z" fill="#FFFFFF" fillOpacity="0.4" />
+    <path
+      d="M66 4L72 11L66 18H71L77 11L71 4H66Z"
+      fill="#FFFFFF"
+      fillOpacity="0.4"
+    />
   </svg>
 );
 
 const MomoBrandLogo = () => (
-  <svg className="h-7 w-auto" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg
+    className="h-7 w-auto"
+    viewBox="0 0 28 28"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
     <rect width="28" height="28" rx="6" fill="#A50064" />
-    <circle cx="9" cy="11" r="4.2" stroke="#FFFFFF" strokeWidth="2.5" fill="none" />
-    <circle cx="19" cy="11" r="4.2" stroke="#FFFFFF" strokeWidth="2.5" fill="none" />
-    <path d="M7 18C7 18 9 22 14 22C19 22 21 18 21 18" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" />
+    <circle
+      cx="9"
+      cy="11"
+      r="4.2"
+      stroke="#FFFFFF"
+      strokeWidth="2.5"
+      fill="none"
+    />
+    <circle
+      cx="19"
+      cy="11"
+      r="4.2"
+      stroke="#FFFFFF"
+      strokeWidth="2.5"
+      fill="none"
+    />
+    <path
+      d="M7 18C7 18 9 22 14 22C19 22 21 18 21 18"
+      stroke="#FFFFFF"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+    />
   </svg>
 );
+
+function getSeatMultiplier(seatNumber = "") {
+  const match = String(seatNumber).match(/(\d+)/);
+  const rowNum = match ? Number(match[1]) : 10;
+  if (rowNum >= 1 && rowNum <= 5) return 1.2;
+  if (rowNum >= 15) return 0.95;
+  return 1;
+}
+
+function isValidIdentity(rawValue = "") {
+  const clean = rawValue.trim().toUpperCase();
+  const digitsOnly = clean.replace(/\D/g, "");
+  // Accept 12-digit CCCD (or 9-digit CMND) OR 7–10 char alphanumeric Passport (e.g. C1234567, P01234567)
+  if (digitsOnly.length === 12 || digitsOnly.length === 9) return true;
+  return /^[A-Z0-9]{7,12}$/.test(clean);
+}
+
+const currency = new Intl.NumberFormat("vi-VN", {
+  style: "currency",
+  currency: "VND",
+  maximumFractionDigits: 0,
+});
 
 export default function Checkout() {
   const navigate = useNavigate();
 
-  const searchParams = JSON.parse(localStorage.getItem("search_params")) || { passengers: { adults: 1, children: 0 } };
-  const totalPassengers = (searchParams.passengers?.adults || 1) + (searchParams.passengers?.children || 0);
+  let searchParams = { passengers: { adults: 1, children: 0 } };
+  try {
+    const parsed = JSON.parse(localStorage.getItem("search_params") || "null");
+    if (parsed) searchParams = parsed;
+  } catch {
+    // ignore storage errors
+  }
 
-  const [passengers, setPassengers] = useState(
-    Array.from({ length: totalPassengers }).map(() => ({ name: "", identity_number: "" }))
+  const totalPassengers = Math.max(
+    1,
+    (Number(searchParams.passengers?.adults) || 1) +
+      (Number(searchParams.passengers?.children) || 0)
   );
 
+  const [passengers, setPassengers] = useState(() => {
+    let savedName = "";
+    try {
+      const userObj = JSON.parse(
+        localStorage.getItem("user") || sessionStorage.getItem("user") || "null"
+      );
+      if (userObj?.name) savedName = String(userObj.name).toUpperCase();
+    } catch {
+      savedName = "";
+    }
+    return Array.from({ length: totalPassengers }).map((_, idx) => ({
+      name: idx === 0 ? savedName : "",
+      identity_number: "",
+    }));
+  });
+
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState("");
   const [flights, setFlights] = useState([]);
   const [services, setServices] = useState([]);
-  const [selectedSeats, setSelectedSeats] = useState({ outbound: [], return: [] });
+  const [selectedSeats, setSelectedSeats] = useState({
+    outbound: [],
+    return: [],
+  });
   const [paymentMethod, setPaymentMethod] = useState("vnpay");
-
   const [paymentDetails, setPaymentDetails] = useState({
     vnpayCard: "",
     vnpayPin: "",
     momoPhone: "",
-    momoPin: ""
+    momoPin: "",
   });
+
+  // 5-Star Post-Payment Success Screen State (replaces browser alert())
+  const [completedBooking, setCompletedBooking] = useState(null);
+  const [copiedPnr, setCopiedPnr] = useState(false);
 
   // Countdown timer for 15 minutes hold
   const [timeLeft, setTimeLeft] = useState(900);
 
   useEffect(() => {
+    if (completedBooking) return undefined;
     const timer = setInterval(() => {
       setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [completedBooking]);
 
   const formatCountdown = (seconds) => {
     const m = Math.floor(seconds / 60);
@@ -83,445 +191,822 @@ export default function Checkout() {
   };
 
   useEffect(() => {
-    const savedFlights = JSON.parse(localStorage.getItem("selected_flights")) || [];
-    const savedServices = JSON.parse(localStorage.getItem("selected_services")) || [];
-    const savedSeats = JSON.parse(localStorage.getItem("selected_seats")) || {};
+    let savedFlights = [];
+    let savedServices = [];
+    let savedSeats = { outbound: [], return: [] };
+    try {
+      savedFlights = JSON.parse(
+        localStorage.getItem("selected_flights") || "[]"
+      );
+      savedServices = JSON.parse(
+        localStorage.getItem("selected_services") || "[]"
+      );
+      savedSeats = JSON.parse(
+        localStorage.getItem("selected_seats") || '{"outbound":[],"return":[]}'
+      );
+    } catch {
+      // ignore storage errors
+    }
 
-    if (savedFlights.length === 0) {
-      alert("Không tìm thấy thông tin chuyến bay! Vui lòng chọn lại.");
+    if (!Array.isArray(savedFlights) || savedFlights.length === 0) {
       navigate("/flights");
       return;
     }
 
     setFlights(savedFlights);
-    setServices(savedServices);
-    setSelectedSeats(savedSeats);
+    setServices(Array.isArray(savedServices) ? savedServices : []);
+    setSelectedSeats(savedSeats || { outbound: [], return: [] });
   }, [navigate]);
 
-  if (flights.length === 0 || !selectedSeats) return null;
+  if (flights.length === 0 && !completedBooking) return null;
 
-  // Tính tiền vé dựa vào giá của các ghế đã chọn
-  const outboundSeatPrice = selectedSeats.outbound?.reduce((sum, s) => sum + Number(s.price), 0) || 0;
-  const returnSeatPrice = selectedSeats.return?.reduce((sum, s) => sum + Number(s.price), 0) || 0;
+  // Safe ticket price calculation (never NaN even if seat object omits `price`)
+  const calcLegBasePrice = (flight, seatList) => {
+    if (!flight) return 0;
+    const flightBase = Number(flight.display_price || flight.base_price || 0);
+    if (Array.isArray(seatList) && seatList.length > 0) {
+      return seatList.reduce((sum, s) => {
+        const seatPrice = Number(s?.price);
+        if (!Number.isNaN(seatPrice) && seatPrice > 0) return sum + seatPrice;
+        return sum + Math.round(flightBase * getSeatMultiplier(s?.seat_number));
+      }, 0);
+    }
+    return flightBase * totalPassengers;
+  };
 
-  const basePrice = outboundSeatPrice + returnSeatPrice;
-  const taxAmount = basePrice * 0.80; // Thuế 80% giá vé cơ bản
-  const servicesTotal = services.reduce((sum, s) => sum + Number(s.price), 0);
+  const outboundBasePrice = calcLegBasePrice(flights[0], selectedSeats.outbound);
+  const returnBasePrice = flights[1]
+    ? calcLegBasePrice(flights[1], selectedSeats.return)
+    : 0;
+
+  const basePrice = outboundBasePrice + returnBasePrice;
+  const taxAmount = Math.round(basePrice * 0.8);
+  const servicesTotal = services.reduce(
+    (sum, s) => sum + Number(s.price || 0),
+    0
+  );
   const totalAmount = basePrice + taxAmount + servicesTotal;
 
+  const validatePassengers = () => {
+    const isAnyEmpty = passengers.some(
+      (p) => !p.name.trim() || !p.identity_number.trim()
+    );
+    if (isAnyEmpty) {
+      setFormError(
+        "Vui lòng nhập đầy đủ Họ tên và Số CCCD / Hộ chiếu cho tất cả hành khách."
+      );
+      return false;
+    }
+
+    const isAnyIdInvalid = passengers.some(
+      (p) => !isValidIdentity(p.identity_number)
+    );
+    if (isAnyIdInvalid) {
+      setFormError(
+        "Số CCCD (12 số) hoặc Hộ chiếu (7–12 ký tự chữ/số) chưa đúng định dạng."
+      );
+      return false;
+    }
+    return true;
+  };
+
   const handleCheckout = async () => {
-    const isAnyPassengerEmpty = passengers.some(p => !p.name || !p.identity_number);
-    if (isAnyPassengerEmpty) {
-      alert("Vui lòng nhập đầy đủ Họ tên và Số CCCD/Passport cho tất cả hành khách.");
-      return;
-    }
+    setFormError("");
+    if (!validatePassengers()) return;
 
-    const isAnyCCCDInvalid = passengers.some(p => p.identity_number.replace(/\D/g, '').length < 11);
-    if (isAnyCCCDInvalid) {
-      alert("Số CCCD/Passport không hợp lệ (phải có ít nhất 11 chữ số).");
-      return;
-    }
-
-    if (paymentMethod === 'vnpay') {
-      if (!paymentDetails.vnpayCard || !paymentDetails.vnpayPin) {
-        alert("Vui lòng nhập đầy đủ Số thẻ và Mã PIN VNPAY.");
+    if (paymentMethod === "vnpay") {
+      if (!paymentDetails.vnpayCard.trim() || !paymentDetails.vnpayPin.trim()) {
+        setFormError("Vui lòng nhập đầy đủ Số thẻ ATM và Mã PIN VNPAY.");
         return;
       }
-      if (paymentDetails.vnpayCard.replace(/\D/g, '').length < 4) {
-        alert("Số thẻ VNPAY không hợp lệ.");
+      if (paymentDetails.vnpayCard.replace(/\D/g, "").length < 4) {
+        setFormError("Số thẻ VNPAY không hợp lệ.");
         return;
       }
-    } else if (paymentMethod === 'momo') {
-      if (!paymentDetails.momoPhone || !paymentDetails.momoPin) {
-        alert("Vui lòng nhập Số điện thoại và Mật khẩu MoMo.");
+    } else if (paymentMethod === "momo") {
+      if (!paymentDetails.momoPhone.trim() || !paymentDetails.momoPin.trim()) {
+        setFormError("Vui lòng nhập Số điện thoại và Mật khẩu Ví MoMo.");
         return;
       }
-      if (paymentDetails.momoPhone.replace(/\D/g, '').length < 10) {
-        alert("Số điện thoại MoMo không hợp lệ.");
+      if (paymentDetails.momoPhone.replace(/\D/g, "").length < 10) {
+        setFormError("Số điện thoại MoMo phải có ít nhất 10 chữ số.");
         return;
       }
       if (paymentDetails.momoPin.length < 6) {
-        alert("Mật khẩu MoMo phải có ít nhất 6 ký tự.");
+        setFormError("Mật khẩu MoMo phải có ít nhất 6 ký tự.");
         return;
       }
     }
 
-    const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
-
+    const token =
+      localStorage.getItem("access_token") ||
+      sessionStorage.getItem("access_token");
     if (!token) {
-      alert("Bạn cần đăng nhập để đặt vé!");
+      setFormError("Bạn cần đăng nhập để hoàn tất đặt vé!");
       navigate("/login");
       return;
     }
 
+    if (
+      !selectedSeats.outbound ||
+      selectedSeats.outbound.length !== totalPassengers
+    ) {
+      setFormError("Thông tin ghế chưa đầy đủ. Vui lòng quay lại chọn ghế.");
+      return;
+    }
+
     setLoading(true);
-
     try {
-      if (!selectedSeats.outbound || selectedSeats.outbound.length !== totalPassengers) {
-        alert("Thông tin ghế chưa đầy đủ. Vui lòng chọn lại.");
-        setLoading(false);
-        return;
-      }
-
-      const flightId = flights[0].id;
-      const returnFlightId = flights.length > 1 ? flights[1].id : null;
-
       const checkoutPayload = {
-        flight_id: flightId,
-        return_flight_id: returnFlightId,
-        service_ids: services.map(s => s.id),
+        flight_id: flights[0].id,
+        return_flight_id: flights.length > 1 ? flights[1].id : null,
+        service_ids: services.map((s) => s.id),
         passengers: passengers.map((p, index) => ({
-          name: p.name,
-          identity_number: p.identity_number,
+          name: p.name.trim(),
+          identity_number: p.identity_number.trim().toUpperCase(),
           outbound_seat_id: selectedSeats.outbound[index]?.id,
-          return_seat_id: selectedSeats.return?.[index]?.id || null
-        }))
+          return_seat_id: selectedSeats.return?.[index]?.id || null,
+        })),
       };
 
-      const bookingRes = await fetch(`/api/bookings`, {
+      const bookingRes = await fetch("/api/bookings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${token}`
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(checkoutPayload)
+        body: JSON.stringify(checkoutPayload),
       });
 
       const bookingData = await bookingRes.json();
 
       if (!bookingRes.ok || bookingData.status !== "success") {
-        alert("Lỗi đặt vé: " + (bookingData.message || "Đơn giữ chỗ có thể đã hết hạn (15 phút)."));
-        setLoading(false);
+        setFormError(
+          bookingData.message ||
+            "Đơn giữ chỗ có thể đã hết hạn (15 phút). Vui lòng chọn lại ghế."
+        );
         return;
       }
 
-      let createdBookingIds = [];
-      let pnrCodes = [];
-      if (Array.isArray(bookingData.data)) {
-        createdBookingIds = bookingData.data.map(b => b.id);
-        pnrCodes = bookingData.data.map(b => b.pnr_code);
-      } else {
-        createdBookingIds = [bookingData.data.id];
-        pnrCodes = [bookingData.data.pnr_code];
-      }
+      const createdList = Array.isArray(bookingData.data)
+        ? bookingData.data
+        : [bookingData.data];
+      const createdBookingIds = createdList.map((b) => b.id);
+      const pnrCodes = createdList.map((b) => b.pnr_code);
 
       const payRes = await fetch("/api/bookings/pay", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${token}`
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           booking_ids: createdBookingIds,
-          payment_method: paymentMethod
-        })
+          payment_method: paymentMethod,
+        }),
       });
 
       const payData = await payRes.json();
 
       if (payRes.ok && payData.status === "success") {
-        alert(`Thanh toán thành công!\nMã đặt chỗ của bạn là: ${pnrCodes.join(', ')}`);
+        const snapshot = {
+          mode: "paid",
+          pnrCodes,
+          flights: [...flights],
+          passengers: [...passengers],
+          selectedSeats: { ...selectedSeats },
+          services: [...services],
+          totalAmount,
+          paymentMethod,
+          paidAt: new Date().toLocaleString("vi-VN"),
+        };
         localStorage.removeItem("selected_flights");
         localStorage.removeItem("selected_services");
         localStorage.removeItem("selected_seats");
-        navigate("/my-bookings");
+        setCompletedBooking(snapshot);
+        window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
-        alert("Thanh toán thất bại: " + (payData.message || "Vui lòng thử lại."));
-        navigate("/my-bookings");
+        setFormError(
+          "Thanh toán chưa hoàn tất: " +
+            (payData.message || "Đơn vé đã được tạo ở trạng thái Chờ thanh toán.")
+        );
       }
-
-    } catch (error) {
-      console.error("Lỗi khi gọi API:", error);
-      alert("Không thể kết nối tới server.");
+    } catch (err) {
+      console.error("Lỗi khi gọi API:", err);
+      setFormError("Không thể kết nối tới máy chủ. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleHoldBooking = async () => {
-    const isAnyPassengerEmpty = passengers.some(p => !p.name || !p.identity_number);
-    if (isAnyPassengerEmpty) {
-      alert("Vui lòng nhập đầy đủ Họ tên và Số CCCD/Passport cho tất cả hành khách.");
+    setFormError("");
+    if (!validatePassengers()) return;
+
+    const token =
+      localStorage.getItem("access_token") ||
+      sessionStorage.getItem("access_token");
+    if (!token) {
+      navigate("/login");
       return;
     }
 
-    const isAnyCCCDInvalid = passengers.some(p => p.identity_number.replace(/\D/g, '').length < 11);
-    if (isAnyCCCDInvalid) {
-      alert("Số CCCD/Passport không hợp lệ (phải có ít nhất 11 chữ số).");
-      return;
-    }
-
-    const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
-    if (!token) return navigate("/login");
     setLoading(true);
     try {
-      const flightId = flights[0].id;
       const checkoutPayload = {
-        flight_id: flightId,
+        flight_id: flights[0].id,
         return_flight_id: flights.length > 1 ? flights[1].id : null,
-        service_ids: services.map(s => s.id),
+        service_ids: services.map((s) => s.id),
         passengers: passengers.map((p, index) => ({
-          name: p.name,
-          identity_number: p.identity_number,
+          name: p.name.trim(),
+          identity_number: p.identity_number.trim().toUpperCase(),
           outbound_seat_id: selectedSeats.outbound[index]?.id,
-          return_seat_id: selectedSeats.return?.[index]?.id || null
-        }))
+          return_seat_id: selectedSeats.return?.[index]?.id || null,
+        })),
       };
-      const res = await fetch(`/api/bookings`, {
+
+      const res = await fetch("/api/bookings", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify(checkoutPayload)
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(checkoutPayload),
       });
       const data = await res.json();
       if (res.ok && data.status === "success") {
-        alert("Đã giữ chỗ thành công! Vui lòng thanh toán trong thời gian quy định.");
+        const createdList = Array.isArray(data.data) ? data.data : [data.data];
+        const pnrCodes = createdList.map((b) => b.pnr_code);
+        const snapshot = {
+          mode: "held",
+          pnrCodes,
+          flights: [...flights],
+          passengers: [...passengers],
+          selectedSeats: { ...selectedSeats },
+          services: [...services],
+          totalAmount,
+          paymentMethod: "hold",
+          paidAt: new Date().toLocaleString("vi-VN"),
+        };
         localStorage.removeItem("selected_flights");
         localStorage.removeItem("selected_services");
         localStorage.removeItem("selected_seats");
-        navigate("/my-bookings");
+        setCompletedBooking(snapshot);
+        window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
-        alert("Lỗi đặt vé: " + (data.message || "Vui lòng thử lại."));
+        setFormError(data.message || "Không thể đặt giữ chỗ lúc này.");
       }
-    } catch (e) {
-      alert("Lỗi kết nối.");
+    } catch {
+      setFormError("Lỗi kết nối tới máy chủ.");
     } finally {
       setLoading(false);
     }
   };
 
   const formatTime = (timeString) => {
-    return new Date(timeString).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+    if (!timeString) return "—";
+    return new Date(timeString).toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
   const formatDate = (timeString) => {
-    return new Date(timeString).toLocaleDateString("vi-VN");
-  };
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("vi-VN").format(amount) + " đ";
+    if (!timeString) return "—";
+    return new Date(timeString).toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
   };
 
+  const getCity = (airport) =>
+    airport?.city || airport?.city_name || airport?.name || airport?.code || "—";
+
+  // ─── 5-STAR POST-PAYMENT / HOLD CONFIRMATION SCREEN ───────────────────────
+  if (completedBooking) {
+    const isPaidMode = completedBooking.mode === "paid";
+    const mainPnr = completedBooking.pnrCodes.join(" • ");
+    const firstFlight = completedBooking.flights[0];
+
+    return (
+      <div
+        className="min-h-screen font-sans text-slate-900"
+        style={{
+          background:
+            "linear-gradient(180deg, #b8dcff 0%, #dceeff 26%, #eef6ff 64%, #d6eaff 100%)",
+        }}
+      >
+        <Navbar />
+
+        <main className="mx-auto max-w-4xl px-4 pb-20 pt-28 sm:px-6">
+          <div
+            className="overflow-hidden bg-white p-6 text-center shadow-xl sm:p-10"
+            style={{
+              borderRadius: 28,
+              border: "1px solid rgba(255,255,255,0.98)",
+              boxShadow: "0 20px 50px rgba(20, 62, 132, 0.14)",
+            }}
+          >
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 shadow-inner">
+              <CheckCircle size={40} weight="fill" />
+            </div>
+
+            <h1 className="text-2xl font-black text-[#092152] sm:text-3xl" style={{ margin: 0 }}>
+              {isPaidMode ? "Thanh toán vé thành công!" : "Đã đặt giữ chỗ thành công!"}
+            </h1>
+            <p className="mt-2 text-xs font-semibold text-[#47628a] sm:text-sm" style={{ margin: "8px 0 16px 0" }}>
+              {isPaidMode
+                ? "Vé điện tử SkyLink Airlines của bạn đã được xác nhận. Bạn có thể đăng ký suất ăn đặc biệt miễn phí trước giờ bay 24h."
+                : "Vui lòng hoàn tất thanh toán trong thời gian giữ chỗ tại mục Chuyến bay của tôi để tránh vé tự động hủy."}
+            </p>
+
+            {/* PNR Code Mint Pill */}
+            <div className="mb-6 flex justify-center">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard?.writeText(mainPnr);
+                  setCopiedPnr(true);
+                  window.setTimeout(() => setCopiedPnr(false), 2000);
+                }}
+                className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-black transition hover:opacity-90"
+                style={{
+                  background: "#dcfce7",
+                  color: "#15803d",
+                  border: "1px solid #bbf7d0",
+                  cursor: "pointer",
+                }}
+              >
+                <Ticket size={18} weight="fill" />
+                <span>Mã đặt chỗ (PNR): {mainPnr}</span>
+                <Copy size={15} weight="bold" />
+                {copiedPnr && (
+                  <span className="text-xs font-bold text-emerald-700">(Đã chép)</span>
+                )}
+              </button>
+            </div>
+
+            {/* Summary Receipt Grid */}
+            <div className="mb-6 grid grid-cols-1 gap-4 text-left md:grid-cols-2">
+              <div className="rounded-2xl border border-blue-100 bg-[#f7faff] p-4">
+                <p className="text-[11px] font-extrabold uppercase tracking-wider text-[#0b5ed7]" style={{ margin: "0 0 8px 0" }}>
+                  Hành trình chuyến bay
+                </p>
+                {firstFlight && (
+                  <p className="text-base font-black text-[#092152]" style={{ margin: "0 0 4px 0" }}>
+                    {getCity(firstFlight.departure_airport)} ({firstFlight.departure_airport?.code}) ➔{" "}
+                    {getCity(firstFlight.arrival_airport)} ({firstFlight.arrival_airport?.code})
+                  </p>
+                )}
+                <p className="text-xs font-semibold text-[#47628a]" style={{ margin: "0 0 6px 0" }}>
+                  Ngày bay: {formatDate(firstFlight?.departure_time)} • Giờ:{" "}
+                  {formatTime(firstFlight?.departure_time)}
+                </p>
+                <p className="text-xs font-bold text-[#163d7a]" style={{ margin: 0 }}>
+                  Hành khách:{" "}
+                  {completedBooking.passengers.map((p) => p.name).join(", ")}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-blue-100 bg-[#f0f7ff] p-4">
+                <p className="text-[11px] font-extrabold uppercase tracking-wider text-[#0b5ed7]" style={{ margin: "0 0 8px 0" }}>
+                  Thông tin thanh toán
+                </p>
+                <p className="text-xl font-black text-[#0b4fd0]" style={{ margin: "0 0 4px 0" }}>
+                  {currency.format(completedBooking.totalAmount)}
+                </p>
+                <p className="text-xs font-bold text-emerald-700" style={{ margin: "0 0 4px 0" }}>
+                  {isPaidMode
+                    ? `✔ Đã thanh toán qua ${completedBooking.paymentMethod.toUpperCase()}`
+                    : "⏳ Đang giữ chỗ (Chờ thanh toán)"}
+                </p>
+                <p className="text-[11px] font-semibold text-[#556f96]" style={{ margin: 0 }}>
+                  Thời gian: {completedBooking.paidAt}
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 text-xs font-extrabold text-[#163d7a] transition hover:bg-blue-50"
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #cde0fc",
+                  borderRadius: 9999,
+                  cursor: "pointer",
+                }}
+              >
+                <Printer size={15} weight="bold" />
+                In xác nhận vé
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate("/services/meals")}
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 text-xs font-extrabold text-emerald-800 transition hover:bg-emerald-100"
+                style={{
+                  background: "#ecfdf5",
+                  border: "1px solid #a7f3d0",
+                  borderRadius: 9999,
+                  cursor: "pointer",
+                }}
+              >
+                <ForkKnife size={15} weight="fill" />
+                Đăng ký suất ăn miễn phí
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate("/my-bookings")}
+                className="inline-flex items-center gap-1.5 px-6 py-2.5 text-xs font-extrabold text-white shadow-md transition hover:opacity-95"
+                style={{
+                  background: "linear-gradient(90deg, #0b5ed7 0%, #1d78f0 100%)",
+                  borderRadius: 9999,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <Ticket size={15} weight="fill" />
+                Xem chuyến bay của tôi
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate("/")}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-100"
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 9999,
+                  cursor: "pointer",
+                }}
+              >
+                <House size={15} weight="bold" />
+                Về trang chủ
+              </button>
+            </div>
+          </div>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -12 }}
-      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-      className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans pt-24 pb-20 selection:bg-blue-600 selection:text-white"
+    <div
+      className="relative min-h-screen font-sans text-slate-900"
+      style={{
+        background:
+          "linear-gradient(180deg, #b8dcff 0%, #dceeff 24%, #eef6ff 60%, #d6eaff 100%)",
+      }}
     >
       <Navbar />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
-
-        {/* Top Back Navigation */}
-        <div className="mb-4">
-          <BackButton to="/services" label="Quay lại chọn dịch vụ" />
+      {/* 1. HERO HEADER BANNER (Synced 5-Star SkyLink Style) */}
+      <div className="relative overflow-hidden pb-8 pt-22">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 overflow-hidden"
+          style={{ height: 310 }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(90deg, rgba(188,223,255,0.96) 0%, rgba(210,234,255,0.85) 46%, rgba(225,241,255,0.20) 100%)",
+            }}
+          />
+          <img
+            src={HERO_CHECKOUT_BG_URL}
+            alt=""
+            className="absolute right-0 top-0 h-full object-cover"
+            style={{
+              width: "62%",
+              objectPosition: "center 32%",
+              opacity: 0.9,
+              WebkitMaskImage:
+                "linear-gradient(to right, transparent 0%, black 34%)",
+              maskImage: "linear-gradient(to right, transparent 0%, black 34%)",
+            }}
+          />
+          <div
+            className="absolute inset-x-0 bottom-0"
+            style={{
+              height: 92,
+              background:
+                "linear-gradient(180deg, rgba(220,238,255,0) 0%, #dceeff 100%)",
+            }}
+          />
         </div>
 
-        {/* Hero Header & Step Progress Indicator */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-4 border-b border-slate-200/80">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <span className="bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-xs">
-                Bước 03 / 03
+        <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => navigate("/services")}
+              className="inline-flex items-center gap-2 bg-white/90 px-4 py-1.5 text-xs font-extrabold text-[#16428b] shadow-sm transition hover:bg-white"
+              style={{
+                border: "1px solid rgba(255,255,255,0.96)",
+                borderRadius: 9999,
+                cursor: "pointer",
+              }}
+            >
+              <ArrowLeft size={14} weight="bold" />
+              <span>Quay lại chọn dịch vụ</span>
+            </button>
+
+            {/* Clean 4-Step Progress Bar */}
+            <div
+              className="inline-flex flex-wrap items-center gap-2 px-4 py-1.5 text-xs font-bold"
+              style={{
+                background: "rgba(255,255,255,0.90)",
+                border: "1px solid rgba(255,255,255,0.98)",
+                borderRadius: 9999,
+              }}
+            >
+              <span className="inline-flex items-center gap-1 text-emerald-700">
+                <Check size={13} weight="bold" />
+                1. Chuyến bay
               </span>
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
-                <Timer size={14} weight="bold" className="animate-pulse" /> Đơn giữ chỗ hết hạn trong: <strong className="font-mono text-amber-700">{formatCountdown(timeLeft)}</strong>
+              <span className="text-slate-300">›</span>
+              <span className="inline-flex items-center gap-1 text-emerald-700">
+                <Check size={13} weight="bold" />
+                2. Chọn ghế
               </span>
+              <span className="text-slate-300">›</span>
+              <span className="inline-flex items-center gap-1 text-emerald-700">
+                <Check size={13} weight="bold" />
+                3. Dịch vụ
+              </span>
+              <span className="text-slate-300">›</span>
+              <span className="font-black text-[#0b5ed7]">4. Thanh toán</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-              Xác nhận & Thanh toán
-            </h1>
-            <p className="text-sm text-slate-500 font-medium mt-1">
-              Hoàn tất thông tin hành khách và chọn phương thức thanh toán an toàn để nhận ngay mã đặt chỗ PNR.
-            </p>
           </div>
 
-          {/* Security Guarantee Badge */}
-          <div className="hidden md:flex items-center gap-2.5 bg-blue-50/80 border border-blue-100 px-4 py-3 rounded-2xl shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
-              <ShieldCheck size={20} weight="fill" />
-            </div>
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-xs font-extrabold text-blue-900">Bảo mật mã hóa 256-bit</p>
-              <p className="text-[11px] text-blue-600 font-medium">Thanh toán an toàn 100%</p>
+              <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#0b57d0]">
+                  <AirplaneTilt size={15} weight="fill" />
+                  BƯỚC 4/4 • HOÀN TẤT ĐẶT VÉ
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-0.5 text-xs font-bold text-amber-800">
+                  <Timer size={14} weight="bold" className="animate-pulse" />
+                  Giữ ghế còn:{" "}
+                  <strong className="font-mono">{formatCountdown(timeLeft)}</strong>
+                </span>
+              </div>
+              <h1
+                className="font-black tracking-tight"
+                style={{
+                  fontSize: "clamp(1.95rem, 3.4vw, 2.7rem)",
+                  color: "#091e47",
+                  lineHeight: 1.12,
+                  margin: "0 0 6px 0",
+                }}
+              >
+                Xác nhận & Thanh toán
+              </h1>
+              <p className="text-xs font-semibold text-[#2d4b7a] sm:text-sm" style={{ margin: 0 }}>
+                Nhập chính xác thông tin hành khách theo CCCD/Hộ chiếu và hoàn tất thanh toán để
+                nhận ngay mã đặt chỗ PNR.
+              </p>
+            </div>
+
+            <div
+              className="hidden items-center gap-2.5 bg-white/90 px-4 py-2.5 shadow-sm md:flex"
+              style={{ borderRadius: 18, border: "1px solid #d5e6fc" }}
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white">
+                <ShieldCheck size={20} weight="fill" />
+              </span>
+              <div>
+                <p className="text-xs font-extrabold text-[#092152]" style={{ margin: 0 }}>
+                  Bảo mật chuẩn PCI DSS
+                </p>
+                <p className="text-[11px] font-semibold text-[#0b5ed7]" style={{ margin: 0 }}>
+                  Mã hóa giao dịch 256-bit
+                </p>
+              </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Main Content Layout Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+      {/* 2. MAIN CONTENT GRID */}
+      <main className="relative z-10 mx-auto max-w-6xl px-4 pb-20 pt-2 sm:px-6 lg:px-8">
+        {formError && (
+          <div
+            role="alert"
+            className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700"
+          >
+            {formError}
+          </div>
+        )}
 
-          {/* LEFT COLUMN: Passenger Information & Payment Methods */}
-          <div className="lg:col-span-2 space-y-6">
-
+        <div className="grid grid-cols-1 items-start gap-7 lg:grid-cols-12">
+          {/* LEFT 8 COLUMNS: Passenger Details + Payment Method */}
+          <div className="space-y-6 lg:col-span-8">
             {/* SECTION 1: PASSENGER DETAILS */}
-            <section className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
-                <div className="w-9 h-9 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-sm shadow-md shadow-blue-500/20">
+            <section
+              className="bg-white p-6 sm:p-7"
+              style={{
+                borderRadius: 24,
+                border: "1px solid rgba(255,255,255,0.98)",
+                boxShadow: "0 14px 36px rgba(20, 62, 132, 0.09)",
+              }}
+            >
+              <div className="mb-5 flex items-center gap-3 border-b border-blue-50 pb-4">
+                <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-600 text-sm font-black text-white shadow-sm">
                   1
-                </div>
+                </span>
                 <div>
-                  <h2 className="text-lg font-extrabold text-slate-900 leading-tight">
-                    Thông tin hành khách
+                  <h2 className="text-base font-black text-[#092152]" style={{ margin: 0 }}>
+                    Thông tin hành khách ({totalPassengers} khách)
                   </h2>
-                  <p className="text-xs text-slate-500 font-medium">
-                    Nhập đúng họ tên theo CCCD/Hộ chiếu để làm thủ tục bay
+                  <p className="text-xs font-semibold text-[#556f96]" style={{ margin: "2px 0 0 0" }}>
+                    Nhập đúng họ tên theo CCCD gắn chip hoặc Hộ chiếu để làm thủ tục lên máy bay
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-5">
-                {passengers.map((p, index) => (
-                  <div
-                    key={index}
-                    className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/60 transition-all hover:bg-slate-50"
-                  >
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
-                        <User size={14} weight="bold" />
-                      </div>
-                      <h3 className="font-extrabold text-sm text-slate-800">
-                        Hành khách {index + 1} <span className="text-xs font-semibold text-slate-400">({index === 0 ? "Người lớn chính" : "Hành khách đi kèm"})</span>
-                      </h3>
-                    </div>
+              <div className="space-y-4">
+                {passengers.map((p, index) => {
+                  const outSeat = selectedSeats.outbound?.[index]?.seat_number;
+                  const retSeat = selectedSeats.return?.[index]?.seat_number;
+                  return (
+                    <div
+                      key={index}
+                      className="rounded-2xl border border-blue-100 bg-[#f8fbff] p-4 sm:p-5"
+                    >
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600">
+                            <User size={13} weight="bold" />
+                          </span>
+                          <h3 className="text-xs font-black text-[#092152]" style={{ margin: 0 }}>
+                            Hành khách {index + 1}{" "}
+                            <span className="font-semibold text-[#5a749b]">
+                              ({index === 0 ? "Người lớn chính" : "Hành khách đi kèm"})
+                            </span>
+                          </h3>
+                        </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Name Input */}
-                      <div>
-                        <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">
-                          Họ và Tên (In hoa không dấu) <span className="text-rose-500">*</span>
-                        </label>
-                        <div className="relative">
+                        {outSeat && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-extrabold text-[#0b4fd0] border border-blue-200">
+                            <Armchair size={12} weight="fill" />
+                            Ghế đi: {outSeat}
+                            {retSeat ? ` • Về: ${retSeat}` : ""}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wider text-[#47628a]">
+                            Họ và Tên (In hoa không dấu){" "}
+                            <span className="text-rose-500">*</span>
+                          </label>
                           <input
                             type="text"
                             placeholder="NGUYEN VAN A"
                             value={p.name}
                             onChange={(e) => {
-                              const newPassengers = [...passengers];
-                              newPassengers[index].name = e.target.value.toUpperCase();
-                              setPassengers(newPassengers);
+                              setFormError("");
+                              const next = [...passengers];
+                              next[index].name = e.target.value.toUpperCase();
+                              setPassengers(next);
                             }}
-                            className="w-full bg-white border border-slate-200 px-4 py-3.5 rounded-xl text-slate-900 text-sm font-bold uppercase focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 transition-all"
+                            className="w-full rounded-xl border border-blue-200 bg-white px-3.5 py-2.5 text-xs font-extrabold uppercase text-[#092152] focus:border-blue-500 focus:outline-none"
                             required
                           />
                         </div>
-                      </div>
 
-                      {/* Identity Input */}
-                      <div>
-                        <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">
-                          Số CCCD / Hộ chiếu <span className="text-rose-500">*</span>
-                        </label>
-                        <div className="relative">
+                        <div>
+                          <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wider text-[#47628a]">
+                            Số CCCD (12 số) / Hộ chiếu{" "}
+                            <span className="text-rose-500">*</span>
+                          </label>
                           <input
                             type="text"
-                            placeholder="Nhập 12 số CCCD"
+                            placeholder="VD: 079200012345 hoặc C1234567"
                             value={p.identity_number}
                             onChange={(e) => {
-                              const newPassengers = [...passengers];
-                              newPassengers[index].identity_number = e.target.value;
-                              setPassengers(newPassengers);
+                              setFormError("");
+                              const next = [...passengers];
+                              next[index].identity_number =
+                                e.target.value.toUpperCase();
+                              setPassengers(next);
                             }}
-                            className="w-full bg-white border border-slate-200 px-4 py-3.5 rounded-xl text-slate-900 text-sm font-bold focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 transition-all"
+                            className="w-full rounded-xl border border-blue-200 bg-white px-3.5 py-2.5 text-xs font-extrabold uppercase text-[#092152] focus:border-blue-500 focus:outline-none"
                             required
                           />
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
 
-            {/* SECTION 2: PAYMENT METHOD SELECTION */}
-            <section className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
-                <div className="w-9 h-9 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-sm shadow-md shadow-blue-500/20">
+            {/* SECTION 2: PAYMENT METHOD */}
+            <section
+              className="bg-white p-6 sm:p-7"
+              style={{
+                borderRadius: 24,
+                border: "1px solid rgba(255,255,255,0.98)",
+                boxShadow: "0 14px 36px rgba(20, 62, 132, 0.09)",
+              }}
+            >
+              <div className="mb-5 flex items-center gap-3 border-b border-blue-50 pb-4">
+                <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-600 text-sm font-black text-white shadow-sm">
                   2
-                </div>
+                </span>
                 <div>
-                  <h2 className="text-lg font-extrabold text-slate-900 leading-tight">
+                  <h2 className="text-base font-black text-[#092152]" style={{ margin: 0 }}>
                     Phương thức thanh toán
                   </h2>
-                  <p className="text-xs text-slate-500 font-medium">
-                    Chọn cổng thanh toán thuận tiện nhất dành cho bạn
+                  <p className="text-xs font-semibold text-[#556f96]" style={{ margin: "2px 0 0 0" }}>
+                    Chọn cổng thanh toán trực tuyến để xuất vé điện tử ngay lập tức
                   </p>
                 </div>
               </div>
 
-              {/* Payment Option Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {[
                   {
                     id: "vnpay",
                     title: "Cổng VNPAY / Thẻ ATM",
                     subtitle: "Hỗ trợ 40+ ngân hàng nội địa",
                     Logo: VnpayBrandLogo,
-                    badge: "Khuyên dùng"
+                    badge: "Phổ biến",
                   },
                   {
                     id: "momo",
                     title: "Ví Điện Tử MoMo",
-                    subtitle: "Thanh toán quét mã nhanh chóng",
+                    subtitle: "Thanh toán nhanh không mất phí",
                     Logo: MomoBrandLogo,
-                    badge: "Tức thì"
-                  }
+                    badge: "Tức thì",
+                  },
                 ].map((method) => {
                   const isSelected = paymentMethod === method.id;
                   return (
                     <div
                       key={method.id}
                       onClick={() => setPaymentMethod(method.id)}
-                      className={`relative p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200 flex flex-col justify-between gap-3 ${
-                        isSelected
+                      className="cursor-pointer rounded-2xl p-4 transition"
+                      style={{
+                        border: isSelected
                           ? method.id === "vnpay"
-                            ? "border-blue-600 bg-blue-50/50 shadow-xs ring-2 ring-blue-600/20"
-                            : "border-pink-600 bg-pink-50/50 shadow-xs ring-2 ring-pink-600/20"
-                          : "border-slate-200/80 bg-white hover:border-slate-300 hover:bg-slate-50/50"
-                      }`}
+                            ? "2px solid #0b5ed7"
+                            : "2px solid #a50064"
+                          : "1px solid #dbe8fc",
+                        background: isSelected
+                          ? method.id === "vnpay"
+                            ? "#eff6ff"
+                            : "#fdf2f8"
+                          : "#ffffff",
+                      }}
                     >
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-white rounded-xl border border-slate-200 shadow-xs shrink-0">
+                          <div className="shrink-0 rounded-xl border border-slate-200 bg-white p-2">
                             <method.Logo />
                           </div>
                           <div>
-                            <p className="text-sm font-extrabold text-slate-900 leading-snug">
+                            <p className="text-xs font-black text-[#092152]" style={{ margin: 0 }}>
                               {method.title}
                             </p>
-                            <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                            <p className="mt-0.5 text-[11px] font-semibold text-[#556f96]" style={{ margin: "2px 0 0 0" }}>
                               {method.subtitle}
                             </p>
                           </div>
                         </div>
 
-                        {/* Selection Radio Circle */}
-                        <div
-                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
-                            isSelected
-                              ? method.id === "vnpay"
-                                ? "border-blue-600 bg-blue-600 text-white"
-                                : "border-pink-600 bg-pink-600 text-white"
-                              : "border-slate-300"
-                          }`}
-                        >
-                          {isSelected && <Check size={12} weight="bold" />}
-                        </div>
-                      </div>
-
-                      {/* Bottom Badge */}
-                      <div>
                         <span
-                          className={`inline-block text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full ${
-                            isSelected
+                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2"
+                          style={{
+                            borderColor: isSelected
                               ? method.id === "vnpay"
-                                ? "bg-blue-600 text-white"
-                                : "bg-pink-600 text-white"
-                              : "bg-slate-100 text-slate-600"
-                          }`}
+                                ? "#0b5ed7"
+                                : "#a50064"
+                              : "#cbd5e1",
+                            background: isSelected
+                              ? method.id === "vnpay"
+                                ? "#0b5ed7"
+                                : "#a50064"
+                              : "transparent",
+                            color: "#ffffff",
+                          }}
                         >
-                          {method.badge}
+                          {isSelected && <Check size={11} weight="bold" />}
                         </span>
                       </div>
                     </div>
@@ -529,205 +1014,287 @@ export default function Checkout() {
                 })}
               </div>
 
-              {/* MOCK PAYMENT DETAILS INPUT FIELD */}
-              <div className="bg-slate-50/80 border border-slate-200/80 p-5 rounded-2xl">
-                {paymentMethod === "vnpay" && (
-                  <div className="space-y-3.5">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-xs font-extrabold text-blue-700 uppercase tracking-wider flex items-center gap-1.5">
-                        <Bank size={16} /> Nhập thông tin thẻ VNPAY Sandbox
+              {/* Sandbox Payment Fields */}
+              <div className="rounded-2xl border border-blue-100 bg-[#f8fbff] p-4 sm:p-5">
+                {paymentMethod === "vnpay" ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-[#0b5ed7]" style={{ margin: 0 }}>
+                        <Bank size={16} weight="fill" /> Thông tin thẻ VNPAY Sandbox
                       </p>
-                      <span className="text-[10px] font-bold text-slate-400">Thanh toán thử nghiệm</span>
+                      <span className="text-[10px] font-bold text-slate-400">
+                        Môi trường thử nghiệm
+                      </span>
                     </div>
-
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Số thẻ ATM / Tài khoản</label>
-                      <input
-                        type="text"
-                        placeholder="Số thẻ ATM (VD: 9704 1985 1234 5678)"
-                        value={paymentDetails.vnpayCard}
-                        onChange={(e) => setPaymentDetails({ ...paymentDetails, vnpayCard: e.target.value })}
-                        className="w-full bg-white border border-blue-200 px-4 py-3 rounded-xl text-slate-900 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Mật khẩu / Mã PIN bảo mật</label>
-                      <input
-                        type="password"
-                        placeholder="••••••"
-                        value={paymentDetails.vnpayPin}
-                        onChange={(e) => setPaymentDetails({ ...paymentDetails, vnpayPin: e.target.value })}
-                        className="w-full bg-white border border-blue-200 px-4 py-3 rounded-xl text-slate-900 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                      />
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-[11px] font-bold text-[#47628a]">
+                          Số thẻ ATM / Tài khoản
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="9704 1985 1234 5678"
+                          value={paymentDetails.vnpayCard}
+                          onChange={(e) =>
+                            setPaymentDetails({
+                              ...paymentDetails,
+                              vnpayCard: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-xl border border-blue-200 bg-white px-3.5 py-2.5 font-mono text-xs font-bold text-[#092152] focus:border-blue-500 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[11px] font-bold text-[#47628a]">
+                          Mã PIN / OTP xác thực
+                        </label>
+                        <input
+                          type="password"
+                          placeholder="••••••"
+                          value={paymentDetails.vnpayPin}
+                          onChange={(e) =>
+                            setPaymentDetails({
+                              ...paymentDetails,
+                              vnpayPin: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-xl border border-blue-200 bg-white px-3.5 py-2.5 font-mono text-xs font-bold text-[#092152] focus:border-blue-500 focus:outline-none"
+                        />
+                      </div>
                     </div>
                   </div>
-                )}
-
-                {paymentMethod === "momo" && (
-                  <div className="space-y-3.5">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-xs font-extrabold text-pink-700 uppercase tracking-wider flex items-center gap-1.5">
-                        <Wallet size={16} /> Đăng nhập ví MoMo Sandbox
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-[#a50064]" style={{ margin: 0 }}>
+                        <Wallet size={16} weight="fill" /> Đăng nhập Ví MoMo Sandbox
                       </p>
-                      <span className="text-[10px] font-bold text-slate-400">Thanh toán thử nghiệm</span>
+                      <span className="text-[10px] font-bold text-slate-400">
+                        Môi trường thử nghiệm
+                      </span>
                     </div>
-
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Số điện thoại đăng ký MoMo</label>
-                      <input
-                        type="text"
-                        placeholder="0901234567"
-                        value={paymentDetails.momoPhone}
-                        onChange={(e) => setPaymentDetails({ ...paymentDetails, momoPhone: e.target.value })}
-                        className="w-full bg-white border border-pink-200 px-4 py-3 rounded-xl text-slate-900 text-sm font-bold outline-none focus:ring-2 focus:ring-pink-500 font-mono"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Mật khẩu Ví MoMo (6 số)</label>
-                      <input
-                        type="password"
-                        placeholder="••••••"
-                        value={paymentDetails.momoPin}
-                        onChange={(e) => setPaymentDetails({ ...paymentDetails, momoPin: e.target.value })}
-                        className="w-full bg-white border border-pink-200 px-4 py-3 rounded-xl text-slate-900 text-sm font-bold outline-none focus:ring-2 focus:ring-pink-500 font-mono"
-                      />
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-[11px] font-bold text-[#47628a]">
+                          Số điện thoại MoMo
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="0901234567"
+                          value={paymentDetails.momoPhone}
+                          onChange={(e) =>
+                            setPaymentDetails({
+                              ...paymentDetails,
+                              momoPhone: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-xl border border-pink-200 bg-white px-3.5 py-2.5 font-mono text-xs font-bold text-[#092152] focus:border-pink-500 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[11px] font-bold text-[#47628a]">
+                          Mật khẩu Ví MoMo (6 số)
+                        </label>
+                        <input
+                          type="password"
+                          placeholder="••••••"
+                          value={paymentDetails.momoPin}
+                          onChange={(e) =>
+                            setPaymentDetails({
+                              ...paymentDetails,
+                              momoPin: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-xl border border-pink-200 bg-white px-3.5 py-2.5 font-mono text-xs font-bold text-[#092152] focus:border-pink-500 focus:outline-none"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
             </section>
-
           </div>
 
-          {/* RIGHT COLUMN: STICKY FLIGHT SUMMARY SIDEBAR */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs sticky top-28 space-y-5">
-
-              {/* Header */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h3 className="text-base font-extrabold text-slate-900">
+          {/* RIGHT 4 COLUMNS: STICKY ORDER SUMMARY */}
+          <aside className="lg:col-span-4">
+            <div
+              className="sticky top-24 space-y-4 bg-white p-6"
+              style={{
+                borderRadius: 24,
+                border: "1px solid rgba(255,255,255,0.98)",
+                boxShadow: "0 14px 36px rgba(20, 62, 132, 0.10)",
+              }}
+            >
+              <div className="flex items-center justify-between border-b border-blue-50 pb-3">
+                <h3 className="text-base font-black text-[#092152]" style={{ margin: 0 }}>
                   Tóm tắt đơn hàng
                 </h3>
-                <span className="text-[10px] font-extrabold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                <span
+                  className="rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider"
+                  style={{ background: "#eef6ff", color: "#0b4fd0" }}
+                >
                   Chi tiết vé
                 </span>
               </div>
 
-              {/* Flights Summary List */}
-              <div className="space-y-4 pb-4 border-b border-slate-100">
-                {flights.map((f, idx) => (
-                  <div key={idx} className="bg-slate-50/80 rounded-2xl p-4 border border-slate-100">
-                    <div className="flex items-center justify-between text-[11px] font-extrabold uppercase text-blue-600 mb-2 tracking-wider">
-                      <span>Chuyến {idx === 0 ? "Đi" : "Về"}</span>
-                      <span className="text-slate-400 font-medium">{f.flight_number || "SK-888"}</span>
+              {/* Flights Summary with Accurate City Names & Seats */}
+              <div className="space-y-3 border-b border-blue-50 pb-4">
+                {flights.map((f, idx) => {
+                  const legSeats =
+                    idx === 0
+                      ? selectedSeats.outbound || []
+                      : selectedSeats.return || [];
+                  return (
+                    <div
+                      key={idx}
+                      className="rounded-2xl border border-blue-100 bg-[#f7faff] p-3.5"
+                    >
+                      <div className="mb-2 flex items-center justify-between text-[11px] font-extrabold uppercase tracking-wider text-[#0b5ed7]">
+                        <span>Chuyến {idx === 0 ? "Đi" : "Về"}</span>
+                        <span className="font-bold text-[#5a749b]">
+                          {f.flight_number || "SK-888"}
+                        </span>
+                      </div>
+
+                      <div className="mb-2 flex items-center justify-between">
+                        <div className="text-left">
+                          <span className="block text-lg font-black leading-tight text-[#092152]">
+                            {f.departure_airport?.code || "—"}
+                          </span>
+                          <span className="text-[10px] font-bold text-[#5a749b]">
+                            {getCity(f.departure_airport)}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-col items-center px-2">
+                          <AirplaneTilt
+                            size={18}
+                            weight="fill"
+                            className={`text-blue-600 ${idx === 1 ? "rotate-180 text-orange-500" : ""}`}
+                          />
+                          <span className="text-[9px] font-extrabold tracking-wider text-slate-400">
+                            SKYLINK
+                          </span>
+                        </div>
+
+                        <div className="text-right">
+                          <span className="block text-lg font-black leading-tight text-[#092152]">
+                            {f.arrival_airport?.code || "—"}
+                          </span>
+                          <span className="text-[10px] font-bold text-[#5a749b]">
+                            {getCity(f.arrival_airport)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <p className="text-center text-[11px] font-bold text-[#47628a]" style={{ margin: 0 }}>
+                        {formatDate(f.departure_time)} • {formatTime(f.departure_time)}
+                        {legSeats.length > 0 && (
+                          <span className="ml-1.5 text-[#0b4fd0]">
+                            • Ghế: {legSeats.map((s) => s.seat_number).join(", ")}
+                          </span>
+                        )}
+                      </p>
                     </div>
-
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-center">
-                        <span className="text-xl font-black text-slate-900 block leading-tight">{f.departure_airport?.code}</span>
-                        <span className="text-[10px] text-slate-400 font-semibold">{f.departure_airport?.city_name}</span>
-                      </div>
-
-                      <div className="flex flex-col items-center px-2">
-                        <AirplaneTilt size={18} weight="fill" className={`text-blue-600 ${idx === 1 ? "rotate-180 text-orange-500" : ""}`} />
-                        <span className="text-[9px] font-bold text-slate-400 tracking-wider">SKYLINK</span>
-                      </div>
-
-                      <div className="text-center">
-                        <span className="text-xl font-black text-slate-900 block leading-tight">{f.arrival_airport?.code}</span>
-                        <span className="text-[10px] text-slate-400 font-semibold">{f.arrival_airport?.city_name}</span>
-                      </div>
-                    </div>
-
-                    <p className="text-[11px] font-semibold text-slate-500 text-center">
-                      📅 {formatDate(f.departure_time)} &bull; ⏰ {formatTime(f.departure_time)}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Itemized Price Breakdown */}
-              <div className="space-y-2.5 text-xs pb-4 border-b border-slate-100">
-                <div className="flex justify-between items-center text-slate-600 font-medium">
-                  <span>Giá vé cơ bản ({totalPassengers} khách)</span>
-                  <span className="font-extrabold text-slate-900">{formatCurrency(basePrice)}</span>
+              <div className="space-y-2 border-b border-blue-50 pb-4 text-xs">
+                <div className="flex items-center justify-between font-semibold text-[#47628a]">
+                  <span>Giá vé ({totalPassengers} khách)</span>
+                  <strong className="text-[#092152]">
+                    {currency.format(basePrice)}
+                  </strong>
                 </div>
 
                 {services.map((s) => (
-                  <div key={s.id} className="flex justify-between items-center text-slate-600">
+                  <div
+                    key={s.id}
+                    className="flex items-center justify-between font-semibold text-[#47628a]"
+                  >
                     <span className="flex items-center gap-1">
-                      <Sparkle size={12} className="text-blue-600" /> {s.name}
+                      <Sparkle size={12} weight="fill" className="text-blue-600" />
+                      {s.name}
                     </span>
-                    <span className="font-extrabold text-slate-900">+{formatCurrency(s.price)}</span>
+                    <strong className="text-[#092152]">
+                      +{currency.format(Number(s.price || 0))}
+                    </strong>
                   </div>
                 ))}
 
-                <div className="flex justify-between items-center text-slate-600 font-medium">
-                  <span>Thuế, phí hệ thống (80%)</span>
-                  <span className="font-extrabold text-slate-900">{formatCurrency(taxAmount)}</span>
+                <div className="flex items-center justify-between font-semibold text-[#47628a]">
+                  <span>Thuế, phí sân bay & hệ thống</span>
+                  <strong className="text-[#092152]">
+                    {currency.format(taxAmount)}
+                  </strong>
                 </div>
               </div>
 
-              {/* Total Amount Box */}
-              <div className="bg-blue-50/60 p-4 rounded-2xl border border-blue-100 flex items-center justify-between">
+              {/* Total Box */}
+              <div className="flex items-center justify-between rounded-2xl border border-blue-100 bg-[#eef6ff] p-4">
                 <div>
-                  <span className="text-xs font-extrabold uppercase text-slate-600 block tracking-wider">
+                  <span className="block text-xs font-black uppercase tracking-wider text-[#092152]">
                     Tổng thanh toán
                   </span>
-                  <span className="text-[10px] text-slate-400 font-medium">Đã bao gồm VAT & phí</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-2xl font-black text-blue-600 tracking-tight block">
-                    {formatCurrency(totalAmount)}
+                  <span className="text-[10px] font-semibold text-[#5a749b]">
+                    Đã bao gồm VAT & phí
                   </span>
                 </div>
+                <span className="text-2xl font-black tracking-tight text-[#0b4fd0]">
+                  {currency.format(totalAmount)}
+                </span>
               </div>
 
               {/* Action Buttons */}
               <div className="space-y-2.5 pt-1">
-                {/* Primary Payment Button */}
                 <button
                   type="button"
                   onClick={handleCheckout}
                   disabled={loading}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3.5 px-4 rounded-2xl flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 transition-all duration-200 cursor-pointer active:scale-[0.99] disabled:opacity-50 text-sm"
+                  className="inline-flex w-full items-center justify-center gap-2 py-3.5 text-xs font-extrabold text-white shadow-md transition hover:-translate-y-0.5 disabled:opacity-50"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, #0b5ed7 0%, #1d78f0 100%)",
+                    borderRadius: 9999,
+                    border: "none",
+                    cursor: loading ? "wait" : "pointer",
+                  }}
                 >
-                  {loading ? (
-                    "Đang xử lý giao dịch..."
-                  ) : (
-                    <>
-                      Xác nhận & Thanh toán <ArrowRight size={16} weight="bold" />
-                    </>
-                  )}
+                  <span>
+                    {loading ? "Đang xử lý giao dịch..." : "Xác nhận & Thanh toán"}
+                  </span>
+                  {!loading && <ArrowRight size={15} weight="bold" />}
                 </button>
 
-                {/* Secondary Hold Booking Button */}
                 <button
                   type="button"
                   onClick={handleHoldBooking}
                   disabled={loading}
-                  className="w-full bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-bold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer active:scale-[0.99] disabled:opacity-50 text-xs"
+                  className="inline-flex w-full items-center justify-center gap-2 py-3 text-xs font-extrabold text-[#163d7a] transition hover:bg-blue-50 disabled:opacity-50"
+                  style={{
+                    background: "#ffffff",
+                    border: "1px solid #cde0fc",
+                    borderRadius: 9999,
+                    cursor: loading ? "wait" : "pointer",
+                  }}
                 >
-                  <Clock size={14} className="text-slate-500" />
-                  Đặt giữ chỗ (Thanh toán sau)
+                  <Clock size={14} weight="bold" className="text-blue-600" />
+                  <span>Đặt giữ chỗ (Thanh toán sau)</span>
                 </button>
               </div>
 
-              {/* Terms note */}
-              <p className="text-[10px] text-slate-400 text-center leading-relaxed">
-                🔒 Bằng việc nhấp vào nút thanh toán, bạn đồng ý với Điều khoản dịch vụ & Chính sách bảo mật của SkyLink Airlines.
+              <p className="text-center text-[10px] font-semibold leading-relaxed text-slate-400" style={{ margin: 0 }}>
+                🔒 Bằng việc tiếp tục, bạn đồng ý với Điều khoản vận chuyển & Chính sách bảo mật của
+                SkyLink Airlines.
               </p>
             </div>
-          </div>
-
+          </aside>
         </div>
-      </div>
+      </main>
 
-      <div className="mt-20">
-        <Footer />
-      </div>
-    </motion.div>
+      <Footer />
+    </div>
   );
 }

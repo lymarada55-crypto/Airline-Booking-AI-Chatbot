@@ -117,15 +117,18 @@ class FlightGeneratorService
 
             // Tạo mã số hiệu chuyến bay theo chặng bay cụ thể (VD: VN721, VJ722, FB723)
             $routeCodeNumber = (abs(crc32($departure->code . $arrival->code)) % 800) + 100;
+            $routeProfile = $this->getRouteProfile($departure->code, $arrival->code);
 
             // Sinh 3 hãng × 5 chuyến = 15 flights
-            foreach (self::AIRLINE_SCHEDULES as $airline) {
+            foreach (self::AIRLINE_SCHEDULES as $airlineIdx => $airline) {
                 foreach ($airline['baseNumbers'] as $idx => $baseNum) {
                     // Mã chuyến bay theo chặng: PREFIX + RouteCode + STT (VD: VN721, VJ722)
                     $flightNumber  = sprintf('%s%d%d', $airline['prefix'], $routeCodeNumber, $idx + 1);
                     $timeSlot      = $airline['slots'][$idx];
                     $departureTime = Carbon::parse("{$date} {$timeSlot}");
-                    $arrivalTime   = $departureTime->copy()->addMinutes($airline['duration']);
+                    // Thời gian bay thực tế theo chặng (chênh lệch nhỏ 0–10 phút giữa các hãng)
+                    $durationMins  = $routeProfile['duration'] + ($airlineIdx * 5);
+                    $arrivalTime   = $departureTime->copy()->addMinutes($durationMins);
 
                     // Kiểm tra đúng chuyến bay cho tuyến này + ngày này + giờ này
                     $existing = Flight::where('departure_airport_id', $departure->id)
@@ -148,6 +151,15 @@ class FlightGeneratorService
                         $flightNumber = sprintf('%s%s%s%d', $airline['prefix'], $departure->code, $arrival->code, $idx + 1);
                     }
 
+                    // Giá vé thực tế theo tuyến & phân khúc hãng (VN cao hơn VJ/FB)
+                    $tierFactor = match ($airline['prefix']) {
+                        'VN' => 1.18,
+                        'VJ' => 0.96,
+                        default => 0.85,
+                    };
+                    $minSteps = max(35, (int) round(($routeProfile['min_price'] * $tierFactor) / 10000));
+                    $maxSteps = max($minSteps + 10, (int) round(($routeProfile['max_price'] * $tierFactor) / 10000));
+
                     $flight = Flight::create([
                         'flight_number'        => $flightNumber,
                         'departure_airport_id' => $departure->id,
@@ -155,8 +167,7 @@ class FlightGeneratorService
                         'departure_time'       => $departureTime,
                         'arrival_time'         => $arrivalTime,
                         'aircraft_id'          => $aircrafts[$airline['prefix']]->id,
-                        // Giá random từ 500,000đ đến 1,500,000đ (bước giá 10k)
-                        'base_price'           => rand(50, 150) * 10000,
+                        'base_price'           => rand($minSteps, $maxSteps) * 10000,
                         'available_seats'      => 180,
                         'status'               => 'scheduled',
                     ]);
@@ -173,5 +184,81 @@ class FlightGeneratorService
                 ->orderBy('departure_time')
                 ->get();
         });
+    }
+
+    /**
+     * Trả về thời gian bay (phút) và khung giá cơ bản (VND) sát thực tế theo tuyến bay.
+     */
+    private function getRouteProfile(string $depCode, string $arrCode): array
+    {
+        $pair = [strtoupper($depCode), strtoupper($arrCode)];
+        sort($pair);
+        $routeKey = implode('-', $pair);
+
+        // Chặng Trung Quốc (Bắc Kinh, Thượng Hải, Quảng Châu, Thâm Quyến)
+        $chinaAirports = ['PEK', 'PVG', 'CAN', 'SZX'];
+        if (array_intersect($pair, $chinaAirports)) {
+            $isFromNorth = in_array('HAN', $pair, true) || in_array('HPH', $pair, true);
+            if (in_array('PEK', $pair, true)) {
+                return [
+                    'duration'  => $isFromNorth ? 225 : 280, // ~3h45 (từ Bắc) / ~4h40 (từ Nam)
+                    'min_price' => 4500000,
+                    'max_price' => 8500000,
+                ];
+            }
+            if (in_array('PVG', $pair, true)) {
+                return [
+                    'duration'  => $isFromNorth ? 195 : 245, // ~3h15 / ~4h05
+                    'min_price' => 4200000,
+                    'max_price' => 7800000,
+                ];
+            }
+            // Quảng Châu (CAN) & Thâm Quyến (SZX) - Hoa Nam
+            return [
+                'duration'  => $isFromNorth ? 115 : 165, // ~1h55 / ~2h45
+                'min_price' => 2800000,
+                'max_price' => 5400000,
+            ];
+        }
+
+        // Chặng Đông Bắc Á (Hàn Quốc / Nhật Bản)
+        $northeastAsia = ['ICN', 'NRT'];
+        if (array_intersect($pair, $northeastAsia)) {
+            if (in_array('NRT', $pair, true)) {
+                return ['duration' => 330, 'min_price' => 6200000, 'max_price' => 10500000]; // ~5h30
+            }
+            return ['duration' => 275, 'min_price' => 5200000, 'max_price' => 8800000]; // ~4h35
+        }
+
+        // Chặng Đông Nam Á (Singapore / Malaysia / Campuchia)
+        $southeastAsia = ['SIN', 'KUL', 'PNH'];
+        if (array_intersect($pair, $southeastAsia)) {
+            if (in_array('PNH', $pair, true)) {
+                $isFromSouth = in_array('SGN', $pair, true) || in_array('PQC', $pair, true) || in_array('VCA', $pair, true);
+                return $isFromSouth
+                    ? ['duration' => 55, 'min_price' => 1900000, 'max_price' => 3400000]
+                    : ['duration' => 115, 'min_price' => 2400000, 'max_price' => 4200000];
+            }
+            return ['duration' => 145, 'min_price' => 2300000, 'max_price' => 4500000]; // ~2h25
+        }
+
+        // Chặng Nội địa ngắn (cùng miền)
+        $shortDomestic = [
+            'DLI-SGN' => 55,
+            'PQC-SGN' => 65,
+            'CXR-SGN' => 70,
+            'SGN-VCA' => 50,
+            'DAD-HUI' => 45,
+            'DAD-UIH' => 55,
+            'HAN-HUI' => 75,
+            'DAD-HAN' => 80,
+            'DAD-HPH' => 80,
+        ];
+        if (isset($shortDomestic[$routeKey])) {
+            return ['duration' => $shortDomestic[$routeKey], 'min_price' => 550000, 'max_price' => 1250000];
+        }
+
+        // Chặng Nội địa trục Bắc - Nam (HAN/HPH <-> SGN/PQC/VCA/DLI/CXR)
+        return ['duration' => 120, 'min_price' => 850000, 'max_price' => 1650000];
     }
 }

@@ -83,12 +83,13 @@ class CheckInService implements CheckInServiceInterface
             throw new Exception("Không tìm thấy chuyến bay.");
         }
 
-        if ($ticket->checkIn) {
-            throw new Exception("Hành khách đã check-in rồi.");
-        }
+        // 5. Nếu hành khách đã Check-in trước đó: cho phép tra cứu & tải lại Boarding Pass
+        $alreadyCheckedIn = (bool) $ticket->checkIn;
 
-        // 5. Kiểm tra trạng thái chuyến bay bằng State Pattern
-        $flight->state()->validateCheckIn();
+        if (!$alreadyCheckedIn) {
+            // Kiểm tra trạng thái chuyến bay bằng State Pattern trước khi Check-in mới
+            $flight->state()->validateCheckIn();
+        }
 
         // 6. Tạo BoardingPass nếu chưa có
         if (!$ticket->boardingPass) {
@@ -98,7 +99,7 @@ class CheckInService implements CheckInServiceInterface
         }
 
         // 7. Tạo CheckIn record (ghi nhận hành khách đã Check-in vật lý)
-        $checkIn = CheckIn::firstOrCreate(
+        $checkIn = $ticket->checkIn ?: CheckIn::firstOrCreate(
             ['ticket_id' => $ticket->id],
             [
                 'boarding_gate' => null,
@@ -109,6 +110,7 @@ class CheckInService implements CheckInServiceInterface
 
         // 8. Trả về dữ liệu Boarding Pass động theo chuyến bay đặt thực tế
         return [
+            'already_checked_in' => $alreadyCheckedIn,
             'boarding_pass_id' => $boardingPass->id,
             'ticket_code' => $ticket->ticket_code,
             'passenger_name' => $ticket->passenger_name,

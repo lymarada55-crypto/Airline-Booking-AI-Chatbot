@@ -1,22 +1,42 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { useNavigate, useLocation, useSearchParams as useReactSearchParams } from "react-router-dom";
 import {
-  MapPinLine,
-  CalendarBlank,
-  ArrowsLeftRight,
-  MagnifyingGlass,
+  useLocation,
+  useNavigate,
+  useSearchParams as useReactSearchParams,
+} from "react-router-dom";
+import {
+  AirplaneTilt,
   ArrowLeft,
-  Users,
+  ArrowsLeftRight,
+  CalendarBlank,
   CaretDown,
-  Robot
+  MagnifyingGlass,
+  MapPinLine,
+  Minus,
+  Plus,
+  Robot,
+  Users,
+  WarningCircle,
 } from "@phosphor-icons/react";
-import { motion } from "motion/react";
 import FlightCard from "../components/flight/FlightCard";
 import FlightFilterSidebar from "../components/flight/FlightFilterSidebar";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import RescheduleModal from "../components/RescheduleModal";
+
+const HERO_FLIGHT_BG_URL =
+  "https://static.vecteezy.com/system/resources/previews/035/719/664/non_2x/ai-generated-image-of-a-large-airliner-flying-in-the-sky-free-photo.jpg";
+
+const FLIGHTS_PER_PAGE = 6;
+
+const getTodayString = () => {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
 
 export default function FlightResults() {
   const [urlSearchParams, setUrlSearchParams] = useReactSearchParams();
@@ -24,8 +44,9 @@ export default function FlightResults() {
   const [airports, setAirports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchWarning, setSearchWarning] = useState("");
   const [filters, setFilters] = useState({
-    sort: 'price_asc',
+    sort: "price_asc",
     times: [],
     maxPrice: 10000000,
   });
@@ -36,10 +57,14 @@ export default function FlightResults() {
     date: "",
     returnDate: "",
     tripType: "one-way",
-    passengers: { adults: 1, children: 0 }
+    cabinClass: "Phổ thông",
+    passengers: { adults: 1, children: 0 },
   });
 
-  const [bookingStage, setBookingStage] = useState('outbound');
+  const [passengerMenuOpen, setPassengerMenuOpen] = useState(false);
+  const passengerMenuRef = useRef(null);
+
+  const [bookingStage, setBookingStage] = useState("outbound");
   const [outboundFlight, setOutboundFlight] = useState(null);
 
   // Reschedule mode states
@@ -52,25 +77,45 @@ export default function FlightResults() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const todayStr = getTodayString();
 
-  // Pagination state matching image < 1 2 3 >
+  // Real pagination state
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Load danh sách sân bay cho thanh tìm kiếm
+  // Close passenger dropdown when clicking outside
   useEffect(() => {
-    axios.get("/api/airports")
-      .then(res => {
-        const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
+    const handleClickOutside = (event) => {
+      if (
+        passengerMenuRef.current &&
+        !passengerMenuRef.current.contains(event.target)
+      ) {
+        setPassengerMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Load airport list
+  useEffect(() => {
+    axios
+      .get("/api/airports")
+      .then((res) => {
+        const list = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.data)
+            ? res.data.data
+            : [];
         setAirports(list);
       })
-      .catch(err => {
+      .catch((err) => {
         console.error("Failed to load airports:", err);
         setAirports([]);
       });
   }, []);
 
   useEffect(() => {
-    // Kiểm tra nếu đang ở mode đổi chuyến
+    // Reschedule mode
     if (location.state?.rescheduleBooking) {
       setRescheduleMode(true);
       setRescheduleBooking(location.state.rescheduleBooking);
@@ -81,8 +126,13 @@ export default function FlightResults() {
       const params = {
         departure: flight.departure_airport?.code || "",
         arrival: flight.arrival_airport?.code || "",
-        date: flight.departure_time ? new Date(flight.departure_time).toISOString().slice(0, 10) : "",
-        tripType: 'one-way'
+        date: flight.departure_time
+          ? new Date(flight.departure_time).toISOString().slice(0, 10)
+          : "",
+        returnDate: "",
+        tripType: "one-way",
+        cabinClass: "Phổ thông",
+        passengers: { adults: 1, children: 0 },
       };
       setSearchParams(params);
       fetchFlights(params);
@@ -90,11 +140,16 @@ export default function FlightResults() {
     }
 
     // Read from URL query params
-    const fromParam = urlSearchParams.get("from") || urlSearchParams.get("departure");
+    const fromParam =
+      urlSearchParams.get("from") || urlSearchParams.get("departure");
     const toParam = urlSearchParams.get("to") || urlSearchParams.get("arrival");
     const dateParam = urlSearchParams.get("date");
-    const returnDateParam = urlSearchParams.get("returnDate") || urlSearchParams.get("return_date");
-    const tripTypeParam = urlSearchParams.get("trip_type") || urlSearchParams.get("tripType") || "one-way";
+    const returnDateParam =
+      urlSearchParams.get("returnDate") || urlSearchParams.get("return_date");
+    const tripTypeParam =
+      urlSearchParams.get("trip_type") ||
+      urlSearchParams.get("tripType") ||
+      "one-way";
 
     if (fromParam || toParam || dateParam) {
       const urlParams = {
@@ -102,7 +157,9 @@ export default function FlightResults() {
         arrival: toParam || "",
         date: dateParam || "",
         returnDate: returnDateParam || "",
-        tripType: tripTypeParam.replace('_', '-')
+        tripType: tripTypeParam.replace("_", "-"),
+        cabinClass: "Phổ thông",
+        passengers: { adults: 1, children: 0 },
       };
       setSearchParams(urlParams);
       localStorage.setItem("search_params", JSON.stringify(urlParams));
@@ -112,10 +169,27 @@ export default function FlightResults() {
 
     // Read from localStorage
     const stored = localStorage.getItem("search_params");
-    const parsed = stored ? JSON.parse(stored) : null;
+    let parsed = null;
+    try {
+      parsed = stored ? JSON.parse(stored) : null;
+    } catch {
+      parsed = null;
+    }
     if (parsed) {
-      setSearchParams(parsed);
-      fetchFlights(parsed);
+      const normalized = {
+        departure: parsed.departure || "",
+        arrival: parsed.arrival || "",
+        date: parsed.date || "",
+        returnDate: parsed.returnDate || "",
+        tripType: (parsed.tripType || "one-way").replace("_", "-"),
+        cabinClass: parsed.cabinClass || "Phổ thông",
+        passengers: {
+          adults: Math.max(1, Number(parsed.passengers?.adults || 1)),
+          children: Math.max(0, Number(parsed.passengers?.children || 0)),
+        },
+      };
+      setSearchParams(normalized);
+      fetchFlights(normalized);
     } else {
       fetchFlights(null);
     }
@@ -123,22 +197,29 @@ export default function FlightResults() {
 
   const fetchFlights = async (params) => {
     setLoading(true);
+    setCurrentPage(1);
     try {
       const queryParts = [];
-      if (params?.departure) queryParts.push(`from=${encodeURIComponent(params.departure)}`);
-      if (params?.arrival) queryParts.push(`to=${encodeURIComponent(params.arrival)}`);
-      if (params?.date) queryParts.push(`date=${encodeURIComponent(params.date)}`);
+      if (params?.departure)
+        queryParts.push(`from=${encodeURIComponent(params.departure)}`);
+      if (params?.arrival)
+        queryParts.push(`to=${encodeURIComponent(params.arrival)}`);
+      if (params?.date)
+        queryParts.push(`date=${encodeURIComponent(params.date)}`);
 
       if (params?.tripType) {
-        const backendTripType = params.tripType.replace('-', '_');
+        const backendTripType = params.tripType.replace("-", "_");
         queryParts.push(`trip_type=${encodeURIComponent(backendTripType)}`);
       }
 
-      const queryString = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
+      const queryString =
+        queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
       const response = await axios.get(`/api/flights${queryString}`);
       const flightList = Array.isArray(response.data)
         ? response.data
-        : (Array.isArray(response.data?.data) ? response.data.data : []);
+        : Array.isArray(response.data?.data)
+          ? response.data.data
+          : [];
       setFlights(flightList);
       setError(null);
     } catch {
@@ -150,7 +231,29 @@ export default function FlightResults() {
 
   const handleApplySearch = (e) => {
     e?.preventDefault();
-    setBookingStage('outbound');
+    setSearchWarning("");
+    setPassengerMenuOpen(false);
+
+    if (
+      searchParams.departure &&
+      searchParams.arrival &&
+      searchParams.departure === searchParams.arrival
+    ) {
+      setSearchWarning("Điểm đi và điểm đến không được trùng nhau. Vui lòng chọn lại.");
+      return;
+    }
+
+    if (
+      searchParams.tripType === "round-trip" &&
+      searchParams.date &&
+      searchParams.returnDate &&
+      searchParams.returnDate < searchParams.date
+    ) {
+      setSearchWarning("Ngày về không thể sớm hơn ngày đi. Vui lòng kiểm tra lại.");
+      return;
+    }
+
+    setBookingStage("outbound");
     setOutboundFlight(null);
     localStorage.setItem("search_params", JSON.stringify(searchParams));
 
@@ -158,27 +261,50 @@ export default function FlightResults() {
     if (searchParams.departure) newParams.set("from", searchParams.departure);
     if (searchParams.arrival) newParams.set("to", searchParams.arrival);
     if (searchParams.date) newParams.set("date", searchParams.date);
-    if (searchParams.returnDate) newParams.set("returnDate", searchParams.returnDate);
-    if (searchParams.tripType) newParams.set("trip_type", searchParams.tripType.replace('-', '_'));
+    if (searchParams.tripType === "round-trip" && searchParams.returnDate) {
+      newParams.set("returnDate", searchParams.returnDate);
+    }
+    if (searchParams.tripType) {
+      newParams.set("trip_type", searchParams.tripType.replace("-", "_"));
+    }
     setUrlSearchParams(newParams);
 
     fetchFlights(searchParams);
   };
 
   const handleSwapAirports = () => {
-    setSearchParams(prev => ({
+    setSearchWarning("");
+    setSearchParams((prev) => ({
       ...prev,
       departure: prev.arrival,
-      arrival: prev.departure
+      arrival: prev.departure,
     }));
   };
 
   const handleFilterChange = (newFilters) => {
+    setCurrentPage(1);
     if (newFilters.clearAll) {
-      setFilters({ sort: 'price_asc', times: [], maxPrice: 10000000 });
+      setFilters({ sort: "price_asc", times: [], maxPrice: 10000000 });
       return;
     }
-    setFilters(prev => ({ ...prev, ...newFilters }));
+    setFilters((prev) => ({ ...prev, ...newFilters }));
+  };
+
+  const updatePassengerCount = (field, delta) => {
+    setSearchParams((prev) => {
+      const current = prev.passengers || { adults: 1, children: 0 };
+      const nextVal =
+        field === "adults"
+          ? Math.max(1, Math.min(9, (current.adults || 1) + delta))
+          : Math.max(0, Math.min(6, (current.children || 0) + delta));
+      return {
+        ...prev,
+        passengers: {
+          ...current,
+          [field]: nextVal,
+        },
+      };
+    });
   };
 
   const handleSelectFlight = (flight) => {
@@ -188,40 +314,47 @@ export default function FlightResults() {
       return;
     }
 
-    if (searchParams?.tripType === 'round-trip' && bookingStage === 'outbound') {
+    localStorage.setItem("search_params", JSON.stringify(searchParams));
+
+    if (searchParams?.tripType === "round-trip" && bookingStage === "outbound") {
       setOutboundFlight(flight);
-      setBookingStage('return');
+      setBookingStage("return");
 
       const returnParams = {
         ...searchParams,
         departure: searchParams.arrival,
         arrival: searchParams.departure,
-        date: searchParams.returnDate
+        date: searchParams.returnDate,
       };
       setSearchParams(returnParams);
       fetchFlights(returnParams);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
-      if (searchParams?.tripType === 'round-trip') {
-        localStorage.setItem('selected_flights', JSON.stringify([outboundFlight, flight]));
+      if (searchParams?.tripType === "round-trip") {
+        localStorage.setItem(
+          "selected_flights",
+          JSON.stringify([outboundFlight, flight])
+        );
       } else {
-        localStorage.setItem('selected_flights', JSON.stringify([flight]));
+        localStorage.setItem("selected_flights", JSON.stringify([flight]));
       }
-      localStorage.removeItem('selected_flight');
-      navigate('/seat-selection');
+      localStorage.removeItem("selected_flight");
+      navigate("/seat-selection");
     }
   };
 
   const calculateReschedulefee = async (newFlight) => {
     try {
-      const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+      const token =
+        localStorage.getItem("access_token") ||
+        sessionStorage.getItem("access_token");
       const res = await axios.post(
         `/api/bookings/${rescheduleBooking.id}/reschedule`,
         { new_flight_id: newFlight.id },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      if (res.data.status === 'success') {
+      if (res.data.status === "success") {
         setRescheduleData({
           oldBooking: rescheduleBooking,
           newFlight: newFlight,
@@ -231,47 +364,52 @@ export default function FlightResults() {
         setShowRescheduleModal(true);
       }
     } catch (err) {
-      alert('Lỗi: ' + (err.response?.data?.message || err.message));
+      alert("Lỗi: " + (err.response?.data?.message || err.message));
     }
   };
 
   const handleRescheduleConfirm = async () => {
     try {
-      const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+      const token =
+        localStorage.getItem("access_token") ||
+        sessionStorage.getItem("access_token");
       const paymentAmount = rescheduleData.reschedule_fee;
 
       if (paymentAmount > 0) {
-        localStorage.setItem('reschedule_payment_data', JSON.stringify({
-          bookingId: rescheduleData.oldBooking.id,
-          newFlightId: rescheduleData.newFlight.id,
-          amount: paymentAmount,
-          type: 'reschedule'
-        }));
-        navigate('/payment', {
+        localStorage.setItem(
+          "reschedule_payment_data",
+          JSON.stringify({
+            bookingId: rescheduleData.oldBooking.id,
+            newFlightId: rescheduleData.newFlight.id,
+            amount: paymentAmount,
+            type: "reschedule",
+          })
+        );
+        navigate("/payment", {
           state: {
             amount: paymentAmount,
             bookingId: rescheduleData.oldBooking.id,
             newFlightId: rescheduleData.newFlight.id,
-            type: 'reschedule'
-          }
+            type: "reschedule",
+          },
         });
       } else {
         const res = await axios.post(
           `/api/bookings/${rescheduleData.oldBooking.id}/pay-reschedule`,
           {
             new_flight_id: rescheduleData.newFlight.id,
-            payment_method: 'vnpay'
+            payment_method: "vnpay",
           },
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        if (res.data.status === 'success') {
-          alert(`Đổi chuyến bay thành công!`);
-          navigate('/my-bookings');
+        if (res.data.status === "success") {
+          alert("Đổi chuyến bay thành công!");
+          navigate("/my-bookings");
         }
       }
     } catch (err) {
-      alert('Lỗi: ' + (err.response?.data?.message || err.message));
+      alert("Lỗi: " + (err.response?.data?.message || err.message));
       setShowRescheduleModal(false);
     }
   };
@@ -281,29 +419,49 @@ export default function FlightResults() {
 
     // Filter by price
     if (filters.maxPrice) {
-      result = result.filter(f => parseFloat(f.display_price || f.base_price) <= filters.maxPrice);
+      result = result.filter(
+        (f) => parseFloat(f.display_price || f.base_price) <= filters.maxPrice
+      );
     }
 
     // Filter by departure times
     if (filters.times?.length > 0) {
-      result = result.filter(f => {
+      result = result.filter((f) => {
         const hour = new Date(f.departure_time).getHours();
-        if (filters.times.includes('morning') && hour >= 6 && hour < 12) return true;
-        if (filters.times.includes('afternoon') && hour >= 12 && hour < 18) return true;
-        if (filters.times.includes('evening') && hour >= 18 && hour < 24) return true;
+        if (filters.times.includes("morning") && hour >= 6 && hour < 12)
+          return true;
+        if (filters.times.includes("afternoon") && hour >= 12 && hour < 18)
+          return true;
+        if (filters.times.includes("evening") && hour >= 18 && hour < 24)
+          return true;
         return false;
       });
     }
 
     // Filter by airlines
     if (filters.airlines?.length > 0) {
-      result = result.filter(f => {
+      result = result.filter((f) => {
         const fn = (f.flight_number || "").toUpperCase();
-        return filters.airlines.some(code => {
-          if (code === 'VN') return fn.startsWith('VN') || fn.includes('VIETNAM');
-          if (code === 'VJ') return fn.startsWith('VJ') || fn.includes('VIETJET');
-          if (code === 'QH' || code === 'FB') return fn.startsWith('QH') || fn.startsWith('FB') || fn.includes('BAMBOO');
-          if (code === 'SKY') return fn.startsWith('SK') || fn.startsWith('SL') || (!fn.startsWith('VN') && !fn.startsWith('VJ') && !fn.startsWith('QH') && !fn.startsWith('FB'));
+        return filters.airlines.some((code) => {
+          if (code === "VN")
+            return fn.startsWith("VN") || fn.includes("VIETNAM");
+          if (code === "VJ")
+            return fn.startsWith("VJ") || fn.includes("VIETJET");
+          if (code === "QH" || code === "FB")
+            return (
+              fn.startsWith("QH") ||
+              fn.startsWith("FB") ||
+              fn.includes("BAMBOO")
+            );
+          if (code === "SKY")
+            return (
+              fn.startsWith("SK") ||
+              fn.startsWith("SL") ||
+              (!fn.startsWith("VN") &&
+                !fn.startsWith("VJ") &&
+                !fn.startsWith("QH") &&
+                !fn.startsWith("FB"))
+            );
           return false;
         });
       });
@@ -311,12 +469,12 @@ export default function FlightResults() {
 
     // Sort
     result.sort((a, b) => {
-      if (filters.sort === 'price_asc') {
+      if (filters.sort === "price_asc") {
         const priceA = parseFloat(a.display_price || a.base_price);
         const priceB = parseFloat(b.display_price || b.base_price);
         return priceA - priceB;
       }
-      if (filters.sort === 'time_asc') {
+      if (filters.sort === "time_asc") {
         return new Date(a.departure_time) - new Date(b.departure_time);
       }
       return 0;
@@ -326,191 +484,567 @@ export default function FlightResults() {
   };
 
   const displayedFlights = getFilteredAndSortedFlights();
+  const totalPages = Math.max(
+    1,
+    Math.ceil(displayedFlights.length / FLIGHTS_PER_PAGE)
+  );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedFlights = displayedFlights.slice(
+    (safeCurrentPage - 1) * FLIGHTS_PER_PAGE,
+    safeCurrentPage * FLIGHTS_PER_PAGE
+  );
+
+  // Compact windowed pagination (e.g. 1 ... 4 5 6 ... 700) — never overflows horizontally!
+  const getVisiblePageNumbers = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const pages = [1];
+    const start = Math.max(2, safeCurrentPage - 1);
+    const end = Math.min(totalPages - 1, safeCurrentPage + 1);
+    if (start > 2) pages.push("...");
+    for (let p = start; p <= end; p += 1) pages.push(p);
+    if (end < totalPages - 1) pages.push("...");
+    pages.push(totalPages);
+    return pages;
+  };
+  const visiblePageNumbers = getVisiblePageNumbers();
+
+  const totalPassengers =
+    (searchParams.passengers?.adults || 1) +
+    (searchParams.passengers?.children || 0);
+
+  const routeSummaryText =
+    searchParams.departure && searchParams.arrival
+      ? `${searchParams.departure} ➔ ${searchParams.arrival}`
+      : searchParams.departure
+        ? `Khởi hành từ ${searchParams.departure}`
+        : searchParams.arrival
+          ? `Đến ${searchParams.arrival}`
+          : "Tất cả chặng bay nội địa & quốc tế";
+
+  const dateSummaryText = searchParams.date
+    ? new Date(`${searchParams.date}T00:00:00`).toLocaleDateString("vi-VN", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+    : "Tất cả ngày khởi hành";
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-24 font-sans relative">
+    <div
+      className="relative min-h-screen font-sans text-slate-900"
+      style={{
+        background:
+          "linear-gradient(180deg, #b8dcff 0%, #dceeff 24%, #eef6ff 60%, #d6eaff 100%)",
+      }}
+    >
       <Navbar />
 
-      {/* 1. HERO HEADER BANNER matching user reference image */}
-      <div className="relative pt-24 pb-20 px-6 md:px-12 bg-gradient-to-b from-[#eaf4ff] via-[#edf6ff] to-slate-50 overflow-hidden">
-
-        {/* Sky Background Plane Graphics */}
-        <div className="absolute top-8 right-10 md:right-24 w-80 md:w-[480px] opacity-90 pointer-events-none z-0">
+      {/* 1. HERO HEADER BANNER (Synced 5-Star SkyLink Style) */}
+      <div className="relative overflow-hidden pb-10 pt-22">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 overflow-hidden"
+          style={{ height: 330 }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(90deg, rgba(188,223,255,0.96) 0%, rgba(210,234,255,0.84) 46%, rgba(225,241,255,0.20) 100%)",
+            }}
+          />
           <img
-            src="https://png.pngtree.com/thumb_back/fh260/background/20230804/pngtree-a-plane-flying-in-the-blue-sky-image_12999284.jpg"
-            alt="Sky background"
-            className="w-full h-auto object-contain mix-blend-multiply opacity-25 rounded-3xl"
+            src={HERO_FLIGHT_BG_URL}
+            alt=""
+            className="absolute right-0 top-0 h-full object-cover"
+            style={{
+              width: "62%",
+              objectPosition: "center 32%",
+              opacity: 0.9,
+              WebkitMaskImage:
+                "linear-gradient(to right, transparent 0%, black 34%)",
+              maskImage: "linear-gradient(to right, transparent 0%, black 34%)",
+            }}
+          />
+          <div
+            className="absolute inset-x-0 bottom-0"
+            style={{
+              height: 92,
+              background:
+                "linear-gradient(180deg, rgba(220,238,255,0) 0%, #dceeff 100%)",
+            }}
           />
         </div>
 
-        {/* Floating script text on top right */}
-        <div className="absolute top-16 right-12 hidden lg:block text-right pointer-events-none z-10">
-          <span className="font-serif italic text-2xl text-blue-800/60 font-semibold tracking-wide block">
-            Fly further with SkyLink
-          </span>
-        </div>
-
-        <div className="max-w-6xl mx-auto relative z-10">
-
-          {/* Back button */}
+        <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <button
+            type="button"
             onClick={() => navigate("/")}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 bg-white/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-blue-100 shadow-xs mb-4 transition-all cursor-pointer"
+            className="mb-3 inline-flex items-center gap-2 bg-white/90 px-4 py-1.5 text-xs font-extrabold text-[#16428b] shadow-sm transition hover:bg-white"
+            style={{
+              border: "1px solid rgba(255,255,255,0.96)",
+              borderRadius: 9999,
+              cursor: "pointer",
+            }}
           >
             <ArrowLeft size={14} weight="bold" />
-            <span>Quay về trang chủ</span>
+            <span>Quay lại trang chủ</span>
           </button>
 
-          {/* Page Title & Route Subtitle */}
-          <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-2">
-            Tìm kiếm chuyến bay
-          </h1>
-          <p className="text-xs md:text-sm text-slate-500 font-medium mb-8">
-            Chặng bay hiện tại: <strong className="text-slate-800">{searchParams.departure || "DAD"} ➔ {searchParams.arrival || "PQC"}</strong> • Ngày: <strong className="text-slate-800">{searchParams.date || "2026-09-26"}</strong>
-          </p>
-
-          {/* Floating Quick Search Bar matching Image */}
-          <form onSubmit={handleApplySearch} className="bg-white rounded-3xl p-5 shadow-lg border border-slate-200/80 space-y-4">
-
-            {/* Hàng 1: Loại vé (Một chiều / Khứ hồi -10%) matching user reference image */}
-            <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-              <button
-                type="button"
-                onClick={() => setSearchParams(prev => ({ ...prev, tripType: "one-way" }))}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${searchParams.tripType === "one-way"
-                    ? "bg-blue-600 text-white shadow-xs"
-                    : "bg-slate-100 text-slate-600 hover:text-slate-900"
-                  }`}
+          <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p
+                className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em]"
+                style={{ color: "#0b57d0", margin: "0 0 4px 0" }}
               >
-                Một chiều
-              </button>
-              <button
-                type="button"
-                onClick={() => setSearchParams(prev => ({ ...prev, tripType: "round-trip" }))}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${searchParams.tripType === "round-trip"
-                    ? "bg-blue-600 text-white shadow-xs"
-                    : "bg-slate-100 text-slate-600 hover:text-slate-900"
-                  }`}
+                <AirplaneTilt size={15} weight="fill" />
+                SKYLINK AIRLINES • ĐẶT VÉ TRỰC TUYẾN
+              </p>
+              <h1
+                className="font-black tracking-tight"
+                style={{
+                  fontSize: "clamp(1.95rem, 3.4vw, 2.7rem)",
+                  color: "#091e47",
+                  lineHeight: 1.12,
+                  margin: "0 0 6px 0",
+                }}
               >
-                <span>Khứ hồi</span>
-                <span className="text-[10px] bg-amber-400 text-amber-950 px-1.5 py-0.5 rounded-full font-extrabold">-10%</span>
-              </button>
+                {rescheduleMode ? "Chọn chuyến bay mới để đổi vé" : "Tìm kiếm chuyến bay"}
+              </h1>
+              <p className="text-xs font-semibold text-[#2d4b7a] sm:text-sm" style={{ margin: 0 }}>
+                Chặng bay: <strong className="text-[#092152]">{routeSummaryText}</strong> • Ngày:{" "}
+                <strong className="text-[#092152]">{dateSummaryText}</strong> •{" "}
+                <strong className="text-[#0b5ed7]">
+                  {totalPassengers} hành khách ({searchParams.cabinClass || "Phổ thông"})
+                </strong>
+              </p>
+            </div>
+          </div>
+
+          {/* Floating Quick Search Bar */}
+          <form
+            onSubmit={handleApplySearch}
+            className="bg-white/95 p-5 shadow-lg"
+            style={{
+              borderRadius: 24,
+              border: "1px solid rgba(255,255,255,0.98)",
+              boxShadow: "0 16px 38px rgba(20, 62, 132, 0.11)",
+              backdropFilter: "blur(12px)",
+            }}
+          >
+            {/* Row 1: Trip Type Pills + Search CTA on Desktop */}
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-blue-50 pb-3.5">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-[#eef5ff] p-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSearchParams((prev) => ({
+                      ...prev,
+                      tripType: "one-way",
+                      returnDate: "",
+                    }))
+                  }
+                  className="px-4 py-1.5 text-xs font-extrabold transition"
+                  style={
+                    searchParams.tripType === "one-way"
+                      ? {
+                          background:
+                            "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
+                          color: "#ffffff",
+                          borderRadius: 9999,
+                          border: "none",
+                          cursor: "pointer",
+                        }
+                      : {
+                          background: "transparent",
+                          color: "#365382",
+                          borderRadius: 9999,
+                          border: "none",
+                          cursor: "pointer",
+                        }
+                  }
+                >
+                  Một chiều
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSearchParams((prev) => ({
+                      ...prev,
+                      tripType: "round-trip",
+                    }))
+                  }
+                  className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-extrabold transition"
+                  style={
+                    searchParams.tripType === "round-trip"
+                      ? {
+                          background:
+                            "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
+                          color: "#ffffff",
+                          borderRadius: 9999,
+                          border: "none",
+                          cursor: "pointer",
+                        }
+                      : {
+                          background: "transparent",
+                          color: "#365382",
+                          borderRadius: 9999,
+                          border: "none",
+                          cursor: "pointer",
+                        }
+                  }
+                >
+                  <span>Khứ hồi</span>
+                  <span className="rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-black text-amber-950">
+                    -10%
+                  </span>
+                </button>
+              </div>
+
+              {searchWarning && (
+                <p
+                  role="alert"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700"
+                  style={{ margin: 0, border: "1px solid #fecdd3" }}
+                >
+                  <WarningCircle size={15} weight="fill" />
+                  {searchWarning}
+                </p>
+              )}
             </div>
 
-            {/* Hàng 2: Form Chọn Tuyến và Ngày */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-
-              {/* Điểm đi */}
-              <div className="md:col-span-3 bg-slate-50 border border-slate-200 rounded-2xl p-2.5">
-                <label className="text-[10px] font-bold text-slate-400 block mb-0.5 uppercase">Điểm đi</label>
+            {/* Row 2: Compact Single-Row Search Inputs */}
+            <div className="grid grid-cols-1 items-center gap-3 md:grid-cols-12">
+              {/* Departure */}
+              <div className="rounded-2xl border border-blue-100 bg-[#f7faff] p-2.5 md:col-span-3">
+                <label className="mb-0.5 block text-[10px] font-extrabold uppercase tracking-wider text-[#5a749b]">
+                  Điểm đi
+                </label>
                 <div className="flex items-center gap-2">
-                  <span className="text-blue-600 text-xs">✈</span>
+                  <AirplaneTilt size={15} weight="fill" className="shrink-0 text-blue-600" />
                   <select
-                    className="w-full bg-transparent text-xs font-extrabold text-slate-900 outline-none cursor-pointer"
+                    aria-label="Chọn điểm đi"
+                    className="w-full cursor-pointer bg-transparent text-xs font-extrabold text-[#0b2559] outline-none"
                     value={searchParams.departure}
-                    onChange={(e) => setSearchParams(prev => ({ ...prev, departure: e.target.value }))}
+                    onChange={(e) => {
+                      setSearchWarning("");
+                      setSearchParams((prev) => ({
+                        ...prev,
+                        departure: e.target.value,
+                      }));
+                    }}
                   >
-                    <option value="">Chọn điểm đi</option>
-                    {(Array.isArray(airports) ? airports : []).map(ap => (
-                      <option key={ap.id || ap.code} value={ap.code}>{ap.city} ({ap.code})</option>
+                    <option value="">Tất cả điểm đi</option>
+                    {(Array.isArray(airports) ? airports : []).map((ap) => (
+                      <option key={ap.id || ap.code} value={ap.code}>
+                        {ap.city} ({ap.code})
+                      </option>
                     ))}
                   </select>
                 </div>
               </div>
 
               {/* Swap Button */}
-              <div className="md:col-span-1 flex justify-center -my-2 md:my-0">
+              <div className="flex justify-center md:col-span-1">
                 <button
                   type="button"
                   onClick={handleSwapAirports}
-                  className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-xs flex items-center justify-center text-slate-500 hover:text-blue-600 transition-colors cursor-pointer"
-                  title="Đổi chiều"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-blue-200 bg-white text-blue-600 shadow-xs transition hover:bg-blue-50"
+                  style={{ cursor: "pointer" }}
+                  title="Đổi chiều bay"
+                  aria-label="Đổi chiều bay"
                 >
-                  <ArrowsLeftRight size={14} weight="bold" />
+                  <ArrowsLeftRight size={15} weight="bold" />
                 </button>
               </div>
 
-              {/* Điểm đến */}
-              <div className="md:col-span-3 bg-slate-50 border border-slate-200 rounded-2xl p-2.5">
-                <label className="text-[10px] font-bold text-slate-400 block mb-0.5 uppercase">Điểm đến</label>
+              {/* Arrival */}
+              <div className="rounded-2xl border border-blue-100 bg-[#f7faff] p-2.5 md:col-span-3">
+                <label className="mb-0.5 block text-[10px] font-extrabold uppercase tracking-wider text-[#5a749b]">
+                  Điểm đến
+                </label>
                 <div className="flex items-center gap-2">
-                  <MapPinLine size={14} className="text-blue-600" />
+                  <MapPinLine size={15} weight="fill" className="shrink-0 text-blue-600" />
                   <select
-                    className="w-full bg-transparent text-xs font-extrabold text-slate-900 outline-none cursor-pointer"
+                    aria-label="Chọn điểm đến"
+                    className="w-full cursor-pointer bg-transparent text-xs font-extrabold text-[#0b2559] outline-none"
                     value={searchParams.arrival}
-                    onChange={(e) => setSearchParams(prev => ({ ...prev, arrival: e.target.value }))}
+                    onChange={(e) => {
+                      setSearchWarning("");
+                      setSearchParams((prev) => ({
+                        ...prev,
+                        arrival: e.target.value,
+                      }));
+                    }}
                   >
-                    <option value="">Chọn điểm đến</option>
-                    {(Array.isArray(airports) ? airports : []).map(ap => (
-                      <option key={ap.id || ap.code} value={ap.code}>{ap.city} ({ap.code})</option>
+                    <option value="">Tất cả điểm đến</option>
+                    {(Array.isArray(airports) ? airports : []).map((ap) => (
+                      <option key={ap.id || ap.code} value={ap.code}>
+                        {ap.city} ({ap.code})
+                      </option>
                     ))}
                   </select>
                 </div>
               </div>
 
-              {/* Ngày đi */}
-              <div className={`${searchParams.tripType === 'round-trip' ? 'md:col-span-2' : 'md:col-span-2'} bg-slate-50 border border-slate-200 rounded-2xl p-2.5`}>
-                <label className="text-[10px] font-bold text-slate-400 block mb-0.5 uppercase">Ngày đi</label>
-                <div className="flex items-center gap-2">
-                  <CalendarBlank size={14} className="text-blue-600" />
+              {/* Departure Date (Blocks past dates) */}
+              <div
+                className={`rounded-2xl border border-blue-100 bg-[#f7faff] p-2.5 ${
+                  searchParams.tripType === "round-trip"
+                    ? "md:col-span-2"
+                    : "md:col-span-2"
+                }`}
+              >
+                <label className="mb-0.5 block text-[10px] font-extrabold uppercase tracking-wider text-[#5a749b]">
+                  Ngày đi
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <CalendarBlank size={14} weight="fill" className="shrink-0 text-blue-600" />
                   <input
                     type="date"
-                    className="w-full bg-transparent text-xs font-extrabold text-slate-900 outline-none cursor-pointer"
+                    aria-label="Ngày đi"
+                    min={todayStr}
+                    className="w-full cursor-pointer bg-transparent text-xs font-extrabold text-[#0b2559] outline-none"
                     value={searchParams.date}
-                    onChange={(e) => setSearchParams(prev => ({ ...prev, date: e.target.value }))}
+                    onChange={(e) => {
+                      setSearchWarning("");
+                      const val = e.target.value;
+                      setSearchParams((prev) => ({
+                        ...prev,
+                        date: val,
+                        returnDate:
+                          prev.returnDate && val && prev.returnDate < val
+                            ? val
+                            : prev.returnDate,
+                      }));
+                    }}
                   />
                 </div>
               </div>
 
-              {/* Ngày về (Hiện khi chọn Khứ hồi) */}
-              {searchParams.tripType === 'round-trip' && (
-                <div className="md:col-span-3 bg-slate-50 border border-slate-200 rounded-2xl p-2.5">
-                  <label className="text-[10px] font-bold text-slate-400 block mb-0.5 uppercase">Ngày về</label>
-                  <div className="flex items-center gap-2">
-                    <CalendarBlank size={14} className="text-blue-600" />
+              {/* Return Date (When Round-trip) */}
+              {searchParams.tripType === "round-trip" && (
+                <div className="rounded-2xl border border-blue-100 bg-[#f7faff] p-2.5 md:col-span-3">
+                  <label className="mb-0.5 block text-[10px] font-extrabold uppercase tracking-wider text-[#5a749b]">
+                    Ngày về
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <CalendarBlank size={14} weight="fill" className="shrink-0 text-blue-600" />
                     <input
                       type="date"
-                      className="w-full bg-transparent text-xs font-extrabold text-slate-900 outline-none cursor-pointer"
+                      aria-label="Ngày về"
+                      min={searchParams.date || todayStr}
+                      className="w-full cursor-pointer bg-transparent text-xs font-extrabold text-[#0b2559] outline-none"
                       value={searchParams.returnDate}
-                      onChange={(e) => setSearchParams(prev => ({ ...prev, returnDate: e.target.value }))}
-                      min={searchParams.date || undefined}
+                      onChange={(e) => {
+                        setSearchWarning("");
+                        setSearchParams((prev) => ({
+                          ...prev,
+                          returnDate: e.target.value,
+                        }));
+                      }}
                     />
                   </div>
                 </div>
               )}
 
-              {/* Hành khách */}
-              <div className={`${searchParams.tripType === 'round-trip' ? 'md:col-span-3' : 'md:col-span-3'} bg-slate-50 border border-slate-200 rounded-2xl p-2.5`}>
-                <label className="text-[10px] font-bold text-slate-400 block mb-0.5 uppercase">1 hành khách</label>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs font-extrabold text-slate-900">
-                    <Users size={14} className="text-blue-600" />
-                    <span>Phổ thông</span>
+              {/* Interactive Passenger & Cabin Class Selector */}
+              <div
+                ref={passengerMenuRef}
+                className="relative md:col-span-3"
+              >
+                <button
+                  type="button"
+                  onClick={() => setPassengerMenuOpen((v) => !v)}
+                  className="w-full rounded-2xl border border-blue-100 bg-[#f7faff] p-2.5 text-left transition hover:border-blue-300"
+                  style={{ cursor: "pointer" }}
+                >
+                  <span className="mb-0.5 block text-[10px] font-extrabold uppercase tracking-wider text-[#5a749b]">
+                    {totalPassengers} hành khách
+                  </span>
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="inline-flex items-center gap-1.5 truncate text-xs font-extrabold text-[#0b2559]">
+                      <Users size={14} weight="fill" className="shrink-0 text-blue-600" />
+                      <span>{searchParams.cabinClass || "Phổ thông"}</span>
+                    </span>
+                    <CaretDown
+                      size={13}
+                      weight="bold"
+                      className="shrink-0 text-slate-500"
+                      style={{
+                        transform: passengerMenuOpen ? "rotate(180deg)" : "none",
+                        transition: "transform 0.2s ease",
+                      }}
+                    />
                   </div>
-                  <CaretDown size={12} className="text-slate-400" />
-                </div>
+                </button>
+
+                {passengerMenuOpen && (
+                  <div
+                    className="absolute right-0 top-full z-50 mt-2 w-72 bg-white p-4 shadow-2xl"
+                    style={{
+                      borderRadius: 20,
+                      border: "1px solid #dbe8fc",
+                      boxShadow: "0 18px 40px rgba(15, 52, 114, 0.16)",
+                    }}
+                  >
+                    <p className="mb-3 text-xs font-black text-[#092152]" style={{ margin: "0 0 10px 0" }}>
+                      Hành khách & Hạng vé
+                    </p>
+
+                    <div className="space-y-3 border-b border-blue-50 pb-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-extrabold text-[#0b2559]" style={{ margin: 0 }}>
+                            Người lớn
+                          </p>
+                          <p className="text-[10px] font-semibold text-slate-400" style={{ margin: 0 }}>
+                            Từ 12 tuổi trở lên
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <button
+                            type="button"
+                            onClick={() => updatePassengerCount("adults", -1)}
+                            className="flex h-7 w-7 items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-blue-700"
+                            style={{ cursor: "pointer" }}
+                          >
+                            <Minus size={12} weight="bold" />
+                          </button>
+                          <span className="w-5 text-center text-xs font-black text-[#092152]">
+                            {searchParams.passengers?.adults || 1}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => updatePassengerCount("adults", 1)}
+                            className="flex h-7 w-7 items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-blue-700"
+                            style={{ cursor: "pointer" }}
+                          >
+                            <Plus size={12} weight="bold" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-extrabold text-[#0b2559]" style={{ margin: 0 }}>
+                            Trẻ em
+                          </p>
+                          <p className="text-[10px] font-semibold text-slate-400" style={{ margin: 0 }}>
+                            Từ 2 – 11 tuổi
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <button
+                            type="button"
+                            onClick={() => updatePassengerCount("children", -1)}
+                            className="flex h-7 w-7 items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-blue-700"
+                            style={{ cursor: "pointer" }}
+                          >
+                            <Minus size={12} weight="bold" />
+                          </button>
+                          <span className="w-5 text-center text-xs font-black text-[#092152]">
+                            {searchParams.passengers?.children || 0}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => updatePassengerCount("children", 1)}
+                            className="flex h-7 w-7 items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-blue-700"
+                            style={{ cursor: "pointer" }}
+                          >
+                            <Plus size={12} weight="bold" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3">
+                      <p className="mb-2 text-[11px] font-extrabold text-[#5a749b]" style={{ margin: "0 0 8px 0" }}>
+                        Hạng ghế ưu tiên
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {["Phổ thông", "Thương gia"].map((cabin) => {
+                          const active =
+                            (searchParams.cabinClass || "Phổ thông") === cabin;
+                          return (
+                            <button
+                              key={cabin}
+                              type="button"
+                              onClick={() =>
+                                setSearchParams((prev) => ({
+                                  ...prev,
+                                  cabinClass: cabin,
+                                }))
+                              }
+                              className="rounded-xl py-2 text-xs font-extrabold transition"
+                              style={
+                                active
+                                  ? {
+                                      background: "#ebf4ff",
+                                      color: "#0b4fd0",
+                                      border: "1.5px solid #1d75f2",
+                                      cursor: "pointer",
+                                    }
+                                  : {
+                                      background: "#f8fafc",
+                                      color: "#475569",
+                                      border: "1px solid #e2e8f0",
+                                      cursor: "pointer",
+                                    }
+                              }
+                            >
+                              {cabin}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setPassengerMenuOpen(false)}
+                      className="mt-3 w-full py-2 text-xs font-extrabold text-white"
+                      style={{
+                        background:
+                          "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
+                        borderRadius: 9999,
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Xong
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {/* Nút Tìm chuyến bay */}
-              <div className="md:col-span-12 flex justify-end pt-2">
+              {/* Submit Search Button */}
+              <div className="flex justify-end pt-1 md:col-span-12">
                 <button
                   type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs px-6 py-3 rounded-2xl transition-all shadow-xs cursor-pointer flex items-center gap-2"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 text-xs font-extrabold text-white transition hover:-translate-y-0.5"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, #0b5ed7 0%, #1d78f0 100%)",
+                    boxShadow: "0 8px 20px rgba(13, 94, 215, 0.28)",
+                    borderRadius: 9999,
+                    border: "none",
+                    cursor: "pointer",
+                  }}
                 >
-                  <MagnifyingGlass size={16} weight="bold" />
+                  <MagnifyingGlass size={15} weight="bold" />
                   <span>Tìm chuyến bay</span>
                 </button>
               </div>
-
             </div>
           </form>
-
         </div>
       </div>
 
       {/* 2. MAIN LAYOUT GRID (Filter Sidebar + Flight Results List) */}
-      <main className="max-w-6xl mx-auto px-6 pt-8 flex flex-col md:flex-row items-start gap-8 relative z-10">
-
+      <main className="relative z-10 mx-auto flex max-w-6xl flex-col items-start gap-7 px-4 pb-24 pt-2 sm:px-6 md:flex-row lg:px-8">
         {/* Left: Sticky Filter Sidebar */}
         <FlightFilterSidebar
           filters={filters}
@@ -518,36 +1052,37 @@ export default function FlightResults() {
           allFlights={flights}
         />
 
-        {/* Right: Flight List & Pagination */}
-        <div className="flex-1 w-full space-y-4">
-
+        {/* Right: Flight List & Real Pagination */}
+        <div className="min-w-0 w-full flex-1 space-y-4">
           {/* Round-trip Step Progress Banner */}
-          {searchParams?.tripType === 'round-trip' && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-2xl p-4 flex items-center justify-between shadow-xs">
+          {searchParams?.tripType === "round-trip" && (
+            <div className="flex items-center justify-between rounded-2xl border border-blue-200 bg-white/95 p-4 shadow-xs">
               <div className="flex items-center gap-3">
-                <span className="w-8 h-8 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center shrink-0">
-                  {bookingStage === 'outbound' ? '1/2' : '2/2'}
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-black text-white">
+                  {bookingStage === "outbound" ? "1/2" : "2/2"}
                 </span>
                 <div>
-                  <p className="text-xs font-black text-slate-900 uppercase tracking-wide">
-                    {bookingStage === 'outbound' ? 'BƯỚC 1: CHỌN CHUYẾN BAY CHIỀU ĐI' : 'BƯỚC 2: CHỌN CHUYẾN BAY CHIỀU VỀ'}
+                  <p className="text-xs font-black uppercase tracking-wide text-[#092152]" style={{ margin: 0 }}>
+                    {bookingStage === "outbound"
+                      ? "BƯỚC 1: CHỌN CHUYẾN BAY CHIỀU ĐI"
+                      : "BƯỚC 2: CHỌN CHUYẾN BAY CHIỀU VỀ"}
                   </p>
-                  <p className="text-[11px] text-slate-600 font-medium mt-0.5">
-                    {bookingStage === 'outbound'
-                      ? `Chặng đi: ${searchParams.departure || 'DAD'} ➔ ${searchParams.arrival || 'PQC'}`
-                      : `Chặng về: ${searchParams.arrival || 'PQC'} ➔ ${searchParams.departure || 'DAD'} (Đã chọn chiều đi: ${outboundFlight?.flight_number || 'VN-123'})`}
+                  <p className="mt-0.5 text-[11px] font-semibold text-[#47628a]" style={{ margin: "2px 0 0 0" }}>
+                    {bookingStage === "outbound"
+                      ? `Chặng đi: ${routeSummaryText}`
+                      : `Chặng về: ${searchParams.departure || "---"} ➔ ${searchParams.arrival || "---"} (Đã chọn chiều đi: ${outboundFlight?.flight_number || "SkyLink"})`}
                   </p>
                 </div>
               </div>
-              {bookingStage === 'return' && (
+              {bookingStage === "return" && (
                 <button
                   type="button"
                   onClick={() => {
-                    setBookingStage('outbound');
+                    setBookingStage("outbound");
                     setOutboundFlight(null);
                     fetchFlights(searchParams);
                   }}
-                  className="text-[11px] font-bold text-blue-600 hover:text-blue-800 underline cursor-pointer shrink-0"
+                  className="shrink-0 cursor-pointer text-xs font-extrabold text-blue-600 underline hover:text-blue-800"
                 >
                   ← Chọn lại chiều đi
                 </button>
@@ -555,43 +1090,78 @@ export default function FlightResults() {
             </div>
           )}
 
-          {/* Top Control Bar matching image */}
-          <div className="flex items-center justify-between pb-2">
-            <span className="text-xs font-bold text-slate-700">
-              Hiển thị <strong className="text-slate-900">{displayedFlights.length || 2} kết quả</strong>
+          {/* Top Control Bar (Accurate real count — never lies when 0 results) */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
+            <span className="text-xs font-bold text-[#355384]">
+              Hiển thị{" "}
+              <strong className="text-[#092152]">
+                {displayedFlights.length} kết quả
+              </strong>
+              {totalPages > 1 && (
+                <span>
+                  {" "}
+                  (Trang {safeCurrentPage}/{totalPages})
+                </span>
+              )}
             </span>
 
             {/* Sort Dropdown */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 font-semibold">🔀 Sắp xếp:</span>
+              <span className="text-xs font-semibold text-[#47628a]">
+                Sắp xếp:
+              </span>
               <select
+                aria-label="Sắp xếp chuyến bay"
                 value={filters.sort}
                 onChange={(e) => handleFilterChange({ sort: e.target.value })}
-                className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 outline-none cursor-pointer hover:border-slate-300"
+                className="cursor-pointer rounded-full border border-blue-200 bg-white px-3.5 py-1.5 text-xs font-extrabold text-[#0b2559] outline-none hover:border-blue-300"
               >
-                <option value="price_asc">Giá thấp nhất ˅</option>
+                <option value="price_asc">Giá thấp nhất</option>
                 <option value="time_asc">Cất cánh sớm nhất</option>
               </select>
             </div>
           </div>
 
           {loading ? (
-            <div className="py-24 flex flex-col items-center justify-center gap-4 opacity-60 text-slate-500">
-              <MagnifyingGlass className="animate-spin text-blue-600" size={36} />
-              <p className="text-xs font-bold">Đang tìm chuyến bay...</p>
+            <div className="flex flex-col items-center justify-center gap-3 rounded-3xl bg-white/90 py-20 text-slate-500">
+              <MagnifyingGlass
+                className="animate-spin text-blue-600"
+                size={34}
+              />
+              <p className="text-xs font-bold">Đang tìm kiếm chuyến bay phù hợp...</p>
             </div>
           ) : error ? (
-            <div className="py-20 text-center">
-              <p className="text-red-500 font-bold text-sm">{error}</p>
+            <div className="rounded-3xl border border-rose-200 bg-rose-50 py-14 text-center">
+              <p className="text-sm font-bold text-rose-700">{error}</p>
             </div>
           ) : displayedFlights.length === 0 ? (
-            <div className="py-24 flex flex-col items-center justify-center text-slate-400 bg-white rounded-3xl border border-slate-200 p-8">
-              <span className="text-4xl mb-3">✈</span>
-              <p className="text-xs font-bold text-slate-600">Không tìm thấy chuyến bay nào phù hợp với bộ lọc.</p>
+            <div className="flex flex-col items-center justify-center rounded-3xl border border-blue-100 bg-white p-10 text-center shadow-xs">
+              <span className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                <AirplaneTilt size={28} weight="duotone" />
+              </span>
+              <p className="text-sm font-black text-[#092152]">
+                Không tìm thấy chuyến bay nào phù hợp
+              </p>
+              <p className="mt-1 text-xs font-medium text-slate-500">
+                Thử đổi ngày khởi hành hoặc xóa bộ lọc giá/khung giờ để xem thêm chuyến bay khác.
+              </p>
+              <button
+                type="button"
+                onClick={() => handleFilterChange({ clearAll: true })}
+                className="mt-4 px-5 py-2 text-xs font-extrabold text-white"
+                style={{
+                  background: "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
+                  borderRadius: 9999,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Xóa bộ lọc
+              </button>
             </div>
           ) : (
-            <ul className="flex flex-col gap-4 w-full">
-              {displayedFlights.map((flight) => (
+            <ul className="flex w-full flex-col gap-4" style={{ padding: 0, margin: 0 }}>
+              {paginatedFlights.map((flight) => (
                 <FlightCard
                   key={flight.id}
                   flight={flight}
@@ -601,75 +1171,110 @@ export default function FlightResults() {
             </ul>
           )}
 
-          {/* Pagination bar matching image `< 1 2 3 >` */}
-          <div className="flex items-center justify-center gap-2 pt-6">
-            <button
-              type="button"
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 flex items-center justify-center cursor-pointer"
+          {/* Real Dynamic Windowed Pagination (Always fits cleanly on 1 row) */}
+          {!loading && totalPages > 1 && (
+            <div className="flex flex-wrap items-center justify-center gap-1.5 pt-4">
+              <button
+                type="button"
+                disabled={safeCurrentPage <= 1}
+                onClick={() => {
+                  setCurrentPage((prev) => Math.max(1, prev - 1));
+                  window.scrollTo({ top: 320, behavior: "smooth" });
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-200 bg-white text-xs font-bold text-[#163d7a] hover:bg-blue-50 disabled:opacity-40"
+                style={{ cursor: safeCurrentPage <= 1 ? "not-allowed" : "pointer" }}
+              >
+                ‹
+              </button>
+              {visiblePageNumbers.map((pageNum, idx) =>
+                pageNum === "..." ? (
+                  <span
+                    key={`ellipsis-${idx}`}
+                    className="flex h-8 w-7 items-center justify-center text-xs font-bold text-slate-400"
+                  >
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={pageNum}
+                    type="button"
+                    onClick={() => {
+                      setCurrentPage(pageNum);
+                      window.scrollTo({ top: 320, behavior: "smooth" });
+                    }}
+                    className="flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs font-extrabold transition"
+                    style={
+                      safeCurrentPage === pageNum
+                        ? {
+                            background:
+                              "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
+                            color: "#ffffff",
+                            border: "none",
+                            cursor: "pointer",
+                          }
+                        : {
+                            background: "#ffffff",
+                            color: "#163d7a",
+                            border: "1px solid #cde0fc",
+                            cursor: "pointer",
+                          }
+                    }
+                  >
+                    {pageNum}
+                  </button>
+                )
+              )}
+              <button
+                type="button"
+                disabled={safeCurrentPage >= totalPages}
+                onClick={() => {
+                  setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+                  window.scrollTo({ top: 320, behavior: "smooth" });
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-200 bg-white text-xs font-bold text-[#163d7a] hover:bg-blue-50 disabled:opacity-40"
+                style={{
+                  cursor:
+                    safeCurrentPage >= totalPages ? "not-allowed" : "pointer",
+                }}
+              >
+                ›
+              </button>
+            </div>
+          )}
+
+          {/* Clean Inline Support Banner (No longer floats over flight cards) */}
+          <div className="pt-4">
+            <div
+              className="flex flex-wrap items-center justify-between gap-3 rounded-full bg-white/90 px-5 py-2.5 text-xs shadow-sm"
+              style={{ border: "1px solid #c9defc" }}
             >
-              ‹
-            </button>
-            <button
-              type="button"
-              onClick={() => setCurrentPage(1)}
-              className={`w-8 h-8 rounded-lg text-xs font-bold flex items-center justify-center cursor-pointer ${currentPage === 1 ? "bg-blue-600 text-white shadow-xs" : "bg-white border border-slate-200 text-slate-700"
-                }`}
-            >
-              1
-            </button>
-            <button
-              type="button"
-              onClick={() => setCurrentPage(2)}
-              className={`w-8 h-8 rounded-lg text-xs font-bold flex items-center justify-center cursor-pointer ${currentPage === 2 ? "bg-blue-600 text-white shadow-xs" : "bg-white border border-slate-200 text-slate-700"
-                }`}
-            >
-              2
-            </button>
-            <button
-              type="button"
-              onClick={() => setCurrentPage(3)}
-              className={`w-8 h-8 rounded-lg text-xs font-bold flex items-center justify-center cursor-pointer ${currentPage === 3 ? "bg-blue-600 text-white shadow-xs" : "bg-white border border-slate-200 text-slate-700"
-                }`}
-            >
-              3
-            </button>
-            <button
-              type="button"
-              onClick={() => setCurrentPage(prev => Math.min(3, prev + 1))}
-              className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 flex items-center justify-center cursor-pointer"
-            >
-              ›
-            </button>
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+                <p className="truncate font-semibold text-slate-700" style={{ margin: 0 }}>
+                  <strong className="text-blue-600">Bạn cần hỗ trợ?</strong> SkyAI luôn sẵn sàng
+                  24/7 tư vấn chuyến bay phù hợp nhất.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate("/support")}
+                className="inline-flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 text-[11px] font-extrabold text-white shadow-xs transition hover:opacity-95"
+                style={{
+                  background: "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
+                  borderRadius: 9999,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <Robot size={14} weight="bold" />
+                <span>Chat với SkyAI</span>
+              </button>
+            </div>
           </div>
-
         </div>
-
       </main>
 
-      {/* 3. FLOATING SKYAI ASSISTANT STRIP matching bottom bar in user reference image */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-xl w-[90%]">
-        <div className="bg-white/95 backdrop-blur-xl border border-blue-200/80 rounded-full px-5 py-2.5 shadow-xl flex items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
-            <p className="text-slate-700 font-semibold truncate">
-              <strong className="text-blue-600">Bạn cần hỗ trợ?</strong> SkyAI luôn sẵn sàng 24/7 để tư vấn chuyến bay phù hợp nhất.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[11px] px-3.5 py-1.5 rounded-full shrink-0 flex items-center gap-1.5 shadow-xs cursor-pointer"
-          >
-            <Robot size={14} weight="bold" />
-            <span>Chat với SkyAI</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="mt-20">
-        <Footer />
-      </div>
+      <Footer />
 
       {/* Reschedule Modal */}
       <RescheduleModal

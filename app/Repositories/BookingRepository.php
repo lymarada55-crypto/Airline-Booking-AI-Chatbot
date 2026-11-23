@@ -12,7 +12,8 @@ class BookingRepository implements BookingRepositoryInterface
             'user',
             'flight.departureAirport',
             'flight.arrivalAirport',
-            'tickets',
+            'tickets.seat',
+            'tickets.checkIn',
             'payment'
         ])->latest()->get();
     }
@@ -21,8 +22,10 @@ class BookingRepository implements BookingRepositoryInterface
     {
         return Booking::with([
             'user',
-            'flight',
-            'tickets',
+            'flight.departureAirport',
+            'flight.arrivalAirport',
+            'tickets.seat',
+            'tickets.checkIn',
             'services',
             'payment'
         ])->findOrFail($id);

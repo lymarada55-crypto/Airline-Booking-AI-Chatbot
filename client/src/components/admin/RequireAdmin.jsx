@@ -1,11 +1,15 @@
 import { Navigate, Outlet } from "react-router-dom";
 
 export default function RequireAdmin() {
+  const token =
+    localStorage.getItem("access_token") ||
+    sessionStorage.getItem("access_token");
+
   const rawUser =
     localStorage.getItem("user") ||
     sessionStorage.getItem("user");
 
-  if (!rawUser) return <Navigate to="/login" replace />;
+  if (!token || !rawUser) return <Navigate to="/login" replace />;
 
   let user;
   try {
@@ -14,15 +18,10 @@ export default function RequireAdmin() {
     return <Navigate to="/login" replace />;
   }
 
-  // chuẩn hoá role
-  const role =
-    user?.role ??
-    user?.roles?.[0]?.id ??
-    user?.roles?.[0]?.name;
-
   const isAdmin =
-    Number(role) === 1 ||
-    role === "admin";
+    Number(user?.role) === 1 ||
+    user?.role === "admin" ||
+    user?.roles?.some((r) => r?.name === "admin" || Number(r?.id) === 1);
 
   return isAdmin ? <Outlet /> : <Navigate to="/" replace />;
 }

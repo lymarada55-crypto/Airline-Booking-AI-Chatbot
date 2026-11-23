@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AirportController;
 use App\Http\Controllers\Api\FlightController;
 use App\Http\Controllers\Api\Admin\FlightAdminController;
+use App\Http\Controllers\Api\Admin\AircraftAdminController;
 use App\Http\Controllers\Api\Admin\BookingAdminController;
 use App\Http\Controllers\Api\Admin\AirportAdminController;
 use App\Http\Controllers\Api\Admin\UserAdminController;
@@ -126,6 +127,12 @@ Route::middleware(['auth:sanctum', 'role:admin'])
     Route::get('/travel-service-reservations', [TravelServiceController::class, 'adminReservations']);
     Route::patch('/travel-service-reservations/{id}', [TravelServiceController::class, 'updateReservationStatus'])
         ->whereNumber('id');
+    Route::get('/travel-products', [TravelServiceController::class, 'adminProducts']);
+    Route::post('/travel-products', [TravelServiceController::class, 'storeProduct']);
+    Route::put('/travel-products/{id}', [TravelServiceController::class, 'updateProduct'])
+        ->whereNumber('id');
+    Route::delete('/travel-products/{id}', [TravelServiceController::class, 'destroyProduct'])
+        ->whereNumber('id');
 
         // PROFILE
         Route::get('/profile', [ProfileController::class, 'show']);
@@ -136,6 +143,13 @@ Route::middleware(['auth:sanctum', 'role:admin'])
         Route::post('/flights', [FlightAdminController::class, 'store']);
         Route::put('/flights/{id}', [FlightAdminController::class, 'update']);
         Route::delete('/flights/{id}', [FlightAdminController::class, 'destroy']);
+
+        // AIRCRAFTS (FLEET)
+        Route::get('/aircrafts', [AircraftAdminController::class, 'index']);
+        Route::get('/aircrafts/{id}', [AircraftAdminController::class, 'show'])->whereNumber('id');
+        Route::post('/aircrafts', [AircraftAdminController::class, 'store']);
+        Route::put('/aircrafts/{id}', [AircraftAdminController::class, 'update'])->whereNumber('id');
+        Route::delete('/aircrafts/{id}', [AircraftAdminController::class, 'destroy'])->whereNumber('id');
 
         //AirPorts
         Route::get('/airports', [AirportAdminController::class, 'index']);

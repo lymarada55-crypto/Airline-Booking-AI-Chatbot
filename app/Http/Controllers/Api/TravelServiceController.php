@@ -349,10 +349,14 @@ class TravelServiceController extends Controller
     {
         $validated = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
+            'type' => ['nullable', 'in:all,hotel,car,experience'],
             'status' => ['nullable', 'in:all,pending_payment,booked,pending_confirmation,confirmed,cancelled'],
             'payment_status' => ['nullable', 'in:all,paid,unpaid'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
+
+        $perPage = (int) ($validated['per_page'] ?? 10);
 
         $reservations = TravelServiceReservation::query()
             ->with([
@@ -365,7 +369,9 @@ class TravelServiceController extends Controller
                 $search = $validated['search'];
                 $query->where(function ($subQuery) use ($search) {
                     $subQuery->where('reference_code', 'like', "%{$search}%")
-                        ->orWhereHas('product', fn ($productQuery) => $productQuery->where('name', 'like', "%{$search}%"))
+                        ->orWhere('guest_name', 'like', "%{$search}%")
+                        ->orWhere('guest_email', 'like', "%{$search}%")
+                        ->orWhereHas('product', fn ($productQuery) => $productQuery->where('name', 'like', "%{$search}%")->orWhere('city', 'like', "%{$search}%"))
                         ->orWhereHas('user', function ($userQuery) use ($search) {
                             $userQuery->where('name', 'like', "%{$search}%")
                                 ->orWhere('email', 'like', "%{$search}%");
@@ -375,6 +381,10 @@ class TravelServiceController extends Controller
                 });
             })
             ->when(
+                ! empty($validated['type']) && $validated['type'] !== 'all',
+                fn ($query) => $query->whereHas('product', fn ($pq) => $pq->where('type', $validated['type']))
+            )
+            ->when(
                 ! empty($validated['status']) && $validated['status'] !== 'all',
                 fn ($query) => $query->where('status', $validated['status'])
             )
@@ -383,11 +393,169 @@ class TravelServiceController extends Controller
                 fn ($query) => $query->where('payment_status', $validated['payment_status'])
             )
             ->latest()
-            ->paginate(20);
+            ->paginate($perPage);
+
+        $summary = [
+            'total_products' => TravelProduct::count(),
+            'active_products' => TravelProduct::where('is_active', true)->count(),
+            'total_reservations' => TravelServiceReservation::count(),
+            'paid_reservations' => TravelServiceReservation::where('payment_status', 'paid')->count(),
+            'unpaid_reservations' => TravelServiceReservation::where('payment_status', '!=', 'paid')->count(),
+            'total_revenue' => (float) TravelServiceReservation::where('payment_status', 'paid')->sum('total_price'),
+        ];
 
         return response()->json([
             'status' => 'success',
             'data' => $reservations,
+            'summary' => $summary,
+        ]);
+    }
+
+    public function adminProducts(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'search' => ['nullable', 'string', 'max:120'],
+            'type' => ['nullable', 'in:all,hotel,car,experience'],
+            'status' => ['nullable', 'in:all,active,inactive'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $perPage = (int) ($validated['per_page'] ?? 8);
+
+        $products = TravelProduct::query()
+            ->withCount('reservations')
+            ->when(($validated['search'] ?? '') !== '', function ($query) use ($validated) {
+                $search = $validated['search'];
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('name', 'like', "%{$search}%")
+                        ->orWhere('city', 'like', "%{$search}%")
+                        ->orWhere('location', 'like', "%{$search}%");
+                });
+            })
+            ->when(
+                ! empty($validated['type']) && $validated['type'] !== 'all',
+                fn ($query) => $query->where('type', $validated['type'])
+            )
+            ->when(
+                ! empty($validated['status']) && $validated['status'] !== 'all',
+                fn ($query) => $query->where('is_active', $validated['status'] === 'active')
+            )
+            ->latest('id')
+            ->paginate($perPage);
+
+        $summary = [
+            'total_products' => TravelProduct::count(),
+            'active_products' => TravelProduct::where('is_active', true)->count(),
+            'hotels' => TravelProduct::where('type', 'hotel')->count(),
+            'cars' => TravelProduct::where('type', 'car')->count(),
+            'experiences' => TravelProduct::where('type', 'experience')->count(),
+            'total_reservations' => TravelServiceReservation::count(),
+            'paid_reservations' => TravelServiceReservation::where('payment_status', 'paid')->count(),
+            'total_revenue' => (float) TravelServiceReservation::where('payment_status', 'paid')->sum('total_price'),
+        ];
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $products,
+            'summary' => $summary,
+        ]);
+    }
+
+    public function storeProduct(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'type' => ['required', 'in:hotel,car,experience'],
+            'name' => ['required', 'string', 'max:255'],
+            'city' => ['required', 'string', 'max:120'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'image_url' => ['nullable', 'string', 'max:1000'],
+            'price' => ['required', 'numeric', 'min:0'],
+            'price_unit' => ['nullable', 'string', 'max:50'],
+            'rating' => ['nullable', 'numeric', 'min:1', 'max:5'],
+            'max_guests' => ['required', 'integer', 'min:1', 'max:100'],
+            'inventory_count' => ['required', 'integer', 'min:0', 'max:1000'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $defaultUnit = match ($validated['type']) {
+            'hotel' => 'đêm',
+            'car' => 'ngày',
+            default => 'khách',
+        };
+
+        $baseSlug = Str::slug($validated['name']);
+        $slug = ($baseSlug ?: 'service') . '-' . strtolower(Str::random(5));
+
+        $product = TravelProduct::create([
+            'type' => $validated['type'],
+            'name' => $validated['name'],
+            'slug' => $slug,
+            'city' => $validated['city'],
+            'location' => $validated['location'] ?: $validated['city'],
+            'description' => $validated['description'] ?: 'Dịch vụ đối tác chính thức của SkyLink Airlines.',
+            'image_url' => $validated['image_url'] ?: null,
+            'price' => $validated['price'],
+            'price_unit' => $validated['price_unit'] ?: $defaultUnit,
+            'rating' => $validated['rating'] ?? 4.8,
+            'max_guests' => $validated['max_guests'],
+            'inventory_count' => $validated['inventory_count'],
+            'is_active' => $validated['is_active'] ?? true,
+            'is_demo' => false,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Đã thêm dịch vụ du lịch mới thành công.',
+            'data' => $product,
+        ], 201);
+    }
+
+    public function updateProduct(Request $request, int $id): JsonResponse
+    {
+        $product = TravelProduct::findOrFail($id);
+
+        $validated = $request->validate([
+            'type' => ['sometimes', 'in:hotel,car,experience'],
+            'name' => ['sometimes', 'string', 'max:255'],
+            'city' => ['sometimes', 'string', 'max:120'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'image_url' => ['nullable', 'string', 'max:1000'],
+            'price' => ['sometimes', 'numeric', 'min:0'],
+            'price_unit' => ['nullable', 'string', 'max:50'],
+            'rating' => ['nullable', 'numeric', 'min:1', 'max:5'],
+            'max_guests' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'inventory_count' => ['sometimes', 'integer', 'min:0', 'max:1000'],
+            'is_active' => ['sometimes', 'boolean'],
+        ]);
+
+        $product->update($validated);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Đã cập nhật dịch vụ thành công.',
+            'data' => $product->fresh()->loadCount('reservations'),
+        ]);
+    }
+
+    public function destroyProduct(int $id): JsonResponse
+    {
+        $product = TravelProduct::withCount('reservations')->findOrFail($id);
+
+        if ($product->reservations_count > 0) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Không thể xóa dịch vụ đã phát sinh đơn đặt. Vui lòng chuyển sang trạng thái Tạm ngưng bán.',
+            ], 422);
+        }
+
+        $product->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Đã xóa dịch vụ khỏi danh mục.',
         ]);
     }
 

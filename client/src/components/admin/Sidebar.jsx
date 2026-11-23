@@ -1,5 +1,8 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
+const SIDEBAR_PLANE_IMG =
+  "https://static.vecteezy.com/system/resources/previews/035/719/664/non_2x/ai-generated-image-of-a-large-airliner-flying-in-the-sky-free-photo.jpg";
+
 function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -10,6 +13,7 @@ function Sidebar() {
     { path: "/admin/bookings", label: "Reservation", icon: "fa-calendar-alt" },
     { path: "/admin/travel-services", label: "Travel services", icon: "fa-concierge-bell" },
     { path: "/admin/flights", label: "Flights", icon: "fa-plane" },
+    { path: "/admin/fleet", label: "Fleet", icon: "fa-layer-group" },
     { path: "/admin/airports", label: "Airports", icon: "fa-map-marker-alt" },
     { path: "/admin/payments", label: "Payment", icon: "fa-credit-card" },
     { path: "/admin/profits", label: "Profits", icon: "fa-sack-dollar" },
@@ -32,84 +36,152 @@ function Sidebar() {
   return (
     <aside
       style={{
-        width: "260px",
-        minWidth: "260px",
+        width: "242px",
+        minWidth: "242px",
         height: "100vh",
         position: "sticky",
         top: 0,
-        background: "linear-gradient(185deg, #1e40af 0%, #1e3a8a 45%, #172554 100%)",
+        background: "linear-gradient(180deg, #092c7a 0%, #072361 52%, #051b4d 100%)",
         color: "#fff",
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
-        boxShadow: "4px 0 25px rgba(15, 23, 42, 0.15)",
+        boxShadow: "4px 0 28px rgba(7, 30, 84, 0.22)",
         zIndex: 100,
         overflow: "hidden",
       }}
     >
-      {/* BACKGROUND DECORATIVE WATERMARK */}
+      {/* BOTTOM AIRPLANE & SKY GLOW ILLUSTRATION matching mockup */}
       <div
+        aria-hidden="true"
         style={{
           position: "absolute",
-          bottom: "-40px",
-          left: "-40px",
-          opacity: 0.08,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: "210px",
           pointerEvents: "none",
+          zIndex: 0,
+          overflow: "hidden",
         }}
       >
-        <svg width="300" height="300" viewBox="0 0 24 24" fill="white">
-          <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" />
-        </svg>
+        <img
+          src={SIDEBAR_PLANE_IMG}
+          alt=""
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center 35%",
+            opacity: 0.45,
+            WebkitMaskImage:
+              "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0.95) 100%)",
+            maskImage:
+              "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0.95) 100%)",
+          }}
+        />
       </div>
 
-      <div>
-        {/* LOGO AREA */}
+      <div style={{ position: "relative", zIndex: 2, overflowY: "auto" }}>
+        {/* LOGO AREA — Stylized Winged SkyLink Emblem matching mockup */}
         <Link
           to="/admin"
           style={{
-            padding: "24px 20px 20px 24px",
+            padding: "22px 18px 14px 18px",
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
-            gap: "14px",
             textDecoration: "none",
           }}
         >
-          {/* Logo Badge */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <svg
+              width="46"
+              height="36"
+              viewBox="0 0 64 48"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              style={{ flexShrink: 0, filter: "drop-shadow(0 4px 10px rgba(56, 189, 248, 0.45))" }}
+            >
+              <defs>
+                <linearGradient id="skyWingTop" x1="0" y1="0" x2="64" y2="48" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="#7dd3fc" />
+                  <stop offset="55%" stopColor="#38bdf8" />
+                  <stop offset="100%" stopColor="#ffffff" />
+                </linearGradient>
+                <linearGradient id="skyWingBot" x1="0" y1="10" x2="58" y2="44" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="#38bdf8" />
+                  <stop offset="100%" stopColor="#e0f2fe" />
+                </linearGradient>
+              </defs>
+              {/* Left sweeping wing */}
+              <path
+                d="M4 8C14 14 23 22 30 33C21 29 12 24 6 16C4.8 14.3 4 11.2 4 8Z"
+                fill="url(#skyWingTop)"
+              />
+              <path
+                d="M8 21C16 25 23 30 29 37C21 36 14 33 9.5 27C8.4 25.4 8 23.2 8 21Z"
+                fill="url(#skyWingBot)"
+                opacity="0.92"
+              />
+              {/* Right soaring wing */}
+              <path
+                d="M60 6C49 12 39 21 32 34C42 29 51 23 57.5 14.5C59 12.4 59.8 9.2 60 6Z"
+                fill="url(#skyWingTop)"
+              />
+              <path
+                d="M55 20C47 25 39 30 33 38C41 36.5 48.5 33 53.5 26.5C54.6 24.8 55 22.4 55 20Z"
+                fill="url(#skyWingBot)"
+                opacity="0.92"
+              />
+              {/* Center fuselage / tail accent */}
+              <path
+                d="M31.5 14L35 39L31.5 44L28 39L31.5 14Z"
+                fill="#ffffff"
+                opacity="0.95"
+              />
+            </svg>
+
+            <div>
+              <div
+                style={{
+                  fontSize: "19px",
+                  fontWeight: "900",
+                  color: "#ffffff",
+                  letterSpacing: "-0.3px",
+                  lineHeight: "1.08",
+                }}
+              >
+                SkyLink
+              </div>
+              <div
+                style={{
+                  fontSize: "14px",
+                  fontWeight: "700",
+                  color: "#bae6fd",
+                  lineHeight: "1.12",
+                  letterSpacing: "0.2px",
+                }}
+              >
+                Airlines
+              </div>
+            </div>
+          </div>
           <div
             style={{
-              width: "44px",
-              height: "44px",
-              borderRadius: "14px",
-              background: "linear-gradient(135deg, #f59e0b, #eab308)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 6px 16px rgba(245, 158, 11, 0.4)",
+              marginTop: "7px",
+              fontSize: "11px",
+              color: "rgba(186, 230, 253, 0.82)",
+              fontWeight: "500",
+              letterSpacing: "0.2px",
             }}
           >
-            <i className="fas fa-paper-plane" style={{ color: "#fff", fontSize: "20px" }} />
-          </div>
-
-          <div>
-            <div
-              style={{
-                fontSize: "22px",
-                fontWeight: "800",
-                color: "#ffffff",
-                letterSpacing: "-0.5px",
-                lineHeight: "1.2",
-              }}
-            >
-              SkyLink
-            </div>
-            <div style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.7)", fontWeight: "500" }}>
-              Fly with confidence
-            </div>
+            Fly with confidence
           </div>
         </Link>
 
         {/* MENU ITEMS */}
-        <nav style={{ padding: "10px 14px" }}>
+        <nav style={{ padding: "6px 14px" }}>
           {menuItems.map((item, idx) => {
             const active = isActive(item.path) && (idx === 0 ? location.pathname === "/admin" : true);
             return (
@@ -119,29 +191,28 @@ function Sidebar() {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "14px",
-                  padding: "12px 18px",
-                  marginBottom: "4px",
-                  borderRadius: "14px",
+                  gap: "12px",
+                  padding: "9.5px 15px",
+                  marginBottom: "3px",
+                  borderRadius: "12px",
                   textDecoration: "none",
-                  fontSize: "15px",
-                  fontWeight: active ? "600" : "500",
+                  fontSize: "13.5px",
+                  fontWeight: active ? "700" : "500",
                   transition: "all 0.2s ease",
                   background: active
-                    ? "rgba(255, 255, 255, 0.2)"
+                    ? "linear-gradient(90deg, #1b78f2 0%, #3b93ff 100%)"
                     : "transparent",
-                  color: active ? "#ffffff" : "rgba(255, 255, 255, 0.8)",
-                  boxShadow: active ? "0 4px 15px rgba(0, 0, 0, 0.1)" : "none",
-                  backdropFilter: active ? "blur(10px)" : "none",
+                  color: active ? "#ffffff" : "rgba(226, 238, 255, 0.85)",
+                  boxShadow: active ? "0 6px 18px rgba(27, 120, 242, 0.42)" : "none",
                 }}
               >
                 <i
                   className={`fas ${item.icon}`}
                   style={{
-                    fontSize: "17px",
-                    width: "22px",
+                    fontSize: "14px",
+                    width: "20px",
                     textAlign: "center",
-                    color: active ? "#ffffff" : "rgba(255, 255, 255, 0.75)",
+                    color: active ? "#ffffff" : "rgba(191, 219, 254, 0.82)",
                   }}
                 />
                 <span>{item.label}</span>
@@ -151,35 +222,35 @@ function Sidebar() {
         </nav>
       </div>
 
-      {/* LOGOUT BUTTON AT BOTTOM */}
-      <div style={{ padding: "16px 14px 24px 14px" }}>
+      {/* GLASS LOGOUT BUTTON AT BOTTOM matching mockup */}
+      <div style={{ position: "relative", zIndex: 2, padding: "12px 14px 18px 14px" }}>
         <button
           onClick={handleLogout}
           style={{
             width: "100%",
             display: "flex",
             alignItems: "center",
-            gap: "14px",
-            padding: "12px 18px",
+            justifyContent: "center",
+            gap: "10px",
+            padding: "11px 16px",
             borderRadius: "14px",
-            border: "none",
-            background: "rgba(239, 68, 68, 0.15)",
-            color: "#fca5a5",
+            border: "1px solid rgba(255, 255, 255, 0.24)",
+            background: "rgba(9, 44, 122, 0.58)",
+            backdropFilter: "blur(8px)",
+            color: "#ffffff",
             cursor: "pointer",
-            fontSize: "15px",
-            fontWeight: "600",
+            fontSize: "14px",
+            fontWeight: "700",
             transition: "all 0.2s ease",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(239, 68, 68, 0.3)";
-            e.currentTarget.style.color = "#ffffff";
+            e.currentTarget.style.background = "rgba(239, 68, 68, 0.72)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)";
-            e.currentTarget.style.color = "#fca5a5";
+            e.currentTarget.style.background = "rgba(9, 44, 122, 0.58)";
           }}
         >
-          <i className="fas fa-sign-out-alt" style={{ fontSize: "17px", width: "22px", textAlign: "center" }} />
+          <i className="fas fa-sign-out-alt" style={{ fontSize: "15px" }} />
           <span>Logout</span>
         </button>
       </div>

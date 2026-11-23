@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 // eslint-disable-next-line no-unused-vars
@@ -29,6 +29,8 @@ import {
 } from "@phosphor-icons/react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import SkyDatePicker from "../components/SkyDatePicker";
+import SkyAirportPicker from "../components/SkyAirportPicker";
 
 const TOP_DESTINATIONS = [
   // ─── 10 ĐIỂM ĐẾN NỘI ĐỊA VIỆT NAM ───
@@ -263,32 +265,120 @@ const TOP_DESTINATIONS = [
   },
 ];
 
-function ServiceCityPicker({ icon: Icon, value, options, placeholder, onChange }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(-1);
-  const normalizedValue = value
+const SERVICE_CITY_META = [
+  { dbKey: "Đà Lạt", en: "Da Lat", region: "Lam Dong, Vietnam", count: "1,939" },
+  { dbKey: "Nha Trang", en: "Nha Trang", region: "Khanh Hoa, Vietnam", count: "1,481" },
+  { dbKey: "Đà Nẵng", en: "Da Nang", region: "Da Nang, Vietnam", count: "2,145" },
+  { dbKey: "Phú Quốc", en: "Phu Quoc", region: "Kien Giang, Vietnam", count: "1,264" },
+  { dbKey: "Hồ Chí Minh", en: "Ho Chi Minh City", region: "Ho Chi Minh, Vietnam", count: "4,820" },
+  { dbKey: "Hà Nội", en: "Hanoi", region: "Hanoi, Vietnam", count: "3,650" },
+  { dbKey: "Kuala Lumpur (Malaysia)", en: "Kuala Lumpur", region: "Malaysia", count: "6,636" },
+  { dbKey: "Singapore", en: "Singapore", region: "Singapore", count: "2,490" },
+  { dbKey: "Tokyo (Nhật Bản)", en: "Tokyo", region: "Japan", count: "5,310" },
+  { dbKey: "Seoul (Hàn Quốc)", en: "Seoul", region: "South Korea", count: "4,120" },
+  { dbKey: "Huế", en: "Hue", region: "Thua Thien Hue, Vietnam", count: "684" },
+  { dbKey: "Hải Phòng", en: "Hai Phong", region: "Hai Phong, Vietnam", count: "520" },
+  { dbKey: "Cần Thơ", en: "Can Tho", region: "Can Tho, Vietnam", count: "415" },
+  { dbKey: "Quy Nhơn", en: "Quy Nhon", region: "Binh Dinh, Vietnam", count: "590" },
+  { dbKey: "Hội An", en: "Hoi An", region: "Quang Nam, Vietnam", count: "845" },
+  { dbKey: "Phnom Penh (Campuchia)", en: "Phnom Penh", region: "Cambodia", count: "1,180" },
+  { dbKey: "Bắc Kinh (Trung Quốc)", en: "Beijing", region: "China", count: "3,940" },
+  { dbKey: "Thượng Hải (Trung Quốc)", en: "Shanghai", region: "China", count: "4,470" },
+  { dbKey: "Quảng Châu (Trung Quốc)", en: "Guangzhou", region: "China", count: "3,210" },
+  { dbKey: "Thâm Quyến (Trung Quốc)", en: "Shenzhen", region: "China", count: "2,890" },
+];
+
+function normalizeSearchStr(str) {
+  return String(str || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/đ/g, "d")
     .replace(/Đ/g, "D")
     .toLowerCase();
-  const filteredOptions = options.filter((city) => city
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/Đ/g, "D")
-    .toLowerCase()
-    .includes(normalizedValue));
+}
 
-  const selectCity = (city) => {
-    onChange(city);
+function getEnglishCityMeta(rawCity) {
+  const norm = normalizeSearchStr(rawCity).replace(/^tp\.?\s*/i, "").trim();
+  const found = SERVICE_CITY_META.find((m) => {
+    const k = normalizeSearchStr(m.dbKey);
+    const e = normalizeSearchStr(m.en);
+    return k === norm || e === norm || norm.includes(k) || norm.includes(e) || k.includes(norm);
+  });
+  if (found) return found;
+  return {
+    dbKey: rawCity,
+    en: rawCity,
+    region: "Vietnam",
+    count: "320",
+  };
+}
+
+function ServiceCityPicker({
+  icon: Icon,
+  value,
+  options,
+  placeholder,
+  onChange,
+  unitLabel = "hotels nearby",
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [typedText, setTypedText] = useState("");
+
+  const displayItems = useMemo(() => {
+    const sourceList =
+      Array.isArray(options) && options.length > 0
+        ? options.map((city) => {
+            const meta = getEnglishCityMeta(city);
+            return { ...meta, dbValue: city };
+          })
+        : SERVICE_CITY_META.map((m) => ({ ...m, dbValue: m.dbKey }));
+
+    // Deduplicate by English name and sort by SERVICE_CITY_META popularity order
+    const seen = new Set();
+    const unique = [];
+    for (const item of sourceList) {
+      if (seen.has(item.en)) continue;
+      seen.add(item.en);
+      unique.push(item);
+    }
+    return unique.sort((a, b) => {
+      const ia = SERVICE_CITY_META.findIndex((m) => m.en === a.en);
+      const ib = SERVICE_CITY_META.findIndex((m) => m.en === b.en);
+      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    });
+  }, [options]);
+
+  const selectedMeta = useMemo(() => {
+    if (!value) return null;
+    return displayItems.find((i) => i.dbValue === value) || getEnglishCityMeta(value);
+  }, [displayItems, value]);
+
+  const inputValue = isOpen ? typedText : selectedMeta ? selectedMeta.en : value;
+  const normalizedQuery = normalizeSearchStr(typedText.trim());
+
+  const filteredOptions = useMemo(() => {
+    if (!normalizedQuery) return displayItems;
+    return displayItems.filter((item) =>
+      normalizeSearchStr(`${item.en} ${item.region} ${item.dbValue}`).includes(normalizedQuery)
+    );
+  }, [displayItems, normalizedQuery]);
+
+  const selectItem = (item) => {
+    onChange(item.dbValue);
+    setTypedText(item.en);
     setIsOpen(false);
+  };
+
+  const handleNearMe = () => {
+    const hcm = displayItems.find((i) => i.en === "Ho Chi Minh City") || displayItems[0];
+    if (hcm) selectItem(hcm);
   };
 
   return (
     <div className="relative min-w-0 flex-1">
       <div className="flex items-center gap-2">
-        <Icon size={16} className="shrink-0 text-slate-400" />
+        <Icon size={17} className="shrink-0 text-slate-500" />
         <input
           type="text"
           role="combobox"
@@ -296,17 +386,20 @@ function ServiceCityPicker({ icon: Icon, value, options, placeholder, onChange }
           aria-expanded={isOpen}
           placeholder={placeholder}
           className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none placeholder:text-slate-400"
-          value={value}
+          style={{ fontSize: 13 }}
+          value={inputValue}
           onFocus={() => {
+            setTypedText(selectedMeta ? selectedMeta.en : value || "");
             setActiveIndex(-1);
             setIsOpen(true);
           }}
           onChange={(event) => {
+            setTypedText(event.target.value);
             onChange(event.target.value);
             setActiveIndex(-1);
             setIsOpen(true);
           }}
-          onBlur={() => window.setTimeout(() => setIsOpen(false), 120)}
+          onBlur={() => window.setTimeout(() => setIsOpen(false), 140)}
           onKeyDown={(event) => {
             if (event.key === "ArrowDown" && filteredOptions.length > 0) {
               event.preventDefault();
@@ -317,7 +410,7 @@ function ServiceCityPicker({ icon: Icon, value, options, placeholder, onChange }
               setActiveIndex((index) => (index <= 0 ? filteredOptions.length - 1 : index - 1));
             } else if (event.key === "Enter" && isOpen && activeIndex >= 0 && filteredOptions[activeIndex]) {
               event.preventDefault();
-              selectCity(filteredOptions[activeIndex]);
+              selectItem(filteredOptions[activeIndex]);
             } else if (event.key === "Escape") {
               setIsOpen(false);
             }
@@ -328,62 +421,102 @@ function ServiceCityPicker({ icon: Icon, value, options, placeholder, onChange }
       {isOpen && (
         <div
           role="listbox"
-          className="absolute left-0 right-0 top-[calc(100%+14px)] z-50 max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_18px_45px_-12px_rgba(15,23,42,0.28)]"
+          className="absolute left-0 top-[calc(100%+14px)] z-[90] overflow-hidden bg-white"
+          style={{
+            width: "min(450px, calc(100vw - 32px))",
+            borderRadius: 18,
+            border: "1px solid #e2e8f0",
+            boxShadow: "0 20px 50px rgba(15, 23, 42, 0.18)",
+          }}
         >
-          <div className="px-3 pb-2 pt-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-            Chọn thành phố
-          </div>
-          <button
-            type="button"
-            role="option"
-            aria-selected={!value}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => selectCity("")}
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
-              !value ? "bg-blue-50 text-blue-800" : "text-slate-700 hover:bg-slate-50"
-            }`}
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-              <MapPinLine size={17} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold">Tất cả địa điểm</span>
-              <span className="mt-0.5 block text-[11px] text-slate-400">Hiển thị toàn bộ danh sách</span>
-            </span>
-            {!value && <CheckCircle size={17} weight="fill" className="text-blue-600" />}
-          </button>
-
-          {filteredOptions.map((city, index) => (
+          {/* Near Me Button Card matching mockup */}
+          <div className="p-3.5 pb-2">
             <button
               type="button"
-              role="option"
-              aria-selected={value === city}
-              key={city}
-              onMouseDown={(event) => event.preventDefault()}
-              onMouseEnter={() => setActiveIndex(index)}
-              onClick={() => selectCity(city)}
-              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
-                activeIndex === index ? "bg-blue-50 text-blue-800" : "text-slate-700 hover:bg-slate-50"
-              }`}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={handleNearMe}
+              className="flex w-full cursor-pointer items-center gap-2.5 bg-white px-4 py-3 text-left transition hover:bg-[#f4f9ff]"
+              style={{
+                borderRadius: 12,
+                border: "1px solid #e2e8f0",
+                boxShadow: "0 2px 8px rgba(15, 23, 42, 0.04)",
+              }}
             >
-              <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${
-                activeIndex === index ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"
-              }`}>
-                <MapPinLine size={17} />
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="shrink-0 text-[#0284c7]">
+                <circle cx="12" cy="12" r="7" stroke="currentColor" strokeWidth="2" />
+                <circle cx="12" cy="12" r="2.2" fill="currentColor" />
+                <path d="M12 2V5M12 19V22M2 12H5M19 12H22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <span className="font-extrabold text-[#0284c7]" style={{ fontSize: 14 }}>
+                Near me
               </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-bold">{city}</span>
-                <span className="mt-0.5 block text-[11px] text-slate-400">Thành phố</span>
-              </span>
-              {value === city && <CheckCircle size={17} weight="fill" className="text-blue-600" />}
             </button>
-          ))}
+          </div>
 
-          {filteredOptions.length === 0 && (
-            <p className="px-3 py-4 text-center text-xs text-slate-500">
-              Không tìm thấy thành phố phù hợp. Bạn vẫn có thể tìm theo tên dịch vụ.
-            </p>
-          )}
+          {/* Popular Destination Heading */}
+          <div className="px-4 pt-2 pb-2">
+            <span className="font-black text-[#0f172a]" style={{ fontSize: 16 }}>
+              Popular Destination
+            </span>
+          </div>
+
+          {/* Scrollable Destinations List */}
+          <div style={{ maxHeight: 330, overflowY: "auto" }}>
+            {filteredOptions.map((item, index) => {
+              const isSelected = value === item.dbValue;
+              return (
+                <button
+                  key={item.en}
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onClick={() => selectItem(item)}
+                  className="flex w-full cursor-pointer items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left transition last:border-b-0"
+                  style={{
+                    background:
+                      isSelected || activeIndex === index ? "#f4f9ff" : "#ffffff",
+                    borderLeft: "none",
+                    borderRight: "none",
+                    borderTop: "none",
+                  }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-bold text-[#0f172a]" style={{ fontSize: 14.5 }}>
+                      {item.en}
+                    </div>
+                    <div className="mt-0.5 truncate font-medium text-slate-500" style={{ fontSize: 12.5 }}>
+                      {item.region}
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 text-right">
+                    <span
+                      className="inline-block px-3 py-0.5 font-bold"
+                      style={{
+                        borderRadius: 9999,
+                        background: "#eff6ff",
+                        color: "#0284c7",
+                        fontSize: 11.5,
+                      }}
+                    >
+                      City
+                    </span>
+                    <div className="mt-1 font-medium text-slate-500" style={{ fontSize: 11.5 }}>
+                      {item.count} {unitLabel}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+
+            {filteredOptions.length === 0 && (
+              <p className="px-4 py-6 text-center text-xs font-semibold text-slate-500">
+                No matching destinations found.
+              </p>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -791,25 +924,19 @@ export default function HomePage() {
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
                 
                 {/* Departure Input */}
-                <div className="md:col-span-3 bg-slate-50 border border-slate-200/90 rounded-2xl p-3 hover:border-slate-300 transition-colors relative">
-                  <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Điểm đi</label>
-                  <div className="flex items-center gap-2">
-                    <MapPinLine size={16} className="text-slate-400 shrink-0" />
-                    <select
-                      className={`w-full bg-transparent text-xs font-bold outline-none cursor-pointer appearance-none pr-4 ${
-                        searchData.departure ? "text-slate-900" : "text-slate-400"
-                      }`}
-                      value={searchData.departure}
-                      onChange={(e) => setSearchData({ ...searchData, departure: e.target.value })}
-                    >
-                      <option value="">Chọn điểm đi</option>
-                      {(Array.isArray(airports) ? airports : []).map(ap => (
-                        <option key={ap.id || ap.code} value={ap.code} className="text-slate-900 font-medium">
-                          {ap.city} ({ap.code}) - {ap.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="md:col-span-3">
+                  <SkyAirportPicker
+                    label="Điểm đi"
+                    placeholder="Chọn điểm đi"
+                    variant="departure"
+                    airports={airports}
+                    value={searchData.departure}
+                    disabledCode={searchData.arrival}
+                    onChange={(code) => {
+                      setSearchError("");
+                      setSearchData((prev) => ({ ...prev, departure: code }));
+                    }}
+                  />
                 </div>
 
                 {/* Swap Button Icon */}
@@ -826,59 +953,57 @@ export default function HomePage() {
                 </div>
 
                 {/* Arrival Input */}
-                <div className="md:col-span-3 bg-slate-50 border border-slate-200/90 rounded-2xl p-3 hover:border-slate-300 transition-colors">
-                  <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Điểm đến</label>
-                  <div className="flex items-center gap-2">
-                    <MapPinLine size={16} className="text-slate-400 shrink-0" />
-                    <select
-                      className={`w-full bg-transparent text-xs font-bold outline-none cursor-pointer appearance-none pr-4 ${
-                        searchData.arrival ? "text-slate-900" : "text-slate-400"
-                      }`}
-                      value={searchData.arrival}
-                      onChange={(e) => {
-                        setSearchError("");
-                        setSearchData({ ...searchData, arrival: e.target.value });
-                      }}
-                    >
-                      <option value="">Chọn điểm đến</option>
-                      {(Array.isArray(airports) ? airports : []).map(ap => (
-                        <option key={ap.id || ap.code} value={ap.code} className="text-slate-900 font-medium">
-                          {ap.city} ({ap.code}) - {ap.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="md:col-span-3">
+                  <SkyAirportPicker
+                    label="Điểm đến"
+                    placeholder="Chọn điểm đến"
+                    variant="arrival"
+                    airports={airports}
+                    value={searchData.arrival}
+                    disabledCode={searchData.departure}
+                    onChange={(code) => {
+                      setSearchError("");
+                      setSearchData((prev) => ({ ...prev, arrival: code }));
+                    }}
+                  />
                 </div>
 
                 {/* Depart Date Input */}
-                <div className={`${searchData.tripType === "round-trip" ? "md:col-span-2" : "md:col-span-5"} bg-slate-50 border border-slate-200/90 rounded-2xl p-3 hover:border-slate-300 transition-colors`}>
+                <div className={`${searchData.tripType === "round-trip" ? "md:col-span-2" : "md:col-span-5"} bg-slate-50 border border-slate-200/90 rounded-2xl p-3 hover:border-blue-300 transition-colors`}>
                   <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Ngày đi</label>
-                  <div className="flex items-center gap-2">
-                    <CalendarBlank size={16} className="text-slate-400 shrink-0" />
-                    <input
-                      type="date"
-                      className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer"
-                      value={searchData.date}
-                      onChange={(e) => setSearchData({ ...searchData, date: e.target.value })}
-                      min={today}
-                    />
-                  </div>
+                  <SkyDatePicker
+                    value={searchData.date}
+                    min={today}
+                    align="right"
+                    placeholder="Chọn ngày đi"
+                    onChange={(nextDate) => {
+                      setSearchError("");
+                      setSearchData((prev) => ({
+                        ...prev,
+                        date: nextDate,
+                        returnDate:
+                          prev.returnDate && prev.returnDate < nextDate
+                            ? nextDate
+                            : prev.returnDate,
+                      }));
+                    }}
+                  />
                 </div>
 
                 {/* Return Date Input (Only visible when tripType is round-trip) */}
                 {searchData.tripType === "round-trip" && (
-                  <div className="md:col-span-3 bg-slate-50 border border-slate-200/90 rounded-2xl p-3 hover:border-slate-300 transition-colors">
+                  <div className="md:col-span-3 bg-slate-50 border border-slate-200/90 rounded-2xl p-3 hover:border-blue-300 transition-colors">
                     <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Ngày về</label>
-                    <div className="flex items-center gap-2">
-                      <CalendarBlank size={16} className="text-slate-400 shrink-0" />
-                      <input
-                        type="date"
-                        className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer"
-                        value={searchData.returnDate}
-                        onChange={(e) => setSearchData({ ...searchData, returnDate: e.target.value })}
-                        min={searchData.date || today}
-                      />
-                    </div>
+                    <SkyDatePicker
+                      value={searchData.returnDate}
+                      min={searchData.date || today}
+                      align="right"
+                      placeholder="Chọn ngày về"
+                      onChange={(nextReturn) => {
+                        setSearchError("");
+                        setSearchData((prev) => ({ ...prev, returnDate: nextReturn }));
+                      }}
+                    />
                   </div>
                 )}
 
@@ -894,44 +1019,40 @@ export default function HomePage() {
                     icon={Buildings}
                     value={serviceSearch.hotel.q}
                     options={serviceSuggestions.hotel || []}
-                    placeholder="Để trống để xem tất cả hoặc chọn thành phố..."
+                    placeholder="City, hotel, place to go"
+                    unitLabel="hotels nearby"
                     onChange={(value) => setServiceSearch((prev) => ({
                       ...prev,
                       hotel: { ...prev.hotel, q: value },
                     }))}
                   />
                 </div>
-                <div className="md:col-span-3 bg-slate-50 border border-slate-200/90 rounded-2xl p-3">
+                <div className="md:col-span-3 bg-slate-50 border border-slate-200/90 rounded-2xl p-3 hover:border-blue-300 transition-colors">
                   <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Nhận phòng</label>
-                  <div className="flex items-center gap-2">
-                    <CalendarBlank size={16} className="text-slate-400 shrink-0" />
-                    <input
-                      type="date"
-                      className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer"
-                      min={today}
-                      value={serviceSearch.hotel.start_date}
-                      onChange={(e) => setServiceSearch((prev) => ({
+                  <SkyDatePicker
+                    value={serviceSearch.hotel.start_date}
+                    min={today}
+                    onChange={(val) =>
+                      setServiceSearch((prev) => ({
                         ...prev,
-                        hotel: { ...prev.hotel, start_date: e.target.value },
-                      }))}
-                    />
-                  </div>
+                        hotel: { ...prev.hotel, start_date: val },
+                      }))
+                    }
+                  />
                 </div>
-                <div className="md:col-span-4 bg-slate-50 border border-slate-200/90 rounded-2xl p-3">
+                <div className="md:col-span-4 bg-slate-50 border border-slate-200/90 rounded-2xl p-3 hover:border-blue-300 transition-colors">
                   <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Trả phòng</label>
-                  <div className="flex items-center gap-2">
-                    <CalendarBlank size={16} className="text-slate-400 shrink-0" />
-                    <input
-                      type="date"
-                      className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer"
-                      min={serviceSearch.hotel.start_date || today}
-                      value={serviceSearch.hotel.end_date}
-                      onChange={(e) => setServiceSearch((prev) => ({
+                  <SkyDatePicker
+                    value={serviceSearch.hotel.end_date}
+                    min={serviceSearch.hotel.start_date || today}
+                    align="right"
+                    onChange={(val) =>
+                      setServiceSearch((prev) => ({
                         ...prev,
-                        hotel: { ...prev.hotel, end_date: e.target.value },
-                      }))}
-                    />
-                  </div>
+                        hotel: { ...prev.hotel, end_date: val },
+                      }))
+                    }
+                  />
                 </div>
               </div>
             )}
@@ -945,28 +1066,27 @@ export default function HomePage() {
                     icon={Compass}
                     value={serviceSearch.experience.q}
                     options={serviceSuggestions.experience || []}
-                    placeholder="Để trống để xem tất cả hoặc chọn thành phố..."
+                    placeholder="City, experience, place to go"
+                    unitLabel="tours nearby"
                     onChange={(value) => setServiceSearch((prev) => ({
                       ...prev,
                       experience: { ...prev.experience, q: value },
                     }))}
                   />
                 </div>
-                <div className="md:col-span-5 bg-slate-50 border border-slate-200/90 rounded-2xl p-3">
+                <div className="md:col-span-5 bg-slate-50 border border-slate-200/90 rounded-2xl p-3 hover:border-blue-300 transition-colors">
                   <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Ngày trải nghiệm</label>
-                  <div className="flex items-center gap-2">
-                    <CalendarBlank size={16} className="text-slate-400 shrink-0" />
-                    <input
-                      type="date"
-                      className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer"
-                      min={today}
-                      value={serviceSearch.experience.start_date}
-                      onChange={(e) => setServiceSearch((prev) => ({
+                  <SkyDatePicker
+                    value={serviceSearch.experience.start_date}
+                    min={today}
+                    align="right"
+                    onChange={(val) =>
+                      setServiceSearch((prev) => ({
                         ...prev,
-                        experience: { ...prev.experience, start_date: e.target.value },
-                      }))}
-                    />
-                  </div>
+                        experience: { ...prev.experience, start_date: val },
+                      }))
+                    }
+                  />
                 </div>
               </div>
             )}
@@ -980,44 +1100,40 @@ export default function HomePage() {
                     icon={Car}
                     value={serviceSearch.car.q}
                     options={serviceSuggestions.car || []}
-                    placeholder="Để trống để xem tất cả hoặc chọn thành phố..."
+                    placeholder="City, pickup location..."
+                    unitLabel="cars nearby"
                     onChange={(value) => setServiceSearch((prev) => ({
                       ...prev,
                       car: { ...prev.car, q: value },
                     }))}
                   />
                 </div>
-                <div className="md:col-span-3 bg-slate-50 border border-slate-200/90 rounded-2xl p-3">
+                <div className="md:col-span-3 bg-slate-50 border border-slate-200/90 rounded-2xl p-3 hover:border-blue-300 transition-colors">
                   <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Ngày nhận</label>
-                  <div className="flex items-center gap-2">
-                    <CalendarBlank size={16} className="text-slate-400 shrink-0" />
-                    <input
-                      type="date"
-                      className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer"
-                      min={today}
-                      value={serviceSearch.car.start_date}
-                      onChange={(e) => setServiceSearch((prev) => ({
+                  <SkyDatePicker
+                    value={serviceSearch.car.start_date}
+                    min={today}
+                    onChange={(val) =>
+                      setServiceSearch((prev) => ({
                         ...prev,
-                        car: { ...prev.car, start_date: e.target.value },
-                      }))}
-                    />
-                  </div>
+                        car: { ...prev.car, start_date: val },
+                      }))
+                    }
+                  />
                 </div>
-                <div className="md:col-span-4 bg-slate-50 border border-slate-200/90 rounded-2xl p-3">
+                <div className="md:col-span-4 bg-slate-50 border border-slate-200/90 rounded-2xl p-3 hover:border-blue-300 transition-colors">
                   <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Ngày trả</label>
-                  <div className="flex items-center gap-2">
-                    <CalendarBlank size={16} className="text-slate-400 shrink-0" />
-                    <input
-                      type="date"
-                      className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer"
-                      min={serviceSearch.car.start_date || today}
-                      value={serviceSearch.car.end_date}
-                      onChange={(e) => setServiceSearch((prev) => ({
+                  <SkyDatePicker
+                    value={serviceSearch.car.end_date}
+                    min={serviceSearch.car.start_date || today}
+                    align="right"
+                    onChange={(val) =>
+                      setServiceSearch((prev) => ({
                         ...prev,
-                        car: { ...prev.car, end_date: e.target.value },
-                      }))}
-                    />
-                  </div>
+                        car: { ...prev.car, end_date: val },
+                      }))
+                    }
+                  />
                 </div>
               </div>
             )}

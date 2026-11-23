@@ -693,17 +693,48 @@ export default function Navbar() {
                 className="flex items-center gap-3 cursor-pointer select-none group"
                 whileTap={{ scale: 0.96 }}
               >
-                {/* Blue-purple Squircle Logo Container */}
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center shadow-md shadow-blue-500/25 shrink-0 transition-transform group-hover:scale-105">
-                  <PaperPlaneTilt size={22} weight="fill" className="text-white transform -rotate-12" />
+                {/* Signature Winged SkyLink Airlines Emblem */}
+                <div
+                  className="w-11 h-11 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
+                  style={{
+                    borderRadius: 14,
+                    background: "linear-gradient(135deg, #092c7a 0%, #0b5ed7 65%, #1d75f2 100%)",
+                    boxShadow: "0 6px 16px rgba(11, 94, 215, 0.28)",
+                  }}
+                >
+                  <svg
+                    width="34"
+                    height="27"
+                    viewBox="0 0 64 48"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    style={{ filter: "drop-shadow(0 2px 6px rgba(56, 189, 248, 0.5))" }}
+                  >
+                    <defs>
+                      <linearGradient id="navWingTop" x1="0" y1="0" x2="64" y2="48" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stopColor="#7dd3fc" />
+                        <stop offset="55%" stopColor="#38bdf8" />
+                        <stop offset="100%" stopColor="#ffffff" />
+                      </linearGradient>
+                      <linearGradient id="navWingBot" x1="0" y1="10" x2="58" y2="44" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stopColor="#38bdf8" />
+                        <stop offset="100%" stopColor="#e0f2fe" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M4 8C14 14 23 22 30 33C21 29 12 24 6 16C4.8 14.3 4 11.2 4 8Z" fill="url(#navWingTop)" />
+                    <path d="M8 21C16 25 23 30 29 37C21 36 14 33 9.5 27C8.4 25.4 8 23.2 8 21Z" fill="url(#navWingBot)" opacity="0.92" />
+                    <path d="M60 6C49 12 39 21 32 34C42 29 51 23 57.5 14.5C59 12.4 59.8 9.2 60 6Z" fill="url(#navWingTop)" />
+                    <path d="M55 20C47 25 39 30 33 38C41 36.5 48.5 33 53.5 26.5C54.6 24.8 55 22.4 55 20Z" fill="url(#navWingBot)" opacity="0.92" />
+                    <path d="M31.5 14L35 39L31.5 44L28 39L31.5 14Z" fill="#ffffff" opacity="0.95" />
+                  </svg>
                 </div>
 
                 {/* Brand Typography */}
                 <div className="flex flex-col text-left -space-y-0.5">
-                  <span className="text-[19px] font-black tracking-tight text-slate-900 leading-none">
-                    SKYLINK
+                  <span className="text-[19px] font-black tracking-tight text-[#091e47] leading-none">
+                    SkyLink
                   </span>
-                  <span className="text-[10px] font-extrabold tracking-[0.25em] text-blue-600 uppercase">
+                  <span className="text-[10.5px] font-extrabold tracking-[0.22em] text-[#0b5ed7] uppercase">
                     AIRLINES
                   </span>
                 </div>

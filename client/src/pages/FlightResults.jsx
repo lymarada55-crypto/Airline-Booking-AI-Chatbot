@@ -24,6 +24,8 @@ import FlightFilterSidebar from "../components/flight/FlightFilterSidebar";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import RescheduleModal from "../components/RescheduleModal";
+import SkyDatePicker from "../components/SkyDatePicker";
+import SkyAirportPicker from "../components/SkyAirportPicker";
 
 const HERO_FLIGHT_BG_URL =
   "https://static.vecteezy.com/system/resources/previews/035/719/664/non_2x/ai-generated-image-of-a-large-airliner-flying-in-the-sky-free-photo.jpg";
@@ -542,7 +544,7 @@ export default function FlightResults() {
       <Navbar />
 
       {/* 1. HERO HEADER BANNER (Synced 5-Star SkyLink Style) */}
-      <div className="relative overflow-hidden pb-10 pt-22">
+      <div className="relative z-30 pb-10 pt-22">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-0 overflow-hidden"
@@ -718,32 +720,23 @@ export default function FlightResults() {
             {/* Row 2: Compact Single-Row Search Inputs */}
             <div className="grid grid-cols-1 items-center gap-3 md:grid-cols-12">
               {/* Departure */}
-              <div className="rounded-2xl border border-blue-100 bg-[#f7faff] p-2.5 md:col-span-3">
-                <label className="mb-0.5 block text-[10px] font-extrabold uppercase tracking-wider text-[#5a749b]">
-                  Điểm đi
-                </label>
-                <div className="flex items-center gap-2">
-                  <AirplaneTilt size={15} weight="fill" className="shrink-0 text-blue-600" />
-                  <select
-                    aria-label="Chọn điểm đi"
-                    className="w-full cursor-pointer bg-transparent text-xs font-extrabold text-[#0b2559] outline-none"
-                    value={searchParams.departure}
-                    onChange={(e) => {
-                      setSearchWarning("");
-                      setSearchParams((prev) => ({
-                        ...prev,
-                        departure: e.target.value,
-                      }));
-                    }}
-                  >
-                    <option value="">Tất cả điểm đi</option>
-                    {(Array.isArray(airports) ? airports : []).map((ap) => (
-                      <option key={ap.id || ap.code} value={ap.code}>
-                        {ap.city} ({ap.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="md:col-span-3">
+                <SkyAirportPicker
+                  label="Điểm đi"
+                  placeholder="Tất cả điểm đi"
+                  variant="departure"
+                  allowClear
+                  airports={airports}
+                  value={searchParams.departure}
+                  disabledCode={searchParams.arrival}
+                  onChange={(code) => {
+                    setSearchWarning("");
+                    setSearchParams((prev) => ({
+                      ...prev,
+                      departure: code,
+                    }));
+                  }}
+                />
               </div>
 
               {/* Swap Button */}
@@ -761,99 +754,76 @@ export default function FlightResults() {
               </div>
 
               {/* Arrival */}
-              <div className="rounded-2xl border border-blue-100 bg-[#f7faff] p-2.5 md:col-span-3">
-                <label className="mb-0.5 block text-[10px] font-extrabold uppercase tracking-wider text-[#5a749b]">
-                  Điểm đến
-                </label>
-                <div className="flex items-center gap-2">
-                  <MapPinLine size={15} weight="fill" className="shrink-0 text-blue-600" />
-                  <select
-                    aria-label="Chọn điểm đến"
-                    className="w-full cursor-pointer bg-transparent text-xs font-extrabold text-[#0b2559] outline-none"
-                    value={searchParams.arrival}
-                    onChange={(e) => {
-                      setSearchWarning("");
-                      setSearchParams((prev) => ({
-                        ...prev,
-                        arrival: e.target.value,
-                      }));
-                    }}
-                  >
-                    <option value="">Tất cả điểm đến</option>
-                    {(Array.isArray(airports) ? airports : []).map((ap) => (
-                      <option key={ap.id || ap.code} value={ap.code}>
-                        {ap.city} ({ap.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="md:col-span-3">
+                <SkyAirportPicker
+                  label="Điểm đến"
+                  placeholder="Tất cả điểm đến"
+                  variant="arrival"
+                  allowClear
+                  airports={airports}
+                  value={searchParams.arrival}
+                  disabledCode={searchParams.departure}
+                  onChange={(code) => {
+                    setSearchWarning("");
+                    setSearchParams((prev) => ({
+                      ...prev,
+                      arrival: code,
+                    }));
+                  }}
+                />
               </div>
 
-              {/* Departure Date (Blocks past dates) */}
+              {/* Departure Date (Vietnamese 5-Star SkyDatePicker) */}
               <div
-                className={`rounded-2xl border border-blue-100 bg-[#f7faff] p-2.5 ${
-                  searchParams.tripType === "round-trip"
-                    ? "md:col-span-2"
-                    : "md:col-span-2"
-                }`}
+                className="rounded-2xl border border-blue-100 bg-[#f7faff] p-2.5 transition-colors hover:border-blue-300 md:col-span-3"
               >
                 <label className="mb-0.5 block text-[10px] font-extrabold uppercase tracking-wider text-[#5a749b]">
                   Ngày đi
                 </label>
-                <div className="flex items-center gap-1.5">
-                  <CalendarBlank size={14} weight="fill" className="shrink-0 text-blue-600" />
-                  <input
-                    type="date"
-                    aria-label="Ngày đi"
-                    min={todayStr}
-                    className="w-full cursor-pointer bg-transparent text-xs font-extrabold text-[#0b2559] outline-none"
-                    value={searchParams.date}
-                    onChange={(e) => {
-                      setSearchWarning("");
-                      const val = e.target.value;
-                      setSearchParams((prev) => ({
-                        ...prev,
-                        date: val,
-                        returnDate:
-                          prev.returnDate && val && prev.returnDate < val
-                            ? val
-                            : prev.returnDate,
-                      }));
-                    }}
-                  />
-                </div>
+                <SkyDatePicker
+                  value={searchParams.date}
+                  min={todayStr}
+                  placeholder="Chọn ngày đi"
+                  onChange={(val) => {
+                    setSearchWarning("");
+                    setSearchParams((prev) => ({
+                      ...prev,
+                      date: val,
+                      returnDate:
+                        prev.returnDate && val && prev.returnDate < val
+                          ? val
+                          : prev.returnDate,
+                    }));
+                  }}
+                />
               </div>
 
               {/* Return Date (When Round-trip) */}
               {searchParams.tripType === "round-trip" && (
-                <div className="rounded-2xl border border-blue-100 bg-[#f7faff] p-2.5 md:col-span-3">
+                <div className="rounded-2xl border border-blue-100 bg-[#f7faff] p-2.5 transition-colors hover:border-blue-300 md:col-span-3">
                   <label className="mb-0.5 block text-[10px] font-extrabold uppercase tracking-wider text-[#5a749b]">
                     Ngày về
                   </label>
-                  <div className="flex items-center gap-1.5">
-                    <CalendarBlank size={14} weight="fill" className="shrink-0 text-blue-600" />
-                    <input
-                      type="date"
-                      aria-label="Ngày về"
-                      min={searchParams.date || todayStr}
-                      className="w-full cursor-pointer bg-transparent text-xs font-extrabold text-[#0b2559] outline-none"
-                      value={searchParams.returnDate}
-                      onChange={(e) => {
-                        setSearchWarning("");
-                        setSearchParams((prev) => ({
-                          ...prev,
-                          returnDate: e.target.value,
-                        }));
-                      }}
-                    />
-                  </div>
+                  <SkyDatePicker
+                    value={searchParams.returnDate}
+                    min={searchParams.date || todayStr}
+                    align="right"
+                    placeholder="Chọn ngày về"
+                    onChange={(val) => {
+                      setSearchWarning("");
+                      setSearchParams((prev) => ({
+                        ...prev,
+                        returnDate: val,
+                      }));
+                    }}
+                  />
                 </div>
               )}
 
               {/* Interactive Passenger & Cabin Class Selector */}
               <div
                 ref={passengerMenuRef}
-                className="relative md:col-span-3"
+                className="relative md:col-span-2"
               >
                 <button
                   type="button"

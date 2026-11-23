@@ -111,7 +111,7 @@ export default function LoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: loginEmail,
+          email: loginEmail.trim(),
           password: loginPassword
         })
       });
@@ -119,6 +119,12 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (data.status === "success") {
+        // Xóa sạch phiên cũ ở cả 2 storage để tránh đè user cũ (member) lên admin mới đăng nhập
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("user");
+        sessionStorage.removeItem("access_token");
+        sessionStorage.removeItem("user");
+
         const storage = rememberMe ? localStorage : sessionStorage;
 
         storage.setItem("access_token", data.access_token);

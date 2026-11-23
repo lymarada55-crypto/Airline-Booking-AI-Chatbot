@@ -22,7 +22,7 @@ class ProfileController extends Controller
                 'role' => $user->roles->first()?->name ?? 'admin',
                 'roles' => $user->roles,
                 'created_at' => $user->created_at ? $user->created_at->format('Y-m-d H:i:s') : null,
-            ]
+            ],
         ]);
     }
 
@@ -33,22 +33,33 @@ class ProfileController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
-            'password' => 'nullable|min:6',
+            'current_password' => 'required_with:password|nullable|string',
+            'password' => 'nullable|string|min:6',
+        ], [
+            'name.required' => 'Vui lòng nhập họ và tên.',
+            'email.unique' => 'Email này đã được sử dụng bởi tài khoản khác.',
+            'current_password.required_with' => 'Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu mới.',
+            'password.min' => 'Mật khẩu mới phải có ít nhất 6 ký tự.',
         ]);
 
-        $user->name = $request->name;
-        $user->email = $request->email;
-
         if ($request->filled('password')) {
+            if (! Hash::check((string) $request->current_password, $user->password)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Mật khẩu hiện tại không chính xác.',
+                ], 422);
+            }
             $user->password = Hash::make($request->password);
         }
 
+        $user->name = trim((string) $request->name);
+        $user->email = trim((string) $request->email);
         $user->save();
         $user->load('roles');
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Profile updated successfully',
+            'message' => 'Đã cập nhật hồ sơ quản trị viên thành công.',
             'data' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -57,7 +68,7 @@ class ProfileController extends Controller
                 'role' => $user->roles->first()?->name ?? 'admin',
                 'roles' => $user->roles,
                 'created_at' => $user->created_at ? $user->created_at->format('Y-m-d H:i:s') : null,
-            ]
+            ],
         ]);
     }
 }

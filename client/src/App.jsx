@@ -35,6 +35,7 @@ import RequireAdmin from "./components/admin/RequireAdmin";
 import AdminLayout from "./layouts/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import Flights from "./pages/admin/Flights";
+import Fleet from "./pages/admin/Fleet";
 import Airports from "./pages/admin/airports";
 import Users from "./pages/admin/Users";
 import Bookings from "./pages/admin/Bookings";
@@ -88,6 +89,7 @@ function PageTitleUpdater() {
       "/profile": "Hồ sơ cá nhân - SkyLink Airlines",
       "/admin": "Bảng điều khiển quản trị - SkyLink Admin",
       "/admin/flights": "Quản lý chuyến bay - SkyLink Admin",
+      "/admin/fleet": "Quản lý đội tàu bay - SkyLink Admin",
       "/admin/users": "Quản lý người dùng - SkyLink Admin",
       "/admin/bookings": "Quản lý đặt vé - SkyLink Admin",
       "/admin/travel-services": "Quản lý dịch vụ du lịch - SkyLink Admin",
@@ -167,6 +169,7 @@ function App() {
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="flights" element={<Flights />} />
+              <Route path="fleet" element={<Fleet />} />
               <Route path="users" element={<Users />} />
               <Route path="bookings" element={<Bookings />} />
               <Route path="travel-services" element={<TravelServices />} />

@@ -1,14 +1,19 @@
 import React, { useState, useRef, useCallback } from "react";
-import { PaperPlaneTilt, Image as ImageIcon, X, FileText, Paperclip } from "@phosphor-icons/react";
+import { PaperPlaneTilt, X, FileText, Paperclip } from "@phosphor-icons/react";
 
-export const ChatInput = ({ onSendMessage, onSend, isLoading, disabled, placeholder = "Nhập tin nhắn của bạn..." }) => {
+export const ChatInput = ({
+  onSendMessage,
+  onSend,
+  isLoading,
+  disabled,
+  placeholder = "Ask me anything about travel...",
+}) => {
   const [text, setText] = useState("");
   const [files, setFiles] = useState([]);
   const fileInputRef = useRef(null);
   const handleSend = onSendMessage || onSend;
   const isBlocked = isLoading || disabled;
 
-  // Convert File to Base64 data URL
   const readFileAsDataURL = (file) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -37,7 +42,6 @@ export const ChatInput = ({ onSendMessage, onSend, isLoading, disabled, placehol
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Handle Clipboard Paste (e.g. Ctrl + V screenshot)
   const handlePaste = useCallback(async (e) => {
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -69,26 +73,31 @@ export const ChatInput = ({ onSendMessage, onSend, isLoading, disabled, placehol
     }
   };
 
+  const canSend = (text.trim().length > 0 || files.length > 0) && !isBlocked;
+
   return (
-    <div className="p-3 bg-white border-t border-slate-100 shrink-0">
+    <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-3">
       {/* File Previews Bar */}
       {files.length > 0 && (
-        <div className="flex items-center gap-2 mb-2 px-1 overflow-x-auto pb-1">
+        <div className="mb-2 flex items-center gap-2 overflow-x-auto px-1 pb-1">
           {files.map((file, idx) => (
-            <div key={idx} className="relative group shrink-0 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shadow-2xs">
+            <div
+              key={idx}
+              className="group relative shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-2xs"
+            >
               {file.type.startsWith("image/") ? (
-                <img src={file.data} alt={file.name} className="w-14 h-14 object-cover" />
+                <img src={file.data} alt={file.name} className="h-14 w-14 object-cover" />
               ) : (
-                <div className="w-14 h-14 flex flex-col items-center justify-center p-1 text-slate-500">
+                <div className="flex h-14 w-14 flex-col items-center justify-center p-1 text-slate-500">
                   <FileText size={20} weight="fill" className="text-blue-500" />
-                  <span className="text-[9px] truncate max-w-full">{file.name}</span>
+                  <span className="max-w-full truncate text-[9px]">{file.name}</span>
                 </div>
               )}
               <button
                 type="button"
                 onClick={() => removeFile(idx)}
                 title="Xóa file"
-                className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-slate-900/80 hover:bg-rose-600 text-white flex items-center justify-center text-[10px] transition-colors cursor-pointer"
+                className="absolute right-0.5 top-0.5 flex h-4 w-4 cursor-pointer items-center justify-center rounded-full bg-slate-900/80 text-[10px] text-white transition-colors hover:bg-rose-600"
               >
                 <X size={10} weight="bold" />
               </button>
@@ -97,8 +106,7 @@ export const ChatInput = ({ onSendMessage, onSend, isLoading, disabled, placehol
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex items-center w-full px-0.5">
-        {/* Hidden File Input */}
+      <form onSubmit={handleSubmit} className="w-full">
         <input
           ref={fileInputRef}
           type="file"
@@ -109,48 +117,56 @@ export const ChatInput = ({ onSendMessage, onSend, isLoading, disabled, placehol
           disabled={isBlocked}
         />
 
-        {/* Unified Capsule Control */}
+        {/* TripGenie Glowing Gradient Border Input Wrapper */}
         <div
-          className="flex-1 flex items-center gap-2 bg-[#f4f8ff] hover:bg-[#edf4ff] focus-within:bg-white px-2 py-1.5 transition-all duration-200 shadow-2xs"
-          style={{ borderRadius: 9999, border: "1px solid #d5e6fc" }}
+          className="p-[1.5px] shadow-xs transition-shadow focus-within:shadow-md"
+          style={{
+            borderRadius: 14,
+            background: "linear-gradient(90deg, #38bdf8 0%, #6366f1 55%, #8b5cf6 100%)",
+          }}
         >
-          {/* Left paperclip button */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isBlocked}
-            title="Đính kèm ảnh hoặc tài liệu"
-            className="w-8 h-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center cursor-pointer transition-colors shrink-0"
-            style={{ borderRadius: 9999, border: "none", background: "transparent" }}
+          <div
+            className="flex items-center gap-2 bg-white px-2.5 py-2"
+            style={{ borderRadius: 12.5 }}
           >
-            <Paperclip size={18} weight="bold" />
-          </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isBlocked}
+              title="Đính kèm ảnh hoặc PDF"
+              className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition hover:bg-blue-50 hover:text-[#2563eb] disabled:opacity-40"
+              style={{ border: "none", background: "transparent" }}
+            >
+              <Paperclip size={18} weight="bold" />
+            </button>
 
-          {/* Text input */}
-          <input
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onPaste={handlePaste}
-            placeholder={files.length > 0 ? "Thêm mô tả..." : placeholder}
-            disabled={isBlocked}
-            className="flex-1 bg-transparent text-[13px] font-medium text-slate-800 placeholder-slate-400 focus:outline-none py-1 px-0.5 select-text"
-          />
+            <input
+              type="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onPaste={handlePaste}
+              disabled={isBlocked}
+              placeholder={placeholder}
+              className="min-w-0 flex-1 bg-transparent text-[13.5px] font-medium text-[#091e47] outline-none placeholder:text-slate-400"
+              style={{ border: "none" }}
+            />
 
-          {/* Send button on the right */}
-          <button
-            type="submit"
-            disabled={(!text.trim() && files.length === 0) || isBlocked}
-            aria-label="Gửi tin nhắn"
-            className="w-8 h-8 disabled:opacity-35 text-white flex items-center justify-center cursor-pointer transition-all active:scale-95 shadow-sm shrink-0"
-            style={{
-              borderRadius: 9999,
-              border: "none",
-              background: "linear-gradient(135deg, #0b5ed7 0%, #1d75f2 100%)",
-            }}
-          >
-            <PaperPlaneTilt size={14} weight="fill" />
-          </button>
+            <button
+              type="submit"
+              disabled={!canSend}
+              title="Gửi tin nhắn"
+              aria-label="Gửi tin nhắn"
+              className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-white transition hover:brightness-105 disabled:cursor-not-allowed"
+              style={{
+                border: "none",
+                background: canSend
+                  ? "linear-gradient(135deg, #0ea5e9 0%, #4f46e5 100%)"
+                  : "#cbd5e1",
+              }}
+            >
+              <PaperPlaneTilt size={15} weight="fill" />
+            </button>
+          </div>
         </div>
       </form>
     </div>

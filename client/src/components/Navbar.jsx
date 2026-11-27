@@ -29,6 +29,7 @@ import {
   Crown,
   AirplaneTilt,
 } from "@phosphor-icons/react";
+import SkyLinkLogo from "./SkyLinkLogo";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -175,7 +176,8 @@ function NavLink({ item, isActive, onHover, isHovered }) {
     >
       <motion.button
         onClick={handleClick}
-        className="relative flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-semibold transition-all duration-200 cursor-pointer select-none"
+        className="relative flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-2 text-[13px] font-semibold transition-all duration-200 cursor-pointer select-none xl:px-3.5 xl:text-sm"
+        style={{ whiteSpace: "nowrap" }}
         whileTap={{ scale: 0.96 }}
       >
         {/* Active / Hover Background Pill */}
@@ -194,7 +196,10 @@ function NavLink({ item, isActive, onHover, isHovered }) {
           )}
         </AnimatePresence>
 
-        <span className={`relative z-10 transition-colors ${isActive ? "text-blue-600 font-bold" : "text-slate-700 hover:text-blue-600"}`}>
+        <span
+          className={`relative z-10 whitespace-nowrap transition-colors ${isActive ? "text-blue-600 font-bold" : "text-slate-700 hover:text-blue-600"}`}
+          style={{ whiteSpace: "nowrap" }}
+        >
           {item.label}
         </span>
 
@@ -681,7 +686,7 @@ export default function Navbar() {
               backgroundColor: "rgba(255, 255, 255, 0.92)",
             }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className="relative flex items-center justify-between h-[66px] px-5 sm:px-6 rounded-[24px] border border-blue-100/80 backdrop-blur-2xl"
+            className="relative flex items-center justify-between gap-2 h-[66px] px-4 sm:px-5 rounded-[24px] border border-blue-100/80 backdrop-blur-2xl"
           >
             {/* Top Light Accent */}
             <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-blue-200/50 to-transparent" />
@@ -693,48 +698,31 @@ export default function Navbar() {
                 className="flex items-center gap-3 cursor-pointer select-none group"
                 whileTap={{ scale: 0.96 }}
               >
-                {/* Signature Winged SkyLink Airlines Emblem */}
-                <div
-                  className="w-11 h-11 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
-                  style={{
-                    borderRadius: 14,
-                    background: "linear-gradient(135deg, #092c7a 0%, #0b5ed7 65%, #1d75f2 100%)",
-                    boxShadow: "0 6px 16px rgba(11, 94, 215, 0.28)",
-                  }}
-                >
-                  <svg
-                    width="34"
-                    height="27"
-                    viewBox="0 0 64 48"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    style={{ filter: "drop-shadow(0 2px 6px rgba(56, 189, 248, 0.5))" }}
-                  >
-                    <defs>
-                      <linearGradient id="navWingTop" x1="0" y1="0" x2="64" y2="48" gradientUnits="userSpaceOnUse">
-                        <stop offset="0%" stopColor="#7dd3fc" />
-                        <stop offset="55%" stopColor="#38bdf8" />
-                        <stop offset="100%" stopColor="#ffffff" />
-                      </linearGradient>
-                      <linearGradient id="navWingBot" x1="0" y1="10" x2="58" y2="44" gradientUnits="userSpaceOnUse">
-                        <stop offset="0%" stopColor="#38bdf8" />
-                        <stop offset="100%" stopColor="#e0f2fe" />
-                      </linearGradient>
-                    </defs>
-                    <path d="M4 8C14 14 23 22 30 33C21 29 12 24 6 16C4.8 14.3 4 11.2 4 8Z" fill="url(#navWingTop)" />
-                    <path d="M8 21C16 25 23 30 29 37C21 36 14 33 9.5 27C8.4 25.4 8 23.2 8 21Z" fill="url(#navWingBot)" opacity="0.92" />
-                    <path d="M60 6C49 12 39 21 32 34C42 29 51 23 57.5 14.5C59 12.4 59.8 9.2 60 6Z" fill="url(#navWingTop)" />
-                    <path d="M55 20C47 25 39 30 33 38C41 36.5 48.5 33 53.5 26.5C54.6 24.8 55 22.4 55 20Z" fill="url(#navWingBot)" opacity="0.92" />
-                    <path d="M31.5 14L35 39L31.5 44L28 39L31.5 14Z" fill="#ffffff" opacity="0.95" />
-                  </svg>
+                {/* Signature Angkor Wat + Wing + Airplane SkyLink Emblem */}
+                <div className="flex items-center gap-2.5">
+                  <SkyLinkLogo
+                    height={44}
+                    variant="light"
+                    className="transition-transform group-hover:scale-105"
+                  />
+                  <span
+                    className="shrink-0"
+                    style={{
+                      width: 1.5,
+                      height: 32,
+                      background: "linear-gradient(180deg, #1e3a8a 0%, #0ea5e9 100%)",
+                      opacity: 0.55,
+                      borderRadius: 99,
+                    }}
+                  />
                 </div>
 
-                {/* Brand Typography */}
+                {/* Brand Typography matching SkyLink Airlines brand sheet */}
                 <div className="flex flex-col text-left -space-y-0.5">
-                  <span className="text-[19px] font-black tracking-tight text-[#091e47] leading-none">
+                  <span className="text-[20px] font-black tracking-tight text-[#0a2463] leading-none">
                     SkyLink
                   </span>
-                  <span className="text-[10.5px] font-extrabold tracking-[0.22em] text-[#0b5ed7] uppercase">
+                  <span className="text-[10px] font-extrabold tracking-[0.28em] text-[#1d64d8] uppercase">
                     AIRLINES
                   </span>
                 </div>
@@ -742,7 +730,7 @@ export default function Navbar() {
             </MagneticWrapper>
 
             {/* Center: Nav Navigation Links */}
-            <div ref={megaRef} className="hidden lg:flex items-center gap-1">
+            <div ref={megaRef} className="hidden lg:flex items-center gap-0.5 xl:gap-1">
               {NAV_LINKS.map((item) => (
                 <div
                   key={item.label}

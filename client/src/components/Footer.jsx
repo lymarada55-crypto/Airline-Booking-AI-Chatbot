@@ -8,6 +8,7 @@ import {
   Lock,
   CheckCircle,
 } from "@phosphor-icons/react";
+import SkyLinkLogo from "./SkyLinkLogo";
 
 // Official Crisp Inline SVG Logos (zero broken Windows font glyphs)
 const VisaLogo = () => (
@@ -173,32 +174,20 @@ export default function Footer() {
               className="group inline-flex items-center gap-3"
               style={{ textDecoration: "none", marginBottom: 14 }}
             >
-              <svg
-                width="44"
-                height="34"
-                viewBox="0 0 64 48"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="shrink-0 transition-transform group-hover:scale-105"
-                style={{ filter: "drop-shadow(0 4px 10px rgba(56, 189, 248, 0.45))" }}
-              >
-                <defs>
-                  <linearGradient id="ftrWingTop" x1="0" y1="0" x2="64" y2="48" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#7dd3fc" />
-                    <stop offset="55%" stopColor="#38bdf8" />
-                    <stop offset="100%" stopColor="#ffffff" />
-                  </linearGradient>
-                  <linearGradient id="ftrWingBot" x1="0" y1="10" x2="58" y2="44" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#38bdf8" />
-                    <stop offset="100%" stopColor="#e0f2fe" />
-                  </linearGradient>
-                </defs>
-                <path d="M4 8C14 14 23 22 30 33C21 29 12 24 6 16C4.8 14.3 4 11.2 4 8Z" fill="url(#ftrWingTop)" />
-                <path d="M8 21C16 25 23 30 29 37C21 36 14 33 9.5 27C8.4 25.4 8 23.2 8 21Z" fill="url(#ftrWingBot)" opacity="0.92" />
-                <path d="M60 6C49 12 39 21 32 34C42 29 51 23 57.5 14.5C59 12.4 59.8 9.2 60 6Z" fill="url(#ftrWingTop)" />
-                <path d="M55 20C47 25 39 30 33 38C41 36.5 48.5 33 53.5 26.5C54.6 24.8 55 22.4 55 20Z" fill="url(#ftrWingBot)" opacity="0.92" />
-                <path d="M31.5 14L35 39L31.5 44L28 39L31.5 14Z" fill="#ffffff" opacity="0.95" />
-              </svg>
+              <SkyLinkLogo
+                height={46}
+                variant="dark"
+                className="transition-transform group-hover:scale-105"
+              />
+              <span
+                className="shrink-0"
+                style={{
+                  width: 1.5,
+                  height: 34,
+                  background: "linear-gradient(180deg, rgba(125,211,252,0.8) 0%, rgba(56,189,248,0.25) 100%)",
+                  borderRadius: 99,
+                }}
+              />
               <div>
                 <span
                   style={{

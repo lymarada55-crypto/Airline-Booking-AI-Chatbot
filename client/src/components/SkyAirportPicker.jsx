@@ -58,6 +58,8 @@ export default function SkyAirportPicker({
   disabledCode = "",
   variant = "departure",
   allowClear = false,
+  compact = false,
+  richCompact = false,
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
@@ -105,48 +107,86 @@ export default function SkyAirportPicker({
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         className="w-full cursor-pointer text-left transition-all"
-        style={{
-          background: open ? "#ffffff" : "#f7faff",
-          border: open ? "1.5px solid #1d75f2" : "1px solid #dbe7fb",
-          borderRadius: 16,
-          padding: "10px 13px",
-          boxShadow: open ? "0 0 0 3px rgba(29, 117, 242, 0.14)" : "none",
-        }}
+        style={
+          richCompact
+            ? {
+                background: "#ffffff",
+                border: open ? "1.5px solid #0284c7" : "1px solid #d5e2f2",
+                borderRadius: 12,
+                padding: "0 14px",
+                height: 54,
+                display: "flex",
+                alignItems: "center",
+                boxShadow: open ? "0 0 0 3px rgba(2, 132, 199, 0.14)" : "none",
+              }
+            : compact
+            ? {
+                background: "#ffffff",
+                border: open ? "1.5px solid #1d75f2" : "1px solid #d5e2f2",
+                borderRadius: 12,
+                padding: "0 14px",
+                height: 44,
+                display: "flex",
+                alignItems: "center",
+                boxShadow: open ? "0 0 0 3px rgba(29, 117, 242, 0.14)" : "none",
+              }
+            : {
+                background: open ? "#ffffff" : "#f7faff",
+                border: open ? "1.5px solid #1d75f2" : "1px solid #dbe7fb",
+                borderRadius: 16,
+                padding: "10px 13px",
+                boxShadow: open ? "0 0 0 3px rgba(29, 117, 242, 0.14)" : "none",
+              }
+        }
         aria-expanded={open}
         aria-label={label}
       >
-        <span
-          className="block font-bold uppercase tracking-wider text-slate-400"
-          style={{ fontSize: 10.5, marginBottom: 3 }}
-        >
-          {label}
-        </span>
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
+        {!compact && !richCompact && (
+          <span
+            className="block font-bold uppercase tracking-wider text-slate-400"
+            style={{ fontSize: 10.5, marginBottom: 3 }}
+          >
+            {label}
+          </span>
+        )}
+        <div className="flex w-full items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2.5">
             <TriggerIcon
-              size={17}
+              size={richCompact ? 20 : compact ? 18 : 17}
               weight="duotone"
-              className={selectedAirport ? "shrink-0 text-blue-600" : "shrink-0 text-slate-400"}
+              className={selectedAirport ? "shrink-0 text-slate-700" : "shrink-0 text-slate-400"}
             />
             {selectedAirport ? (
-              <span
-                className="truncate font-extrabold text-[#091e47]"
-                style={{ fontSize: 13.5 }}
-              >
-                {selectedAirport.shortCity}{" "}
-                <span className="font-mono text-blue-600">({selectedAirport.code})</span>
-              </span>
+              richCompact ? (
+                <div className="min-w-0 leading-tight">
+                  <div className="truncate font-extrabold text-[#091e47]" style={{ fontSize: 13.5 }}>
+                    {selectedAirport.shortCity} ({selectedAirport.code})
+                  </div>
+                  <div className="truncate font-medium text-slate-400" style={{ fontSize: 11, marginTop: 1 }}>
+                    {selectedAirport.airportName}
+                  </div>
+                </div>
+              ) : (
+                <span
+                  className="truncate font-bold text-[#091e47]"
+                  style={{ fontSize: 13.5 }}
+                >
+                  {selectedAirport.shortCity} ({selectedAirport.code})
+                </span>
+              )
             ) : (
               <span className="truncate font-semibold text-slate-400" style={{ fontSize: 13 }}>
                 {placeholder}
               </span>
             )}
           </div>
-          <CaretDown
-            size={14}
-            weight="bold"
-            className={`shrink-0 text-slate-400 transition-transform ${open ? "rotate-180 text-blue-600" : ""}`}
-          />
+          {!compact && !richCompact && (
+            <CaretDown
+              size={14}
+              weight="bold"
+              className={`shrink-0 text-slate-400 transition-transform ${open ? "rotate-180 text-blue-600" : ""}`}
+            />
+          )}
         </div>
       </button>
 

@@ -1,8 +1,14 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { CalendarBlank, CaretLeft, CaretRight, CaretDown } from "@phosphor-icons/react";
 
-const WEEKDAYS_VI = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
-const SHORT_DAY_NAMES = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+const WEEKDAYS_MON_START = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const WEEKDAYS_SUN_START = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const SHORT_DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTH_NAMES_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_NAMES_FULL = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
 
 function toIsoDate(dateObj) {
   const y = dateObj.getFullYear();
@@ -18,22 +24,49 @@ function parseIsoDate(iso) {
   return new Date(parts[0], parts[1] - 1, parts[2]);
 }
 
-function formatVietnameseDate(iso) {
+function formatEnglishDate(iso, shortFormat = false) {
   const dt = parseIsoDate(iso);
   if (!dt) return "";
-  const dayName = SHORT_DAY_NAMES[dt.getDay()];
   const dd = String(dt.getDate()).padStart(2, "0");
-  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  const mon = MONTH_NAMES_SHORT[dt.getMonth()];
   const yyyy = dt.getFullYear();
-  return `${dayName}, ${dd}/${mm}/${yyyy}`;
+  if (shortFormat) {
+    return `${mon} ${dt.getDate()}, ${yyyy}`;
+  }
+  const dayName = SHORT_DAY_NAMES[dt.getDay()];
+  return `${dayName}, ${dd} ${mon} ${yyyy}`;
+}
+
+function buildMonthCells(year, month, sunStart = false) {
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const startOffset = sunStart ? firstDay.getDay() : (firstDay.getDay() + 6) % 7;
+
+  const cells = [];
+  for (let i = 0; i < startOffset; i++) {
+    cells.push(null);
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dt = new Date(year, month, day);
+    cells.push({
+      day,
+      iso: toIsoDate(dt),
+      isSunday: dt.getDay() === 0,
+    });
+  }
+  return cells;
 }
 
 export default function SkyDatePicker({
   value,
   onChange,
   min,
-  placeholder = "Chọn ngày",
+  placeholder = "Select date",
   align = "left",
+  dualMonth = false,
+  shortFormat = false,
+  hideCaret = false,
+  onOpenRequest,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [openUp, setOpenUp] = useState(false);
@@ -88,26 +121,20 @@ export default function SkyDatePicker({
     };
   }, [isOpen]);
 
-  const calendarDays = useMemo(() => {
-    const firstDay = new Date(viewYear, viewMonth, 1);
-    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-    // Convert JS Sunday=0..Saturday=6 into Monday=0..Sunday=6
-    const startOffset = (firstDay.getDay() + 6) % 7;
-
-    const cells = [];
-    for (let i = 0; i < startOffset; i++) {
-      cells.push(null);
-    }
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dt = new Date(viewYear, viewMonth, day);
-      cells.push({
-        day,
-        iso: toIsoDate(dt),
-        isSunday: dt.getDay() === 0,
-      });
-    }
-    return cells;
+  const secondMonthInfo = useMemo(() => {
+    if (viewMonth === 11) return { year: viewYear + 1, month: 0 };
+    return { year: viewYear, month: viewMonth + 1 };
   }, [viewYear, viewMonth]);
+
+  const primaryCells = useMemo(
+    () => buildMonthCells(viewYear, viewMonth, dualMonth),
+    [viewYear, viewMonth, dualMonth]
+  );
+
+  const secondaryCells = useMemo(
+    () => (dualMonth ? buildMonthCells(secondMonthInfo.year, secondMonthInfo.month, true) : []),
+    [dualMonth, secondMonthInfo]
+  );
 
   const handlePrevMonth = () => {
     if (viewMonth === 0) {
@@ -133,14 +160,102 @@ export default function SkyDatePicker({
     setIsOpen(false);
   };
 
-  const displayLabel = formatVietnameseDate(value);
+  const displayLabel = formatEnglishDate(value, shortFormat);
+
+  const renderMonthGrid = (cells, sunStart) => {
+    const weekdays = sunStart ? WEEKDAYS_SUN_START : WEEKDAYS_MON_START;
+    return (
+      <>
+        <div className="mb-1.5 grid grid-cols-7 gap-1 text-center">
+          {weekdays.map((wd) => (
+            <span
+              key={wd}
+              className="py-1 text-[11px] font-bold"
+              style={{ color: wd === "Sun" ? "#dc2626" : "#64748b" }}
+            >
+              {wd}
+            </span>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7 gap-1">
+          {cells.map((cell, idx) => {
+            if (!cell) {
+              return <div key={`empty-${idx}`} className="h-10" />;
+            }
+
+            const isDisabled = Boolean(effectiveMin && cell.iso < effectiveMin);
+            const isSelected = value === cell.iso;
+            const isToday = cell.iso === todayIso;
+
+            return (
+              <button
+                key={cell.iso}
+                type="button"
+                disabled={isDisabled}
+                onClick={() => handleSelectDate(cell.iso)}
+                className="relative flex h-10 w-full flex-col items-center justify-center text-xs font-extrabold transition hover:bg-sky-50"
+                style={
+                  isSelected
+                    ? {
+                        background: "linear-gradient(135deg, #0ea5e9 0%, #1d4ed8 100%)",
+                        color: "#ffffff",
+                        borderRadius: 9999,
+                        border: "none",
+                        boxShadow: "0 4px 12px rgba(14, 165, 233, 0.38)",
+                        cursor: "pointer",
+                      }
+                    : isDisabled
+                    ? {
+                        background: "transparent",
+                        color: "#cbd5e1",
+                        borderRadius: 9999,
+                        border: "none",
+                        cursor: "not-allowed",
+                      }
+                    : isToday
+                    ? {
+                        background: "#eff6ff",
+                        color: "#0b4fd0",
+                        borderRadius: 9999,
+                        border: "1.5px solid #0ea5e9",
+                        cursor: "pointer",
+                      }
+                    : {
+                        background: "transparent",
+                        color: cell.isSunday ? "#dc2626" : "#0f172a",
+                        borderRadius: 9999,
+                        border: "none",
+                        cursor: "pointer",
+                      }
+                }
+              >
+                {isToday && !isSelected && (
+                  <span
+                    className="font-bold leading-none text-[#0284c7]"
+                    style={{ fontSize: 8, marginBottom: 1 }}
+                  >
+                    Today
+                  </span>
+                )}
+                <span>{cell.day}</span>
+              </button>
+            );
+          })}
+        </div>
+      </>
+    );
+  };
 
   return (
     <div ref={containerRef} className="relative w-full">
       {/* Trigger Button */}
       <button
         type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={() => {
+          if (!isOpen && onOpenRequest) onOpenRequest();
+          setIsOpen((prev) => !prev);
+        }}
         className="flex w-full cursor-pointer items-center justify-between gap-2 bg-transparent text-left outline-none"
         style={{ border: "none", padding: 0 }}
       >
@@ -149,174 +264,177 @@ export default function SkyDatePicker({
             size={18}
             weight="duotone"
             className="shrink-0"
-            style={{ color: "#0b57d0" }}
+            style={{ color: displayLabel ? "#091e47" : "#64748b" }}
           />
           <span
-            className="truncate font-extrabold"
-            style={{ fontSize: 14, color: displayLabel ? "#091e47" : "#94a3b8" }}
+            className="truncate font-bold"
+            style={{ fontSize: 13.5, color: displayLabel ? "#091e47" : "#64748b" }}
           >
             {displayLabel || placeholder}
           </span>
         </div>
-        <CaretDown
-          size={13}
-          weight="bold"
-          className="shrink-0 transition-transform"
-          style={{
-            color: "#0b57d0",
-            transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
-          }}
-        />
+        {!hideCaret && (
+          <CaretDown
+            size={13}
+            weight="bold"
+            className="shrink-0 transition-transform"
+            style={{
+              color: "#0b57d0",
+              transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+            }}
+          />
+        )}
       </button>
 
-      {/* Vietnamese 5-Star Calendar Popup */}
+      {/* Calendar Popup (Dual-Month Traveloka Style or Single-Month Compact) */}
       {isOpen && (
         <div
-          className={`absolute z-50 w-[308px] bg-white p-4 ${
+          className={`absolute z-[95] bg-white p-4 sm:p-5 ${
             openUp ? "bottom-[calc(100%+14px)]" : "top-[calc(100%+14px)]"
           } ${align === "right" ? "right-0" : "left-0"}`}
           style={{
-            borderRadius: 24,
-            border: "1px solid #cde2fd",
-            boxShadow: "0 22px 54px -10px rgba(13, 62, 145, 0.28)",
+            width: dualMonth ? "min(610px, calc(100vw - 32px))" : 308,
+            borderRadius: 22,
+            border: "1px solid #dbe7fb",
+            boxShadow: "0 22px 54px -10px rgba(13, 62, 145, 0.25)",
           }}
         >
-          {/* Header: Month / Year + Nav Buttons */}
-          <div className="mb-3 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={handlePrevMonth}
-              aria-label="Tháng trước"
-              className="flex h-8 w-8 cursor-pointer items-center justify-center bg-[#f0f6ff] text-[#0b4fd0] transition hover:bg-blue-100"
-              style={{ borderRadius: 9999, border: "1px solid #d5e6fc" }}
-            >
-              <CaretLeft size={15} weight="bold" />
-            </button>
+          {dualMonth ? (
+            <>
+              {/* Dual-Month Header */}
+              <div className="mb-4 grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={handlePrevMonth}
+                    aria-label="Previous month"
+                    className="flex h-8 w-8 cursor-pointer items-center justify-center bg-[#f4f8ff] text-[#0b5ed7] transition hover:bg-blue-100"
+                    style={{ borderRadius: 9999, border: "1px solid #dbe7fb" }}
+                  >
+                    <CaretLeft size={14} weight="bold" />
+                  </button>
+                  <span className="text-sm font-black tracking-tight text-[#091e47]">
+                    {MONTH_NAMES_FULL[viewMonth]} {viewYear}
+                  </span>
+                  <span className="w-8" />
+                </div>
 
-            <span className="text-sm font-black tracking-tight text-[#091e47]">
-              Tháng {viewMonth + 1}, {viewYear}
-            </span>
+                <div className="hidden items-center justify-between sm:flex">
+                  <span className="w-8" />
+                  <span className="text-sm font-black tracking-tight text-[#091e47]">
+                    {MONTH_NAMES_FULL[secondMonthInfo.month]} {secondMonthInfo.year}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleNextMonth}
+                    aria-label="Next month"
+                    className="flex h-8 w-8 cursor-pointer items-center justify-center bg-[#f4f8ff] text-[#0b5ed7] transition hover:bg-blue-100"
+                    style={{ borderRadius: 9999, border: "1px solid #dbe7fb" }}
+                  >
+                    <CaretRight size={14} weight="bold" />
+                  </button>
+                </div>
+              </div>
 
-            <button
-              type="button"
-              onClick={handleNextMonth}
-              aria-label="Tháng sau"
-              className="flex h-8 w-8 cursor-pointer items-center justify-center bg-[#f0f6ff] text-[#0b4fd0] transition hover:bg-blue-100"
-              style={{ borderRadius: 9999, border: "1px solid #d5e6fc" }}
-            >
-              <CaretRight size={15} weight="bold" />
-            </button>
-          </div>
+              {/* Dual-Month Grids */}
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div>{renderMonthGrid(primaryCells, true)}</div>
+                <div className="hidden border-l border-slate-100 pl-6 sm:block">
+                  {renderMonthGrid(secondaryCells, true)}
+                </div>
+              </div>
 
-          {/* Weekday Headers */}
-          <div className="mb-1.5 grid grid-cols-7 gap-1 text-center">
-            {WEEKDAYS_VI.map((wd, idx) => (
-              <span
-                key={wd}
-                className="py-1 text-[11px] font-black"
-                style={{ color: idx === 6 ? "#dc2626" : "#476494" }}
-              >
-                {wd}
-              </span>
-            ))}
-          </div>
-
-          {/* Days Grid */}
-          <div className="grid grid-cols-7 gap-1">
-            {calendarDays.map((cell, idx) => {
-              if (!cell) {
-                return <div key={`empty-${idx}`} className="h-9" />;
-              }
-
-              const isDisabled = Boolean(effectiveMin && cell.iso < effectiveMin);
-              const isSelected = value === cell.iso;
-              const isToday = cell.iso === todayIso;
-
-              return (
+              {/* Footer Legend matching mockup */}
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                  <span>Lowest flight price available</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={effectiveMin > todayIso}
+                    onClick={() => handleSelectDate(todayIso)}
+                    className="cursor-pointer px-3 py-1 text-[11px] font-extrabold text-[#0b5ed7] transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    style={{ borderRadius: 9999, background: "#f0f7ff", border: "none" }}
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsOpen(false)}
+                    className="cursor-pointer px-2.5 py-1 text-[11px] font-bold text-slate-400 hover:text-slate-700"
+                    style={{ border: "none", background: "transparent" }}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Single-Month Header */}
+              <div className="mb-3 flex items-center justify-between">
                 <button
-                  key={cell.iso}
                   type="button"
-                  disabled={isDisabled}
-                  onClick={() => handleSelectDate(cell.iso)}
-                  className="relative flex h-9 w-full flex-col items-center justify-center text-xs font-extrabold transition"
-                  style={
-                    isSelected
-                      ? {
-                          background: "linear-gradient(135deg, #0b5ed7 0%, #1d75f2 100%)",
-                          color: "#ffffff",
-                          borderRadius: 12,
-                          border: "none",
-                          boxShadow: "0 6px 14px rgba(13, 97, 225, 0.35)",
-                          cursor: "pointer",
-                        }
-                      : isDisabled
-                      ? {
-                          background: "transparent",
-                          color: "#cbd5e1",
-                          borderRadius: 12,
-                          border: "none",
-                          cursor: "not-allowed",
-                        }
-                      : isToday
-                      ? {
-                          background: "#eff6ff",
-                          color: "#0b4fd0",
-                          borderRadius: 12,
-                          border: "1.5px solid #0b5ed7",
-                          cursor: "pointer",
-                        }
-                      : {
-                          background: "transparent",
-                          color: cell.isSunday ? "#dc2626" : "#0f172a",
-                          borderRadius: 12,
-                          border: "none",
-                          cursor: "pointer",
-                        }
-                  }
+                  onClick={handlePrevMonth}
+                  aria-label="Previous month"
+                  className="flex h-8 w-8 cursor-pointer items-center justify-center bg-[#f0f6ff] text-[#0b4fd0] transition hover:bg-blue-100"
+                  style={{ borderRadius: 9999, border: "1px solid #d5e6fc" }}
                 >
-                  <span>{cell.day}</span>
-                  {isToday && !isSelected && (
-                    <span
-                      className="absolute bottom-1 h-1 w-1"
-                      style={{ background: "#0b5ed7", borderRadius: 9999 }}
-                    />
-                  )}
+                  <CaretLeft size={15} weight="bold" />
                 </button>
-              );
-            })}
-          </div>
 
-          {/* Footer Quick Pickers */}
-          <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                disabled={effectiveMin > todayIso}
-                onClick={() => handleSelectDate(todayIso)}
-                className="cursor-pointer bg-[#f0f6ff] text-[11px] font-extrabold text-[#0b4fd0] transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
-                style={{ borderRadius: 9999, border: "1px solid #d5e6fc", padding: "6px 12px", whiteSpace: "nowrap" }}
-              >
-                Hôm nay
-              </button>
-              <button
-                type="button"
-                disabled={effectiveMin > tomorrowIso}
-                onClick={() => handleSelectDate(tomorrowIso)}
-                className="cursor-pointer bg-[#f0f6ff] text-[11px] font-extrabold text-[#0b4fd0] transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
-                style={{ borderRadius: 9999, border: "1px solid #d5e6fc", padding: "6px 12px", whiteSpace: "nowrap" }}
-              >
-                Ngày mai
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="cursor-pointer bg-transparent px-2 py-1 text-[11px] font-extrabold text-slate-500 hover:text-slate-800"
-              style={{ border: "none" }}
-            >
-              Đóng
-            </button>
-          </div>
+                <span className="text-sm font-black tracking-tight text-[#091e47]">
+                  {MONTH_NAMES_FULL[viewMonth]} {viewYear}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={handleNextMonth}
+                  aria-label="Next month"
+                  className="flex h-8 w-8 cursor-pointer items-center justify-center bg-[#f0f6ff] text-[#0b4fd0] transition hover:bg-blue-100"
+                  style={{ borderRadius: 9999, border: "1px solid #d5e6fc" }}
+                >
+                  <CaretRight size={15} weight="bold" />
+                </button>
+              </div>
+
+              {renderMonthGrid(primaryCells, false)}
+
+              {/* Footer Quick Pickers */}
+              <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={effectiveMin > todayIso}
+                    onClick={() => handleSelectDate(todayIso)}
+                    className="cursor-pointer px-2.5 py-1 text-[11px] font-extrabold text-[#0b4fd0] transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    style={{ borderRadius: 9999, background: "#f0f6ff", border: "none" }}
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    disabled={effectiveMin > tomorrowIso}
+                    onClick={() => handleSelectDate(tomorrowIso)}
+                    className="cursor-pointer px-2.5 py-1 text-[11px] font-extrabold text-[#0b4fd0] transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    style={{ borderRadius: 9999, background: "#f0f6ff", border: "none" }}
+                  >
+                    Tomorrow
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="cursor-pointer px-2 py-1 text-[11px] font-bold text-slate-400 transition hover:text-slate-700"
+                  style={{ border: "none", background: "transparent" }}
+                >
+                  Close
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

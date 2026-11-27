@@ -89,6 +89,15 @@ export default function BoardingPassDisplay({ boardingPass }) {
   } = boardingPass || {};
 
   const { dateLabel, depTimeLabel, boardingTimeLabel } = parseFlightTimes(departure_time);
+  const carrierPrefix = String(flight_number || "").slice(0, 2).toUpperCase();
+  const carrierName =
+    carrierPrefix === "VN"
+      ? "Vietnam Airlines"
+      : carrierPrefix === "VJ"
+      ? "VietJet Air"
+      : carrierPrefix === "QH" || carrierPrefix === "FB"
+      ? "Bamboo Airways"
+      : "SkyLink Airlines";
 
   return (
     <div className="w-full font-sans selection:bg-blue-600 selection:text-white">
@@ -96,47 +105,63 @@ export default function BoardingPassDisplay({ boardingPass }) {
       <div
         className="overflow-hidden bg-white"
         style={{
-          borderRadius: 30,
+          borderRadius: 26,
           border: "1px solid #d5e6fc",
-          boxShadow: "0 20px 50px rgba(13, 62, 145, 0.14)",
+          boxShadow: "0 18px 44px rgba(13, 62, 145, 0.13)",
         }}
       >
         {/* Ticket Header Banner */}
         <div
-          className="relative flex flex-wrap items-center justify-between gap-4 overflow-hidden p-6 text-white md:p-8"
+          className="relative flex flex-wrap items-center justify-between gap-4 overflow-hidden px-6 py-5 text-white md:px-8"
           style={{
-            background: "linear-gradient(125deg, #0b4fd0 0%, #1d75f2 55%, #38bdf8 100%)",
+            background: "linear-gradient(125deg, #0a3b8e 0%, #1d64f2 58%, #0ea5e9 100%)",
           }}
         >
           {/* Watermark Plane Outline */}
           <div className="pointer-events-none absolute -bottom-10 right-28 rotate-12 opacity-15">
-            <PaperPlaneTilt size={190} weight="fill" />
+            <PaperPlaneTilt size={170} weight="fill" />
           </div>
 
-          <div className="relative z-10 space-y-1">
+          <div className="relative z-10 space-y-0.5">
             <div className="flex items-center gap-2">
-              <PaperPlaneTilt size={20} weight="fill" className="text-sky-200" />
-              <span className="text-base font-black tracking-tight md:text-lg">
-                SkyLink Airlines
+              <PaperPlaneTilt size={18} weight="fill" className="text-sky-200" />
+              <span className="text-sm font-black tracking-tight md:text-base">
+                {carrierName}
+              </span>
+              <span
+                className="font-mono text-[11px] font-bold text-sky-100"
+                style={{
+                  background: "rgba(255,255,255,0.16)",
+                  borderRadius: 6,
+                  padding: "1px 7px",
+                }}
+              >
+                {flight_number}
               </span>
             </div>
-            <p className="pt-1 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-sky-100">
+            <p
+              className="pt-0.5 font-mono text-[10.5px] font-bold uppercase tracking-[0.18em] text-sky-100"
+              style={{ margin: 0 }}
+            >
               ELECTRONIC BOARDING PASS
             </p>
-            <h2 className="text-2xl font-black leading-none tracking-tight md:text-3xl">
+            <h2
+              className="font-black leading-none tracking-tight text-white"
+              style={{ margin: "2px 0 0 0", fontSize: 24 }}
+            >
               THẺ LÊN MÁY BAY
             </h2>
           </div>
 
           <div className="relative z-10 flex flex-col items-end">
-            <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-sky-100">
-              MÃ ĐẶT CHỖ (PNR)
+            <span className="font-mono text-[10.5px] font-bold uppercase tracking-widest text-sky-100">
+              BOOKING REF (PNR)
             </span>
-            <span className="font-mono text-2xl font-black tracking-wider text-white md:text-3xl">
+            <span className="font-mono font-black tracking-wider text-white" style={{ fontSize: 26, lineHeight: 1.15 }}>
               {pnr_code}
             </span>
             <span
-              className="mt-1.5 px-3 py-0.5 text-xs font-extrabold text-white"
+              className="mt-1 px-3 py-0.5 text-[11px] font-extrabold text-white"
               style={{
                 background: "rgba(255, 255, 255, 0.22)",
                 borderRadius: 9999,
@@ -149,7 +174,7 @@ export default function BoardingPassDisplay({ boardingPass }) {
         </div>
 
         {/* Ticket Body Content */}
-        <div className="grid grid-cols-1 items-start gap-8 p-6 md:p-9 lg:grid-cols-12">
+        <div className="grid grid-cols-1 items-start gap-6 p-6 md:p-7 lg:grid-cols-12">
           {/* Left Column (8 cols): Flight & Passenger Details */}
           <div className="space-y-6 lg:col-span-8">
             {/* Row 1: Passenger Name & Ticket Code */}
@@ -249,59 +274,59 @@ export default function BoardingPassDisplay({ boardingPass }) {
             </div>
 
             {/* Row 3: 4 Info Metric Cards (Seat, Gate, Boarding Time, Zone) */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {/* Seat */}
               <div
-                className="flex flex-col items-center justify-center rounded-2xl p-4 text-center"
+                className="flex flex-col items-center justify-center rounded-2xl px-3 py-3.5 text-center"
                 style={{ background: "#f4f8ff", border: "1px solid #d5e6fc" }}
               >
-                <Armchair size={20} className="mb-1 text-blue-600" weight="bold" />
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-                  Ghế / Seat
+                <Armchair size={18} className="mb-1 text-blue-600" weight="bold" />
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400" style={{ whiteSpace: "nowrap" }}>
+                  Seat · Ghế
                 </span>
-                <span className="mt-0.5 font-mono text-xl font-black text-[#0b4fd0] md:text-2xl">
+                <span className="mt-0.5 font-mono text-xl font-black text-[#0b4fd0]">
                   {seat_number}
                 </span>
               </div>
 
               {/* Gate */}
               <div
-                className="flex flex-col items-center justify-center rounded-2xl p-4 text-center"
+                className="flex flex-col items-center justify-center rounded-2xl px-3 py-3.5 text-center"
                 style={{ background: "#f4f8ff", border: "1px solid #d5e6fc" }}
               >
-                <Buildings size={20} className="mb-1 text-blue-600" weight="bold" />
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-                  Cửa / Gate
+                <Buildings size={18} className="mb-1 text-blue-600" weight="bold" />
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400" style={{ whiteSpace: "nowrap" }}>
+                  Gate · Cửa
                 </span>
-                <span className="mt-0.5 font-mono text-xl font-black text-[#091e47] md:text-2xl">
+                <span className="mt-0.5 font-mono text-xl font-black text-[#091e47]">
                   {gate}
                 </span>
               </div>
 
               {/* Boarding Time */}
               <div
-                className="flex flex-col items-center justify-center rounded-2xl p-4 text-center"
+                className="flex flex-col items-center justify-center rounded-2xl px-3 py-3.5 text-center"
                 style={{ background: "#fff7ed", border: "1px solid #fed7aa" }}
               >
-                <Clock size={20} className="mb-1 text-amber-600" weight="bold" />
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700">
-                  Lên tàu / Board
+                <Clock size={18} className="mb-1 text-amber-600" weight="bold" />
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700" style={{ whiteSpace: "nowrap" }}>
+                  Boarding
                 </span>
-                <span className="mt-0.5 font-mono text-xl font-black text-amber-800 md:text-2xl">
+                <span className="mt-0.5 font-mono text-xl font-black text-amber-800">
                   {boardingTimeLabel}
                 </span>
               </div>
 
               {/* Zone */}
               <div
-                className="flex flex-col items-center justify-center rounded-2xl p-4 text-center"
+                className="flex flex-col items-center justify-center rounded-2xl px-3 py-3.5 text-center"
                 style={{ background: "#f4f8ff", border: "1px solid #d5e6fc" }}
               >
-                <Users size={20} className="mb-1 text-blue-600" weight="bold" />
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-                  Nhóm / Zone
+                <Users size={18} className="mb-1 text-blue-600" weight="bold" />
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400" style={{ whiteSpace: "nowrap" }}>
+                  Zone · Nhóm
                 </span>
-                <span className="mt-1 text-xs font-black text-[#091e47] md:text-sm">
+                <span className="mt-1 text-xs font-black text-[#091e47]">
                   {zone}
                 </span>
               </div>
@@ -320,31 +345,34 @@ export default function BoardingPassDisplay({ boardingPass }) {
           </div>
 
           {/* Right Column (4 cols): QR Code & Gate Notice */}
-          <div className="flex h-full flex-col items-center justify-between space-y-4 lg:col-span-4 lg:border-l lg:border-dashed lg:border-slate-200 lg:pl-8">
-            <div className="flex w-full flex-col items-center justify-center space-y-3 rounded-2xl border border-slate-200/80 bg-[#f8fbff] p-5">
-              <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs">
+          <div className="flex h-full flex-col items-center justify-between space-y-3.5 lg:col-span-4 lg:border-l lg:border-dashed lg:border-slate-200 lg:pl-6">
+            <div className="flex w-full flex-col items-center justify-center space-y-2.5 rounded-2xl border border-slate-200/80 bg-[#f8fbff] p-4">
+              <div className="flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2.5 shadow-xs">
                 {qr_code_url ? (
                   <img
                     src={qr_code_url}
-                    alt="Mã QR Thẻ lên máy bay"
-                    className="h-44 w-44 object-contain"
+                    alt="QR Boarding Pass"
+                    className="aspect-square object-contain"
+                    style={{ width: 148, height: 148 }}
                   />
                 ) : (
-                  <div className="flex h-44 w-44 items-center justify-center bg-slate-50 text-slate-400">
-                    <QrCode size={88} />
+                  <div
+                    className="flex items-center justify-center bg-slate-50 text-slate-400"
+                    style={{ width: 148, height: 148 }}
+                  >
+                    <QrCode size={84} />
                   </div>
                 )}
               </div>
-              <p className="text-center font-mono text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                QUÉT MÃ TẠI CỬA AN NINH &amp; LÊN TÀU
+              <p className="text-center font-mono text-[10.5px] font-bold uppercase tracking-wider text-slate-500" style={{ margin: 0 }}>
+                SCAN AT SECURITY &amp; GATE
               </p>
             </div>
 
-            <div className="flex w-full items-start gap-2.5 rounded-xl border border-blue-100 bg-[#f0f7ff] p-3.5 text-xs font-semibold leading-relaxed text-[#163d7a]">
-              <Info size={18} className="mt-0.5 shrink-0 text-blue-600" weight="bold" />
+            <div className="flex w-full items-start gap-2 rounded-xl border border-blue-100 bg-[#f0f7ff] p-3 text-[11.5px] font-semibold leading-relaxed text-[#163d7a]">
+              <Info size={16} className="mt-0.5 shrink-0 text-blue-600" weight="bold" />
               <span>
-                Xuất trình thẻ điện tử này kèm CCCD/VNeID mức 2 (nội địa) hoặc Hộ chiếu hợp lệ
-                (quốc tế) tại cửa an ninh.
+                Present this Boarding Pass with your National ID / VNeID or valid Passport at airport security.
               </span>
             </div>
           </div>

@@ -5,10 +5,19 @@ import axios from "axios";
 import { motion } from "motion/react";
 import {
   AirplaneTakeoff,
+  Armchair,
+  CaretDown,
+  CaretLeft,
+  CaretRight,
+  DoorOpen,
+  MagnifyingGlass,
   MapPinLine,
+  Minus,
+  Plus,
   CalendarBlank,
   ArrowsLeftRight,
   Users,
+  User,
   PaperPlaneTilt,
   ArrowRight,
   CheckCircle,
@@ -523,6 +532,262 @@ function ServiceCityPicker({
   );
 }
 
+const HOTEL_MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const HOTEL_MONTH_FULL = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+const HOTEL_DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function parseHotelIso(iso) {
+  if (!iso) return null;
+  const parts = String(iso).split("-").map(Number);
+  if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+  return new Date(parts[0], parts[1] - 1, parts[2]);
+}
+
+function toHotelIso(dt) {
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+}
+
+function formatHotelShortDay(iso) {
+  const dt = parseHotelIso(iso);
+  if (!dt) return "";
+  return `${HOTEL_DAY_SHORT[dt.getDay()]}, ${String(dt.getDate()).padStart(2, "0")} ${HOTEL_MONTH_SHORT[dt.getMonth()]}`;
+}
+
+function buildHotelMonthCells(year, month) {
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const offset = firstDay.getDay();
+  const cells = [];
+  for (let i = 0; i < offset; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dt = new Date(year, month, d);
+    cells.push({ day: d, iso: toHotelIso(dt), isSunday: dt.getDay() === 0 });
+  }
+  return cells;
+}
+
+function HotelDateRangePicker({
+  startDate,
+  endDate,
+  minDate,
+  onChange,
+  unitSingular = "night",
+  unitPlural = "nights",
+  startPrompt = "Select Check-in date",
+  endPrompt = "Select Check-out date",
+}) {
+  const [open, setOpen] = useState(false);
+  const [selectingEnd, setSelectingEnd] = useState(false);
+  const wrapRef = useRef(null);
+
+  const initialDt = parseHotelIso(startDate) || new Date();
+  const [viewYear, setViewYear] = useState(initialDt.getFullYear());
+  const [viewMonth, setViewMonth] = useState(initialDt.getMonth());
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
+        setOpen(false);
+        setSelectingEnd(false);
+      }
+    };
+    const onEsc = (e) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        setSelectingEnd(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [open]);
+
+  const secondMonth = viewMonth === 11 ? { year: viewYear + 1, month: 0 } : { year: viewYear, month: viewMonth + 1 };
+  const cells1 = useMemo(() => buildHotelMonthCells(viewYear, viewMonth), [viewYear, viewMonth]);
+  const cells2 = useMemo(() => buildHotelMonthCells(secondMonth.year, secondMonth.month), [secondMonth.year, secondMonth.month]);
+
+  const nights = useMemo(() => {
+    const d1 = parseHotelIso(startDate);
+    const d2 = parseHotelIso(endDate);
+    if (!d1 || !d2) return 1;
+    return Math.max(1, Math.round((d2 - d1) / 86400000));
+  }, [startDate, endDate]);
+
+  const handleDayClick = (iso) => {
+    if (minDate && iso < minDate) return;
+    if (!selectingEnd || iso <= startDate) {
+      const nextDay = parseHotelIso(iso);
+      nextDay.setDate(nextDay.getDate() + 1);
+      onChange(iso, toHotelIso(nextDay));
+      setSelectingEnd(true);
+    } else {
+      onChange(startDate, iso);
+      setSelectingEnd(false);
+      setOpen(false);
+    }
+  };
+
+  const renderGrid = (cells) => (
+    <>
+      <div className="mb-1.5 grid grid-cols-7 gap-1 text-center">
+        {HOTEL_DAY_SHORT.map((wd) => (
+          <span key={wd} className="py-1 text-[11px] font-bold" style={{ color: wd === "Sun" ? "#dc2626" : "#64748b" }}>
+            {wd}
+          </span>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-y-1">
+        {cells.map((cell, idx) => {
+          if (!cell) return <div key={`e-${idx}`} className="h-9" />;
+          const disabled = Boolean(minDate && cell.iso < minDate);
+          const isStart = cell.iso === startDate;
+          const isEnd = cell.iso === endDate;
+          const inRange = startDate && endDate && cell.iso > startDate && cell.iso < endDate;
+
+          return (
+            <button
+              key={cell.iso}
+              type="button"
+              disabled={disabled}
+              onClick={() => handleDayClick(cell.iso)}
+              className="flex h-9 w-full items-center justify-center text-xs font-extrabold transition"
+              style={
+                isStart || isEnd
+                  ? {
+                      background: "linear-gradient(135deg, #0ea5e9 0%, #1d4ed8 100%)",
+                      color: "#ffffff",
+                      borderRadius: 9999,
+                      border: "none",
+                      cursor: "pointer",
+                    }
+                  : inRange
+                  ? {
+                      background: "#e0f2fe",
+                      color: "#0264c8",
+                      borderRadius: 0,
+                      border: "none",
+                      cursor: "pointer",
+                    }
+                  : disabled
+                  ? { background: "transparent", color: "#cbd5e1", border: "none", cursor: "not-allowed" }
+                  : {
+                      background: "transparent",
+                      color: cell.isSunday ? "#dc2626" : "#0f172a",
+                      borderRadius: 9999,
+                      border: "none",
+                      cursor: "pointer",
+                    }
+              }
+            >
+              {cell.day}
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+
+  return (
+    <div ref={wrapRef} className="relative w-full">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full cursor-pointer items-center gap-2.5 bg-white px-3.5 text-left transition"
+        style={{
+          height: 54,
+          borderRadius: 12,
+          border: open ? "1.5px solid #0284c7" : "1px solid #d5e2f2",
+          boxShadow: open ? "0 0 0 3px rgba(2, 132, 199, 0.14)" : "none",
+        }}
+      >
+        <CalendarBlank size={19} weight="duotone" className="shrink-0 text-[#091e47]" />
+        <span className="truncate font-bold text-[#091e47]" style={{ fontSize: 13.5 }}>
+          {formatHotelShortDay(startDate)} - {formatHotelShortDay(endDate)} ({nights}{" "}
+          {nights > 1 ? unitPlural : unitSingular})
+        </span>
+      </button>
+
+      {open && (
+        <div
+          className="absolute left-0 bottom-[calc(100%+12px)] z-[95] bg-white p-5 shadow-2xl"
+          style={{
+            width: "min(600px, calc(100vw - 32px))",
+            borderRadius: 20,
+            border: "1px solid #dbe7fb",
+          }}
+        >
+          <div className="mb-3 flex items-center justify-between border-b border-slate-100 pb-2.5 text-xs font-bold text-slate-600">
+            <span>
+              {selectingEnd ? endPrompt : startPrompt}
+            </span>
+            <span className="rounded-full bg-sky-50 px-2.5 py-0.5 font-extrabold text-[#0284c7]">
+              {nights} {nights > 1 ? unitPlural : unitSingular}
+            </span>
+          </div>
+
+          <div className="mb-3 grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  if (viewMonth === 0) {
+                    setViewMonth(11);
+                    setViewYear((y) => y - 1);
+                  } else {
+                    setViewMonth((m) => m - 1);
+                  }
+                }}
+                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-[#f4f8ff] text-[#0b5ed7]"
+                style={{ border: "1px solid #dbe7fb" }}
+              >
+                <CaretLeft size={13} weight="bold" />
+              </button>
+              <span className="text-sm font-black text-[#091e47]">
+                {HOTEL_MONTH_FULL[viewMonth]} {viewYear}
+              </span>
+              <span className="w-7" />
+            </div>
+
+            <div className="hidden items-center justify-between sm:flex">
+              <span className="w-7" />
+              <span className="text-sm font-black text-[#091e47]">
+                {HOTEL_MONTH_FULL[secondMonth.month]} {secondMonth.year}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (viewMonth === 11) {
+                    setViewMonth(0);
+                    setViewYear((y) => y + 1);
+                  } else {
+                    setViewMonth((m) => m + 1);
+                  }
+                }}
+                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-[#f4f8ff] text-[#0b5ed7]"
+                style={{ border: "1px solid #dbe7fb" }}
+              >
+                <CaretRight size={13} weight="bold" />
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div>{renderGrid(cells1)}</div>
+            <div className="hidden border-l border-slate-100 pl-6 sm:block">{renderGrid(cells2)}</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function HomePage() {
   const navigate = useNavigate();
   const today = new Date().toISOString().split('T')[0];
@@ -563,6 +828,14 @@ export default function HomePage() {
     passengers: { adults: 1, children: 0 }
   });
   const [showPassengerDropdown, setShowPassengerDropdown] = useState(false);
+  const [showCabinDropdown, setShowCabinDropdown] = useState(false);
+  const [hotelGuests, setHotelGuests] = useState({ adults: 2, children: 0, rooms: 1 });
+  const [showHotelGuestsDropdown, setShowHotelGuestsDropdown] = useState(false);
+  const [expGuests, setExpGuests] = useState({ adults: 2, children: 0 });
+  const [showExpGuestsDropdown, setShowExpGuestsDropdown] = useState(false);
+  const [carOptions, setCarOptions] = useState({ cars: 1, passengers: 2 });
+  const [showCarOptionsDropdown, setShowCarOptionsDropdown] = useState(false);
+  const [directOnly, setDirectOnly] = useState(false);
   const [searchError, setSearchError] = useState("");
 
   const handleUpdatePassengers = (type, change) => {
@@ -654,7 +927,14 @@ export default function HomePage() {
 
       const params = new URLSearchParams({
         ...search,
-        guests: String(searchData.passengers.adults + searchData.passengers.children),
+        guests:
+          type === "hotel"
+            ? String(hotelGuests.adults + hotelGuests.children)
+            : type === "experience"
+              ? String(expGuests.adults + expGuests.children)
+              : String(carOptions.passengers),
+        ...(type === "hotel" ? { rooms: String(hotelGuests.rooms) } : {}),
+        ...(type === "car" ? { rooms: String(carOptions.cars) } : {}),
       });
       navigate(`/travel/${type}?${params.toString()}`);
       return;
@@ -764,18 +1044,18 @@ export default function HomePage() {
         </div>
 
         {/* 3. FLOATING SEARCH ENGINE CARD */}
-        <div className="relative z-20 w-full max-w-5xl px-4 -mt-20 md:-mt-28 mb-6">
+        <div className="relative z-20 w-full max-w-6xl px-4 -mt-20 md:-mt-28 mb-6">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: "spring", stiffness: 180, damping: 22, delay: 0.4 }}
-            className="w-full bg-white rounded-3xl p-6 md:p-8 shadow-[0_25px_70px_-15px_rgba(13,62,145,0.20)] border border-blue-100/90"
+            className="w-full bg-white rounded-3xl p-5 md:p-6 shadow-[0_25px_70px_-15px_rgba(13,62,145,0.20)] border border-blue-100/90"
           >
             {/* Inline Validation Error Banner */}
             {searchError && (
               <div
                 role="alert"
-                className="mb-5 flex items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold text-red-700"
+                className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold text-red-700"
               >
                 <div className="flex items-center gap-2">
                   <WarningCircle size={18} weight="fill" className="shrink-0 text-red-500" />
@@ -791,373 +1071,1273 @@ export default function HomePage() {
                 </button>
               </div>
             )}
-            {/* Top Category Tabs matching Image 2 */}
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5 mb-6">
-              
-              {/* Category Icons */}
+
+            {/* Top Service Category Tabs */}
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-5">
               <div className="flex items-center gap-6 text-sm font-bold text-slate-500">
                 <button
                   type="button"
                   onClick={() => setActiveTab("flights")}
-                  className={`flex items-center gap-2 pb-2 -mb-5 border-b-2 transition-all cursor-pointer ${
+                  className={`flex items-center gap-2 pb-2 -mb-4 border-b-2 transition-all cursor-pointer ${
                     activeTab === "flights"
                       ? "border-blue-600 text-blue-600 font-extrabold"
                       : "border-transparent hover:text-slate-800"
                   }`}
+                  style={{ background: "transparent", borderTop: "none", borderLeft: "none", borderRight: "none" }}
                 >
                   <AirplaneTakeoff size={18} weight="bold" />
-                  <span>Chuyến bay</span>
+                  <span>Flights · Chuyến bay</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setActiveTab("hotels")}
-                  className={`flex items-center gap-2 pb-2 -mb-5 border-b-2 transition-all cursor-pointer ${
+                  className={`flex items-center gap-2 pb-2 -mb-4 border-b-2 transition-all cursor-pointer ${
                     activeTab === "hotels"
                       ? "border-blue-600 text-blue-600 font-extrabold"
                       : "border-transparent hover:text-slate-800"
                   }`}
+                  style={{ background: "transparent", borderTop: "none", borderLeft: "none", borderRight: "none" }}
                 >
                   <Buildings size={18} />
-                  <span>Khách sạn</span>
+                  <span>Hotels · Khách sạn</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setActiveTab("experiences")}
-                  className={`flex items-center gap-2 pb-2 -mb-5 border-b-2 transition-all cursor-pointer ${
+                  className={`flex items-center gap-2 pb-2 -mb-4 border-b-2 transition-all cursor-pointer ${
                     activeTab === "experiences"
                       ? "border-blue-600 text-blue-600 font-extrabold"
                       : "border-transparent hover:text-slate-800"
                   }`}
+                  style={{ background: "transparent", borderTop: "none", borderLeft: "none", borderRight: "none" }}
                 >
                   <Compass size={18} />
-                  <span>Trải nghiệm</span>
+                  <span>Experiences</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setActiveTab("cars")}
-                  className={`flex items-center gap-2 pb-2 -mb-5 border-b-2 transition-all cursor-pointer ${
+                  className={`flex items-center gap-2 pb-2 -mb-4 border-b-2 transition-all cursor-pointer ${
                     activeTab === "cars"
                       ? "border-blue-600 text-blue-600 font-extrabold"
                       : "border-transparent hover:text-slate-800"
                   }`}
+                  style={{ background: "transparent", borderTop: "none", borderLeft: "none", borderRight: "none" }}
                 >
                   <Car size={18} />
-                  <span>Thuê xe</span>
+                  <span>Car Rental</span>
                 </button>
               </div>
-
-              {/* Trip Type Toggle Buttons (Only for Flights) */}
-              {activeTab === "flights" && (
-                <div
-                  className="flex items-center gap-1 border border-blue-100 bg-[#f0f6ff] p-1"
-                  style={{ borderRadius: 9999 }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchError("");
-                      setSearchData((prev) => ({ ...prev, tripType: "one-way" }));
-                    }}
-                    className="cursor-pointer px-4 py-1.5 text-xs font-extrabold transition-all"
-                    style={
-                      searchData.tripType === "one-way"
-                        ? {
-                            background: "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
-                            color: "#ffffff",
-                            boxShadow: "0 4px 12px rgba(13, 97, 225, 0.25)",
-                            borderRadius: 9999,
-                            border: "none",
-                          }
-                        : {
-                            background: "transparent",
-                            color: "#33507f",
-                            borderRadius: 9999,
-                            border: "none",
-                          }
-                    }
-                  >
-                    Một chiều
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchError("");
-                      setSearchData((prev) => ({
-                        ...prev,
-                        tripType: "round-trip",
-                        returnDate:
-                          prev.returnDate && prev.returnDate >= (prev.date || today)
-                            ? prev.returnDate
-                            : dateAfterDays(3),
-                      }));
-                    }}
-                    className="cursor-pointer px-4 py-1.5 text-xs font-extrabold transition-all"
-                    style={
-                      searchData.tripType === "round-trip"
-                        ? {
-                            background: "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
-                            color: "#ffffff",
-                            boxShadow: "0 4px 12px rgba(13, 97, 225, 0.25)",
-                            borderRadius: 9999,
-                            border: "none",
-                          }
-                        : {
-                            background: "transparent",
-                            color: "#33507f",
-                            borderRadius: 9999,
-                            border: "none",
-                          }
-                    }
-                  >
-                    Khứ hồi
-                  </button>
-                </div>
-              )}
-
             </div>
 
-            {/* FLIGHTS SEARCH FORM */}
+            {/* FLIGHTS SEARCH FORM — Traveloka 1-Row Style matching Mockup */}
             {activeTab === "flights" && (
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                
-                {/* Departure Input */}
-                <div className="md:col-span-3">
-                  <SkyAirportPicker
-                    label="Điểm đi"
-                    placeholder="Chọn điểm đi"
-                    variant="departure"
-                    airports={airports}
-                    value={searchData.departure}
-                    disabledCode={searchData.arrival}
-                    onChange={(code) => {
-                      setSearchError("");
-                      setSearchData((prev) => ({ ...prev, departure: code }));
-                    }}
-                  />
+              <div>
+                {/* Row 1: One-way / Round-trip Pills (left) + Direct only / 1 Adult / Economy (right) */}
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  {/* Trip Type Pills */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchError("");
+                        setSearchData((prev) => ({ ...prev, tripType: "one-way" }));
+                      }}
+                      className="cursor-pointer px-4 py-1.5 text-xs font-extrabold transition"
+                      style={
+                        searchData.tripType === "one-way"
+                          ? {
+                              background: "#d6eeff",
+                              color: "#0264c8",
+                              borderRadius: 9999,
+                              border: "none",
+                            }
+                          : {
+                              background: "#f1f5f9",
+                              color: "#475569",
+                              borderRadius: 9999,
+                              border: "none",
+                            }
+                      }
+                    >
+                      One-way
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchError("");
+                        setSearchData((prev) => ({
+                          ...prev,
+                          tripType: "round-trip",
+                          returnDate:
+                            prev.returnDate && prev.returnDate >= (prev.date || today)
+                              ? prev.returnDate
+                              : dateAfterDays(3),
+                        }));
+                      }}
+                      className="cursor-pointer px-4 py-1.5 text-xs font-extrabold transition"
+                      style={
+                        searchData.tripType === "round-trip"
+                          ? {
+                              background: "#d6eeff",
+                              color: "#0264c8",
+                              borderRadius: 9999,
+                              border: "none",
+                            }
+                          : {
+                              background: "#f1f5f9",
+                              color: "#475569",
+                              borderRadius: 9999,
+                              border: "none",
+                            }
+                      }
+                    >
+                      Round-trip
+                    </button>
+                  </div>
+
+                  {/* Right Inline Controls: Direct only + 1 Adult + Economy */}
+                  <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-[#091e47]">
+                    <label
+                      className="cursor-pointer gap-2 select-none"
+                      style={{ display: "inline-flex", alignItems: "center", marginBottom: 0 }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={directOnly}
+                        onChange={(e) => setDirectOnly(e.target.checked)}
+                        className="h-4 w-4 cursor-pointer rounded border-blue-300 accent-[#0284c7]"
+                      />
+                      <span className="font-bold text-[#091e47]">Direct only</span>
+                    </label>
+
+                    {/* Passengers Trigger */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCabinDropdown(false);
+                          setShowPassengerDropdown((v) => !v);
+                        }}
+                        className="inline-flex cursor-pointer items-center gap-1.5 bg-transparent font-bold text-[#091e47] transition hover:text-[#0284c7]"
+                        style={{ border: "none", padding: "4px 2px", fontSize: 12.5 }}
+                      >
+                        <Users size={16} weight="duotone" className="text-[#0284c7]" />
+                        <span>
+                          {searchData.passengers.adults + searchData.passengers.children}{" "}
+                          {searchData.passengers.adults + searchData.passengers.children > 1
+                            ? "Passengers"
+                            : "Adult"}
+                        </span>
+                        <CaretDown size={13} weight="bold" className="text-[#0284c7]" />
+                      </button>
+
+                      {showPassengerDropdown && (
+                        <>
+                          <div className="fixed inset-0 z-30" onClick={() => setShowPassengerDropdown(false)} />
+                          <div
+                            className="absolute right-0 top-[calc(100%+8px)] z-40 w-72 bg-white p-4 shadow-2xl"
+                            style={{ borderRadius: 18, border: "1px solid #dbe7fb" }}
+                          >
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="text-xs font-extrabold text-slate-900">Adults · Người lớn</div>
+                                  <div className="text-[11px] text-slate-400">Age 12+</div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdatePassengers("adults", -1)}
+                                    className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-slate-200 font-bold text-slate-600 hover:border-blue-400"
+                                  >
+                                    -
+                                  </button>
+                                  <span className="w-4 text-center text-sm font-black text-slate-900">
+                                    {searchData.passengers.adults}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdatePassengers("adults", 1)}
+                                    className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-slate-200 font-bold text-slate-600 hover:border-blue-400"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="text-xs font-extrabold text-slate-900">Children · Trẻ em</div>
+                                  <div className="text-[11px] text-slate-400">Age 2 – 11</div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdatePassengers("children", -1)}
+                                    className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-slate-200 font-bold text-slate-600 hover:border-blue-400"
+                                  >
+                                    -
+                                  </button>
+                                  <span className="w-4 text-center text-sm font-black text-slate-900">
+                                    {searchData.passengers.children}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdatePassengers("children", 1)}
+                                    className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-slate-200 font-bold text-slate-600 hover:border-blue-400"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between border-t border-slate-100 pt-2.5 text-[11px] font-semibold text-slate-400">
+                                <span>Max 9 passengers</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowPassengerDropdown(false)}
+                                  className="cursor-pointer bg-transparent font-extrabold text-[#0284c7] hover:underline"
+                                  style={{ border: "none" }}
+                                >
+                                  Done
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Cabin Class Trigger */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowPassengerDropdown(false);
+                          setShowCabinDropdown((v) => !v);
+                        }}
+                        className="inline-flex cursor-pointer items-center gap-1.5 bg-transparent font-bold text-[#091e47] transition hover:text-[#0284c7]"
+                        style={{ border: "none", padding: "4px 2px", fontSize: 12.5 }}
+                      >
+                        <Armchair size={16} weight="duotone" className="text-[#0284c7]" />
+                        <span>{searchData.flightClass === "business" ? "Business" : "Economy"}</span>
+                        <CaretDown size={13} weight="bold" className="text-[#0284c7]" />
+                      </button>
+
+                      {showCabinDropdown && (
+                        <>
+                          <div className="fixed inset-0 z-30" onClick={() => setShowCabinDropdown(false)} />
+                          <div
+                            className="absolute right-0 top-[calc(100%+8px)] z-40 w-44 overflow-hidden bg-white p-1.5 shadow-xl"
+                            style={{ borderRadius: 14, border: "1px solid #dbe7fb" }}
+                          >
+                            {[
+                              { id: "economy", label: "Economy · Phổ thông" },
+                              { id: "business", label: "Business · Thương gia" },
+                            ].map((c) => {
+                              const active = searchData.flightClass === c.id;
+                              return (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setSearchData((prev) => ({ ...prev, flightClass: c.id }));
+                                    setShowCabinDropdown(false);
+                                  }}
+                                  className="block w-full cursor-pointer rounded-xl px-3 py-2 text-left text-xs font-extrabold transition"
+                                  style={{
+                                    border: "none",
+                                    background: active ? "#eff6ff" : "transparent",
+                                    color: active ? "#0264c8" : "#334155",
+                                  }}
+                                >
+                                  {c.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                {/* Swap Button Icon */}
-                <div className="md:col-span-1 flex justify-center -my-2 md:my-0">
+                {/* Row 2: Unified Single-Row 54px-Tall Search Bar matching Mockup */}
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+                  {/* From + Swap + To Group */}
+                  <div className="relative flex flex-1 flex-col gap-2.5 sm:flex-row sm:items-end">
+                    <div className="min-w-0 flex-1">
+                      <span
+                        className="mb-1 block font-bold text-[#091e47]"
+                        style={{ fontSize: 12 }}
+                      >
+                        From
+                      </span>
+                      <SkyAirportPicker
+                        label="From"
+                        placeholder="Origin city / airport"
+                        variant="departure"
+                        richCompact
+                        airports={airports}
+                        value={searchData.departure}
+                        disabledCode={searchData.arrival}
+                        onChange={(code) => {
+                          setSearchError("");
+                          setSearchData((prev) => ({ ...prev, departure: code }));
+                        }}
+                      />
+                    </div>
+
+                    {/* Overlapping Soft Sky Swap Button */}
+                    <div className="z-10 -my-3.5 flex justify-center sm:-mx-4 sm:my-0 sm:pb-[10px]">
+                      <button
+                        type="button"
+                        onClick={handleSwap}
+                        className="flex h-8 w-8 cursor-pointer items-center justify-center shadow-xs transition hover:rotate-180 hover:bg-sky-200"
+                        style={{
+                          borderRadius: 9999,
+                          background: "#e0f2fe",
+                          color: "#0284c7",
+                          border: "2px solid #ffffff",
+                        }}
+                        title="Swap origin & destination"
+                      >
+                        <ArrowsLeftRight size={14} weight="bold" />
+                      </button>
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <span
+                        className="mb-1 block font-bold text-[#091e47]"
+                        style={{ fontSize: 12 }}
+                      >
+                        To
+                      </span>
+                      <SkyAirportPicker
+                        label="To"
+                        placeholder="Destination city / airport"
+                        variant="arrival"
+                        richCompact
+                        airports={airports}
+                        value={searchData.arrival}
+                        disabledCode={searchData.departure}
+                        onChange={(code) => {
+                          setSearchError("");
+                          setSearchData((prev) => ({ ...prev, arrival: code }));
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Departure Date Box (54px) */}
+                  <div className="w-full lg:w-[175px] shrink-0">
+                    <span
+                      className="mb-1 block font-bold text-[#091e47]"
+                      style={{ fontSize: 12 }}
+                    >
+                      Departure
+                    </span>
+                    <div
+                      className="flex items-center px-3.5 transition hover:border-sky-400"
+                      style={{
+                        height: 54,
+                        borderRadius: 12,
+                        background: "#ffffff",
+                        border: "1px solid #d5e2f2",
+                      }}
+                    >
+                      <SkyDatePicker
+                        value={searchData.date}
+                        min={today}
+                        align="right"
+                        dualMonth
+                        shortFormat
+                        hideCaret
+                        placeholder="Departure date"
+                        onChange={(nextDate) => {
+                          setSearchError("");
+                          setSearchData((prev) => ({
+                            ...prev,
+                            date: nextDate,
+                            returnDate:
+                              prev.returnDate && prev.returnDate < nextDate
+                                ? nextDate
+                                : prev.returnDate,
+                          }));
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Return Date Box (54px, tinted in One-way, active white in Round-trip) */}
+                  <div className="w-full lg:w-[190px] shrink-0">
+                    <span
+                      className="mb-1 block font-bold text-[#091e47]"
+                      style={{ fontSize: 12 }}
+                    >
+                      Return
+                    </span>
+                    <div
+                      className="flex items-center justify-between gap-1 px-3.5 transition hover:border-sky-400"
+                      style={{
+                        height: 54,
+                        borderRadius: 12,
+                        background: searchData.tripType === "round-trip" ? "#ffffff" : "#f1f5f9",
+                        border: "1px solid #d5e2f2",
+                      }}
+                    >
+                      <SkyDatePicker
+                        value={searchData.tripType === "round-trip" ? searchData.returnDate : ""}
+                        min={searchData.date || today}
+                        align="right"
+                        dualMonth
+                        shortFormat
+                        hideCaret
+                        placeholder="Select return date"
+                        onOpenRequest={() => {
+                          if (searchData.tripType !== "round-trip") {
+                            setSearchData((prev) => ({
+                              ...prev,
+                              tripType: "round-trip",
+                              returnDate:
+                                prev.returnDate && prev.returnDate >= (prev.date || today)
+                                  ? prev.returnDate
+                                  : dateAfterDays(3),
+                            }));
+                          }
+                        }}
+                        onChange={(nextReturn) => {
+                          setSearchError("");
+                          setSearchData((prev) => ({
+                            ...prev,
+                            tripType: "round-trip",
+                            returnDate: nextReturn,
+                          }));
+                        }}
+                      />
+                      {searchData.tripType === "round-trip" && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSearchData((prev) => ({ ...prev, tripType: "one-way" }))
+                          }
+                          aria-label="Clear return date"
+                          className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full bg-sky-100 text-[#0284c7] transition hover:bg-sky-200"
+                          style={{ border: "none", padding: 0 }}
+                        >
+                          <X size={11} weight="bold" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Search Flights Pill CTA (54px) */}
                   <button
                     type="button"
-                    onClick={handleSwap}
-                    className="w-9 h-9 bg-white border border-slate-300 shadow-xs flex items-center justify-center text-slate-600 hover:text-blue-600 hover:border-blue-400 cursor-pointer transition-all transform hover:rotate-180"
-                    style={{ borderRadius: 9999 }}
-                    title="Đổi điểm đi & đến"
+                    onClick={handleSearch}
+                    className="w-full shrink-0 cursor-pointer font-extrabold text-white shadow-md transition hover:brightness-105 lg:w-auto"
+                    style={{
+                      height: 54,
+                      padding: "0 28px",
+                      borderRadius: 9999,
+                      border: "none",
+                      background: "linear-gradient(90deg, #0ea5e9 0%, #1d75f2 100%)",
+                      boxShadow: "0 8px 20px rgba(2, 132, 199, 0.30)",
+                      fontSize: 14,
+                      whiteSpace: "nowrap",
+                    }}
                   >
-                    <ArrowsLeftRight size={14} weight="bold" />
+                    Search Flights
                   </button>
                 </div>
 
-                {/* Arrival Input */}
-                <div className="md:col-span-3">
-                  <SkyAirportPicker
-                    label="Điểm đến"
-                    placeholder="Chọn điểm đến"
-                    variant="arrival"
-                    airports={airports}
-                    value={searchData.arrival}
-                    disabledCode={searchData.departure}
-                    onChange={(code) => {
-                      setSearchError("");
-                      setSearchData((prev) => ({ ...prev, arrival: code }));
-                    }}
-                  />
+                {/* Row 3: Bottom Inspiration Strip matching Mockup */}
+                <div className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-3 text-xs font-semibold text-slate-500">
+                  <Compass size={16} weight="duotone" className="text-slate-600" />
+                  <span>Need travel inspiration?</span>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/promotions")}
+                    className="inline-flex cursor-pointer items-center gap-1 bg-transparent font-extrabold text-[#0284c7] hover:underline"
+                    style={{ border: "none", padding: 0, fontSize: 12 }}
+                  >
+                    <span>Discover flight ideas</span>
+                    <ArrowRight size={13} weight="bold" />
+                  </button>
                 </div>
+              </div>
+            )}
 
-                {/* Depart Date Input */}
-                <div className={`${searchData.tripType === "round-trip" ? "md:col-span-2" : "md:col-span-5"} bg-slate-50 border border-slate-200/90 rounded-2xl p-3 hover:border-blue-300 transition-colors`}>
-                  <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Ngày đi</label>
-                  <SkyDatePicker
-                    value={searchData.date}
-                    min={today}
-                    align="right"
-                    placeholder="Chọn ngày đi"
-                    onChange={(nextDate) => {
-                      setSearchError("");
-                      setSearchData((prev) => ({
-                        ...prev,
-                        date: nextDate,
-                        returnDate:
-                          prev.returnDate && prev.returnDate < nextDate
-                            ? nextDate
-                            : prev.returnDate,
-                      }));
+            {/* HOTELS SEARCH FORM — Traveloka 1-Row Style matching Mockup */}
+            {activeTab === "hotels" && (
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+                {/* Col 1: City, destination, or hotel name */}
+                <div className="min-w-0 flex-1">
+                  <span className="mb-1.5 block font-bold text-[#091e47]" style={{ fontSize: 12 }}>
+                    City, destination, or hotel name
+                  </span>
+                  <div
+                    className="flex items-center bg-white px-3.5 transition hover:border-sky-400"
+                    style={{
+                      height: 54,
+                      borderRadius: 12,
+                      border: "1px solid #d5e2f2",
                     }}
-                  />
-                </div>
-
-                {/* Return Date Input (Only visible when tripType is round-trip) */}
-                {searchData.tripType === "round-trip" && (
-                  <div className="md:col-span-3 bg-slate-50 border border-slate-200/90 rounded-2xl p-3 hover:border-blue-300 transition-colors">
-                    <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Ngày về</label>
-                    <SkyDatePicker
-                      value={searchData.returnDate}
-                      min={searchData.date || today}
-                      align="right"
-                      placeholder="Chọn ngày về"
-                      onChange={(nextReturn) => {
-                        setSearchError("");
-                        setSearchData((prev) => ({ ...prev, returnDate: nextReturn }));
-                      }}
+                  >
+                    <ServiceCityPicker
+                      icon={MapPinLine}
+                      value={serviceSearch.hotel.q}
+                      options={serviceSuggestions.hotel || []}
+                      placeholder="City, hotel, place to go"
+                      unitLabel="hotels nearby"
+                      onChange={(value) =>
+                        setServiceSearch((prev) => ({
+                          ...prev,
+                          hotel: { ...prev.hotel, q: value },
+                        }))
+                      }
                     />
                   </div>
-                )}
-
-              </div>
-            )}
-
-            {/* HOTELS SEARCH FORM */}
-            {activeTab === "hotels" && (
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                <div className="md:col-span-5 bg-slate-50 border border-slate-200/90 rounded-2xl p-3">
-                  <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Thành phố hoặc Khách sạn</label>
-                  <ServiceCityPicker
-                    icon={Buildings}
-                    value={serviceSearch.hotel.q}
-                    options={serviceSuggestions.hotel || []}
-                    placeholder="City, hotel, place to go"
-                    unitLabel="hotels nearby"
-                    onChange={(value) => setServiceSearch((prev) => ({
-                      ...prev,
-                      hotel: { ...prev.hotel, q: value },
-                    }))}
-                  />
                 </div>
-                <div className="md:col-span-3 bg-slate-50 border border-slate-200/90 rounded-2xl p-3 hover:border-blue-300 transition-colors">
-                  <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Nhận phòng</label>
-                  <SkyDatePicker
-                    value={serviceSearch.hotel.start_date}
-                    min={today}
-                    onChange={(val) =>
+
+                {/* Col 2: Check-in & Check-out Dates (Combined Range Picker) */}
+                <div className="w-full shrink-0 lg:w-[295px]">
+                  <span className="mb-1.5 block font-bold text-[#091e47]" style={{ fontSize: 12 }}>
+                    Check-in &amp; Check-out Dates
+                  </span>
+                  <HotelDateRangePicker
+                    startDate={serviceSearch.hotel.start_date}
+                    endDate={serviceSearch.hotel.end_date}
+                    minDate={today}
+                    onChange={(nextStart, nextEnd) =>
                       setServiceSearch((prev) => ({
                         ...prev,
-                        hotel: { ...prev.hotel, start_date: val },
+                        hotel: { ...prev.hotel, start_date: nextStart, end_date: nextEnd },
                       }))
                     }
                   />
                 </div>
-                <div className="md:col-span-4 bg-slate-50 border border-slate-200/90 rounded-2xl p-3 hover:border-blue-300 transition-colors">
-                  <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Trả phòng</label>
-                  <SkyDatePicker
-                    value={serviceSearch.hotel.end_date}
-                    min={serviceSearch.hotel.start_date || today}
-                    align="right"
-                    onChange={(val) =>
-                      setServiceSearch((prev) => ({
-                        ...prev,
-                        hotel: { ...prev.hotel, end_date: val },
-                      }))
-                    }
-                  />
+
+                {/* Col 3: Guests and Rooms Picker matching Mockup */}
+                <div className="relative w-full shrink-0 lg:w-[270px]">
+                  <span className="mb-1.5 block font-bold text-[#091e47]" style={{ fontSize: 12 }}>
+                    Guests and Rooms
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowHotelGuestsDropdown((v) => !v)}
+                    className="flex w-full cursor-pointer items-center justify-between gap-2 bg-white px-3.5 text-left transition hover:border-sky-400"
+                    style={{
+                      height: 54,
+                      borderRadius: 12,
+                      border: showHotelGuestsDropdown ? "1.5px solid #0284c7" : "1px solid #d5e2f2",
+                      boxShadow: showHotelGuestsDropdown ? "0 0 0 3px rgba(2, 132, 199, 0.14)" : "none",
+                    }}
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Users size={19} weight="duotone" className="shrink-0 text-[#091e47]" />
+                      <span className="truncate font-bold text-[#091e47]" style={{ fontSize: 13 }}>
+                        {hotelGuests.adults} {hotelGuests.adults > 1 ? "adults" : "adult"},{" "}
+                        {hotelGuests.children} {hotelGuests.children === 1 ? "child" : "children"},{" "}
+                        {hotelGuests.rooms} {hotelGuests.rooms > 1 ? "rooms" : "room"}
+                      </span>
+                    </div>
+                    <span
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition"
+                      style={
+                        showHotelGuestsDropdown
+                          ? {
+                              background: "#eff6ff",
+                              border: "1.5px solid #22c55e",
+                              color: "#0284c7",
+                            }
+                          : {
+                              background: "#f1f5f9",
+                              color: "#64748b",
+                            }
+                      }
+                    >
+                      <CaretDown
+                        size={12}
+                        weight="bold"
+                        style={{
+                          transform: showHotelGuestsDropdown ? "rotate(180deg)" : "rotate(0deg)",
+                          transition: "transform 0.15s",
+                        }}
+                      />
+                    </span>
+                  </button>
+
+                  {showHotelGuestsDropdown && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-30"
+                        onClick={() => setShowHotelGuestsDropdown(false)}
+                      />
+                      <div
+                        className="absolute right-0 bottom-[calc(100%+10px)] z-40 w-[325px] bg-white p-4 shadow-2xl"
+                        style={{ borderRadius: 18, border: "1px solid #dbe7fb" }}
+                      >
+                        <div className="space-y-4">
+                          {/* Adult Row */}
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
+                              <User size={20} weight="duotone" className="text-[#091e47]" />
+                              <span className="text-sm font-extrabold text-[#091e47]">Adult</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setHotelGuests((p) => ({ ...p, adults: Math.max(1, p.adults - 1) }))
+                                }
+                                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition hover:brightness-95"
+                                style={{ background: "#e0f2fe", color: "#0284c7", border: "none" }}
+                              >
+                                <Minus size={14} weight="bold" />
+                              </button>
+                              <span className="w-5 text-center text-sm font-black text-[#091e47]">
+                                {hotelGuests.adults}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setHotelGuests((p) => ({ ...p, adults: Math.min(12, p.adults + 1) }))
+                                }
+                                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition hover:brightness-95"
+                                style={{ background: "#e0f2fe", color: "#0284c7", border: "none" }}
+                              >
+                                <Plus size={14} weight="bold" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Children Row */}
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
+                              <Users size={20} weight="duotone" className="text-[#091e47]" />
+                              <div>
+                                <div className="text-sm font-extrabold leading-tight text-[#091e47]">
+                                  Children
+                                </div>
+                                <div className="text-[11px] font-medium text-slate-400">
+                                  Maximum 17 years old
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setHotelGuests((p) => ({
+                                    ...p,
+                                    children: Math.max(0, p.children - 1),
+                                  }))
+                                }
+                                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition hover:brightness-95"
+                                style={{ background: "#f1f5f9", color: "#64748b", border: "none" }}
+                              >
+                                <Minus size={14} weight="bold" />
+                              </button>
+                              <span className="w-5 text-center text-sm font-black text-[#091e47]">
+                                {hotelGuests.children}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setHotelGuests((p) => ({
+                                    ...p,
+                                    children: Math.min(8, p.children + 1),
+                                  }))
+                                }
+                                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition hover:brightness-95"
+                                style={{ background: "#e0f2fe", color: "#0284c7", border: "none" }}
+                              >
+                                <Plus size={14} weight="bold" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Room Row */}
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
+                              <DoorOpen size={20} weight="duotone" className="text-[#091e47]" />
+                              <span className="text-sm font-extrabold text-[#091e47]">Room</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setHotelGuests((p) => ({ ...p, rooms: Math.max(1, p.rooms - 1) }))
+                                }
+                                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition hover:brightness-95"
+                                style={{ background: "#f1f5f9", color: "#64748b", border: "none" }}
+                              >
+                                <Minus size={14} weight="bold" />
+                              </button>
+                              <span className="w-5 text-center text-sm font-black text-[#091e47]">
+                                {hotelGuests.rooms}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setHotelGuests((p) => ({ ...p, rooms: Math.min(8, p.rooms + 1) }))
+                                }
+                                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition hover:brightness-95"
+                                style={{ background: "#e0f2fe", color: "#0284c7", border: "none" }}
+                              >
+                                <Plus size={14} weight="bold" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Done Pill CTA */}
+                          <div className="flex justify-end pt-1">
+                            <button
+                              type="button"
+                              onClick={() => setShowHotelGuestsDropdown(false)}
+                              className="cursor-pointer px-6 py-2 text-xs font-extrabold text-white shadow-sm transition hover:brightness-105"
+                              style={{
+                                background: "linear-gradient(90deg, #0ea5e9 0%, #1d75f2 100%)",
+                                borderRadius: 9999,
+                                border: "none",
+                              }}
+                            >
+                              Done
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
+
+                {/* Col 4: Search Pill CTA (54px) */}
+                <button
+                  type="button"
+                  onClick={handleSearch}
+                  className="inline-flex w-full shrink-0 cursor-pointer items-center justify-center gap-2 font-extrabold text-white shadow-md transition hover:brightness-105 lg:w-auto"
+                  style={{
+                    height: 54,
+                    padding: "0 28px",
+                    borderRadius: 9999,
+                    border: "none",
+                    background: "linear-gradient(90deg, #0ea5e9 0%, #1d75f2 100%)",
+                    boxShadow: "0 8px 20px rgba(2, 132, 199, 0.30)",
+                    fontSize: 14,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <span>Search</span>
+                  <MagnifyingGlass size={17} weight="bold" />
+                </button>
               </div>
             )}
 
-            {/* EXPERIENCES SEARCH FORM */}
+            {/* EXPERIENCES SEARCH FORM — Traveloka 1-Row Style matching Hotels */}
             {activeTab === "experiences" && (
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                <div className="md:col-span-7 bg-slate-50 border border-slate-200/90 rounded-2xl p-3">
-                  <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Địa điểm & Trải nghiệm</label>
-                  <ServiceCityPicker
-                    icon={Compass}
-                    value={serviceSearch.experience.q}
-                    options={serviceSuggestions.experience || []}
-                    placeholder="City, experience, place to go"
-                    unitLabel="tours nearby"
-                    onChange={(value) => setServiceSearch((prev) => ({
-                      ...prev,
-                      experience: { ...prev.experience, q: value },
-                    }))}
-                  />
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+                {/* Col 1: Destination, tour, or activity */}
+                <div className="min-w-0 flex-1">
+                  <span className="mb-1.5 block font-bold text-[#091e47]" style={{ fontSize: 12 }}>
+                    Destination, tour, or activity
+                  </span>
+                  <div
+                    className="flex items-center bg-white px-3.5 transition hover:border-sky-400"
+                    style={{
+                      height: 54,
+                      borderRadius: 12,
+                      border: "1px solid #d5e2f2",
+                    }}
+                  >
+                    <ServiceCityPicker
+                      icon={Compass}
+                      value={serviceSearch.experience.q}
+                      options={serviceSuggestions.experience || []}
+                      placeholder="City, experience, place to go"
+                      unitLabel="tours nearby"
+                      onChange={(value) =>
+                        setServiceSearch((prev) => ({
+                          ...prev,
+                          experience: { ...prev.experience, q: value },
+                        }))
+                      }
+                    />
+                  </div>
                 </div>
-                <div className="md:col-span-5 bg-slate-50 border border-slate-200/90 rounded-2xl p-3 hover:border-blue-300 transition-colors">
-                  <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Ngày trải nghiệm</label>
-                  <SkyDatePicker
-                    value={serviceSearch.experience.start_date}
-                    min={today}
-                    align="right"
-                    onChange={(val) =>
-                      setServiceSearch((prev) => ({
-                        ...prev,
-                        experience: { ...prev.experience, start_date: val },
-                      }))
-                    }
-                  />
+
+                {/* Col 2: Activity Date (54px) */}
+                <div className="w-full shrink-0 lg:w-[235px]">
+                  <span className="mb-1.5 block font-bold text-[#091e47]" style={{ fontSize: 12 }}>
+                    Activity Date
+                  </span>
+                  <div
+                    className="flex items-center bg-white px-3.5 transition hover:border-sky-400"
+                    style={{
+                      height: 54,
+                      borderRadius: 12,
+                      border: "1px solid #d5e2f2",
+                    }}
+                  >
+                    <SkyDatePicker
+                      value={serviceSearch.experience.start_date}
+                      min={today}
+                      align="right"
+                      dualMonth
+                      shortFormat
+                      hideCaret
+                      placeholder="Select date"
+                      onChange={(val) =>
+                        setServiceSearch((prev) => ({
+                          ...prev,
+                          experience: { ...prev.experience, start_date: val },
+                        }))
+                      }
+                    />
+                  </div>
                 </div>
+
+                {/* Col 3: Travelers Picker matching Hotels */}
+                <div className="relative w-full shrink-0 lg:w-[250px]">
+                  <span className="mb-1.5 block font-bold text-[#091e47]" style={{ fontSize: 12 }}>
+                    Travelers
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowExpGuestsDropdown((v) => !v)}
+                    className="flex w-full cursor-pointer items-center justify-between gap-2 bg-white px-3.5 text-left transition hover:border-sky-400"
+                    style={{
+                      height: 54,
+                      borderRadius: 12,
+                      border: showExpGuestsDropdown ? "1.5px solid #0284c7" : "1px solid #d5e2f2",
+                      boxShadow: showExpGuestsDropdown ? "0 0 0 3px rgba(2, 132, 199, 0.14)" : "none",
+                    }}
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Users size={19} weight="duotone" className="shrink-0 text-[#091e47]" />
+                      <span className="truncate font-bold text-[#091e47]" style={{ fontSize: 13 }}>
+                        {expGuests.adults} {expGuests.adults > 1 ? "adults" : "adult"},{" "}
+                        {expGuests.children} {expGuests.children === 1 ? "child" : "children"}
+                      </span>
+                    </div>
+                    <span
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition"
+                      style={
+                        showExpGuestsDropdown
+                          ? {
+                              background: "#eff6ff",
+                              border: "1.5px solid #22c55e",
+                              color: "#0284c7",
+                            }
+                          : {
+                              background: "#f1f5f9",
+                              color: "#64748b",
+                            }
+                      }
+                    >
+                      <CaretDown
+                        size={12}
+                        weight="bold"
+                        style={{
+                          transform: showExpGuestsDropdown ? "rotate(180deg)" : "rotate(0deg)",
+                          transition: "transform 0.15s",
+                        }}
+                      />
+                    </span>
+                  </button>
+
+                  {showExpGuestsDropdown && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-30"
+                        onClick={() => setShowExpGuestsDropdown(false)}
+                      />
+                      <div
+                        className="absolute right-0 bottom-[calc(100%+10px)] z-40 w-[310px] bg-white p-4 shadow-2xl"
+                        style={{ borderRadius: 18, border: "1px solid #dbe7fb" }}
+                      >
+                        <div className="flex flex-col gap-4">
+                          {/* Adult Row */}
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
+                              <User size={20} weight="duotone" className="text-[#091e47]" />
+                              <span className="text-sm font-extrabold text-[#091e47]">Adult</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setExpGuests((p) => ({ ...p, adults: Math.max(1, p.adults - 1) }))
+                                }
+                                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition hover:brightness-95"
+                                style={{ background: "#e0f2fe", color: "#0284c7", border: "none" }}
+                              >
+                                <Minus size={14} weight="bold" />
+                              </button>
+                              <span className="w-5 text-center text-sm font-black text-[#091e47]">
+                                {expGuests.adults}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setExpGuests((p) => ({ ...p, adults: Math.min(12, p.adults + 1) }))
+                                }
+                                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition hover:brightness-95"
+                                style={{ background: "#e0f2fe", color: "#0284c7", border: "none" }}
+                              >
+                                <Plus size={14} weight="bold" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Children Row */}
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
+                              <Users size={20} weight="duotone" className="text-[#091e47]" />
+                              <div>
+                                <div className="text-sm font-extrabold leading-tight text-[#091e47]">
+                                  Children
+                                </div>
+                                <div className="text-[11px] font-medium text-slate-400">
+                                  Maximum 17 years old
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setExpGuests((p) => ({
+                                    ...p,
+                                    children: Math.max(0, p.children - 1),
+                                  }))
+                                }
+                                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition hover:brightness-95"
+                                style={{ background: "#f1f5f9", color: "#64748b", border: "none" }}
+                              >
+                                <Minus size={14} weight="bold" />
+                              </button>
+                              <span className="w-5 text-center text-sm font-black text-[#091e47]">
+                                {expGuests.children}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setExpGuests((p) => ({
+                                    ...p,
+                                    children: Math.min(8, p.children + 1),
+                                  }))
+                                }
+                                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition hover:brightness-95"
+                                style={{ background: "#e0f2fe", color: "#0284c7", border: "none" }}
+                              >
+                                <Plus size={14} weight="bold" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Done Pill CTA */}
+                          <div className="flex justify-end pt-1">
+                            <button
+                              type="button"
+                              onClick={() => setShowExpGuestsDropdown(false)}
+                              className="cursor-pointer px-6 py-2 text-xs font-extrabold text-white shadow-sm transition hover:brightness-105"
+                              style={{
+                                background: "linear-gradient(90deg, #0ea5e9 0%, #1d75f2 100%)",
+                                borderRadius: 9999,
+                                border: "none",
+                              }}
+                            >
+                              Done
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Col 4: Search Pill CTA (54px) */}
+                <button
+                  type="button"
+                  onClick={handleSearch}
+                  className="inline-flex w-full shrink-0 cursor-pointer items-center justify-center gap-2 font-extrabold text-white shadow-md transition hover:brightness-105 lg:w-auto"
+                  style={{
+                    height: 54,
+                    padding: "0 28px",
+                    borderRadius: 9999,
+                    border: "none",
+                    background: "linear-gradient(90deg, #0ea5e9 0%, #1d75f2 100%)",
+                    boxShadow: "0 8px 20px rgba(2, 132, 199, 0.30)",
+                    fontSize: 14,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <span>Search</span>
+                  <MagnifyingGlass size={17} weight="bold" />
+                </button>
               </div>
             )}
 
-            {/* CAR RENTAL SEARCH FORM */}
+            {/* CAR RENTAL SEARCH FORM — Traveloka 1-Row Style matching Hotels */}
             {activeTab === "cars" && (
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                <div className="md:col-span-5 bg-slate-50 border border-slate-200/90 rounded-2xl p-3">
-                  <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Địa điểm nhận xe</label>
-                  <ServiceCityPicker
-                    icon={Car}
-                    value={serviceSearch.car.q}
-                    options={serviceSuggestions.car || []}
-                    placeholder="City, pickup location..."
-                    unitLabel="cars nearby"
-                    onChange={(value) => setServiceSearch((prev) => ({
-                      ...prev,
-                      car: { ...prev.car, q: value },
-                    }))}
-                  />
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+                {/* Col 1: Pick-up city or airport */}
+                <div className="min-w-0 flex-1">
+                  <span className="mb-1.5 block font-bold text-[#091e47]" style={{ fontSize: 12 }}>
+                    Pick-up city or airport
+                  </span>
+                  <div
+                    className="flex items-center bg-white px-3.5 transition hover:border-sky-400"
+                    style={{
+                      height: 54,
+                      borderRadius: 12,
+                      border: "1px solid #d5e2f2",
+                    }}
+                  >
+                    <ServiceCityPicker
+                      icon={Car}
+                      value={serviceSearch.car.q}
+                      options={serviceSuggestions.car || []}
+                      placeholder="City, airport, pickup location"
+                      unitLabel="cars nearby"
+                      onChange={(value) =>
+                        setServiceSearch((prev) => ({
+                          ...prev,
+                          car: { ...prev.car, q: value },
+                        }))
+                      }
+                    />
+                  </div>
                 </div>
-                <div className="md:col-span-3 bg-slate-50 border border-slate-200/90 rounded-2xl p-3 hover:border-blue-300 transition-colors">
-                  <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Ngày nhận</label>
-                  <SkyDatePicker
-                    value={serviceSearch.car.start_date}
-                    min={today}
-                    onChange={(val) =>
+
+                {/* Col 2: Pick-up & Drop-off Dates (Combined Range Picker) */}
+                <div className="w-full shrink-0 lg:w-[295px]">
+                  <span className="mb-1.5 block font-bold text-[#091e47]" style={{ fontSize: 12 }}>
+                    Pick-up &amp; Drop-off Dates
+                  </span>
+                  <HotelDateRangePicker
+                    startDate={serviceSearch.car.start_date}
+                    endDate={serviceSearch.car.end_date}
+                    minDate={today}
+                    unitSingular="day"
+                    unitPlural="days"
+                    startPrompt="Select Pick-up date"
+                    endPrompt="Select Drop-off date"
+                    onChange={(nextStart, nextEnd) =>
                       setServiceSearch((prev) => ({
                         ...prev,
-                        car: { ...prev.car, start_date: val },
+                        car: { ...prev.car, start_date: nextStart, end_date: nextEnd },
                       }))
                     }
                   />
                 </div>
-                <div className="md:col-span-4 bg-slate-50 border border-slate-200/90 rounded-2xl p-3 hover:border-blue-300 transition-colors">
-                  <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Ngày trả</label>
-                  <SkyDatePicker
-                    value={serviceSearch.car.end_date}
-                    min={serviceSearch.car.start_date || today}
-                    align="right"
-                    onChange={(val) =>
-                      setServiceSearch((prev) => ({
-                        ...prev,
-                        car: { ...prev.car, end_date: val },
-                      }))
-                    }
-                  />
+
+                {/* Col 3: Cars and Passengers Picker */}
+                <div className="relative w-full shrink-0 lg:w-[250px]">
+                  <span className="mb-1.5 block font-bold text-[#091e47]" style={{ fontSize: 12 }}>
+                    Cars &amp; Passengers
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowCarOptionsDropdown((v) => !v)}
+                    className="flex w-full cursor-pointer items-center justify-between gap-2 bg-white px-3.5 text-left transition hover:border-sky-400"
+                    style={{
+                      height: 54,
+                      borderRadius: 12,
+                      border: showCarOptionsDropdown ? "1.5px solid #0284c7" : "1px solid #d5e2f2",
+                      boxShadow: showCarOptionsDropdown ? "0 0 0 3px rgba(2, 132, 199, 0.14)" : "none",
+                    }}
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Users size={19} weight="duotone" className="shrink-0 text-[#091e47]" />
+                      <span className="truncate font-bold text-[#091e47]" style={{ fontSize: 13 }}>
+                        {carOptions.cars} {carOptions.cars > 1 ? "cars" : "car"},{" "}
+                        {carOptions.passengers} {carOptions.passengers > 1 ? "passengers" : "passenger"}
+                      </span>
+                    </div>
+                    <span
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition"
+                      style={
+                        showCarOptionsDropdown
+                          ? {
+                              background: "#eff6ff",
+                              border: "1.5px solid #22c55e",
+                              color: "#0284c7",
+                            }
+                          : {
+                              background: "#f1f5f9",
+                              color: "#64748b",
+                            }
+                      }
+                    >
+                      <CaretDown
+                        size={12}
+                        weight="bold"
+                        style={{
+                          transform: showCarOptionsDropdown ? "rotate(180deg)" : "rotate(0deg)",
+                          transition: "transform 0.15s",
+                        }}
+                      />
+                    </span>
+                  </button>
+
+                  {showCarOptionsDropdown && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-30"
+                        onClick={() => setShowCarOptionsDropdown(false)}
+                      />
+                      <div
+                        className="absolute right-0 bottom-[calc(100%+10px)] z-40 w-[310px] bg-white p-4 shadow-2xl"
+                        style={{ borderRadius: 18, border: "1px solid #dbe7fb" }}
+                      >
+                        <div className="flex flex-col gap-4">
+                          {/* Cars Row */}
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
+                              <Car size={20} weight="duotone" className="text-[#091e47]" />
+                              <span className="text-sm font-extrabold text-[#091e47]">Cars</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCarOptions((p) => ({ ...p, cars: Math.max(1, p.cars - 1) }))
+                                }
+                                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition hover:brightness-95"
+                                style={{ background: "#f1f5f9", color: "#64748b", border: "none" }}
+                              >
+                                <Minus size={14} weight="bold" />
+                              </button>
+                              <span className="w-5 text-center text-sm font-black text-[#091e47]">
+                                {carOptions.cars}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCarOptions((p) => ({ ...p, cars: Math.min(5, p.cars + 1) }))
+                                }
+                                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition hover:brightness-95"
+                                style={{ background: "#e0f2fe", color: "#0284c7", border: "none" }}
+                              >
+                                <Plus size={14} weight="bold" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Passengers Row */}
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
+                              <Users size={20} weight="duotone" className="text-[#091e47]" />
+                              <div>
+                                <div className="text-sm font-extrabold leading-tight text-[#091e47]">
+                                  Passengers
+                                </div>
+                                <div className="text-[11px] font-medium text-slate-400">
+                                  Including driver
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCarOptions((p) => ({
+                                    ...p,
+                                    passengers: Math.max(1, p.passengers - 1),
+                                  }))
+                                }
+                                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition hover:brightness-95"
+                                style={{ background: "#f1f5f9", color: "#64748b", border: "none" }}
+                              >
+                                <Minus size={14} weight="bold" />
+                              </button>
+                              <span className="w-5 text-center text-sm font-black text-[#091e47]">
+                                {carOptions.passengers}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCarOptions((p) => ({
+                                    ...p,
+                                    passengers: Math.min(16, p.passengers + 1),
+                                  }))
+                                }
+                                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition hover:brightness-95"
+                                style={{ background: "#e0f2fe", color: "#0284c7", border: "none" }}
+                              >
+                                <Plus size={14} weight="bold" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Done Pill CTA */}
+                          <div className="flex justify-end pt-1">
+                            <button
+                              type="button"
+                              onClick={() => setShowCarOptionsDropdown(false)}
+                              className="cursor-pointer px-6 py-2 text-xs font-extrabold text-white shadow-sm transition hover:brightness-105"
+                              style={{
+                                background: "linear-gradient(90deg, #0ea5e9 0%, #1d75f2 100%)",
+                                borderRadius: 9999,
+                                border: "none",
+                              }}
+                            >
+                              Done
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
+
+                {/* Col 4: Search Pill CTA (54px) */}
+                <button
+                  type="button"
+                  onClick={handleSearch}
+                  className="inline-flex w-full shrink-0 cursor-pointer items-center justify-center gap-2 font-extrabold text-white shadow-md transition hover:brightness-105 lg:w-auto"
+                  style={{
+                    height: 54,
+                    padding: "0 28px",
+                    borderRadius: 9999,
+                    border: "none",
+                    background: "linear-gradient(90deg, #0ea5e9 0%, #1d75f2 100%)",
+                    boxShadow: "0 8px 20px rgba(2, 132, 199, 0.30)",
+                    fontSize: 14,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <span>Search</span>
+                  <MagnifyingGlass size={17} weight="bold" />
+                </button>
               </div>
             )}
 
-            {/* Bottom Form Row: Passengers & Cabin + Search Button */}
+            {/* Legacy Bottom Form Row hidden (all 4 tabs now use unified 1-row bar above) */}
+            {false && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100 mt-4">
               
-              {/* Passengers & Cabin Picker */}
+              {/* Passengers Picker */}
               <div className="relative w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setShowPassengerDropdown(!showPassengerDropdown)}
-                  className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-[#f4f8ff] border border-blue-100 text-xs font-extrabold text-[#123975] hover:bg-blue-50 transition-colors cursor-pointer w-full sm:w-auto justify-between"
+                  className="flex items-center gap-2.5 px-4 py-2.5 bg-[#f4f8ff] border border-blue-100 text-xs font-extrabold text-[#123975] hover:bg-blue-50 transition-colors cursor-pointer w-full sm:w-auto justify-between"
+                  style={{ borderRadius: 12 }}
                 >
                   <div className="flex items-center gap-2">
                     <Users size={16} className="text-blue-600" weight="bold" />
                     <span>
-                      {activeTab === "flights" ? "Hành khách" : "Số khách"}:{" "}
-                      {searchData.passengers.adults + searchData.passengers.children} Người
-                      {activeTab === "flights" &&
-                        ` • ${searchData.flightClass === "business" ? "Thương gia" : "Phổ thông"}`}
+                      Số khách: {searchData.passengers.adults + searchData.passengers.children} Người
                     </span>
                   </div>
-                  <span className="text-blue-500">˅</span>
+                  <CaretDown size={13} weight="bold" className="text-blue-500" />
                 </button>
 
                 {showPassengerDropdown && (
@@ -1296,6 +2476,7 @@ export default function HomePage() {
               </button>
 
             </div>
+            )}
 
           </motion.div>
 

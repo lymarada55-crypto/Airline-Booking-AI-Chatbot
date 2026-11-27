@@ -46,6 +46,15 @@ class FlightGeneratorService
      */
     private const AIRLINE_SCHEDULES = [
         [
+            'name'        => 'SkyLink Airlines',
+            'prefix'      => 'SK',
+            'baseNumbers' => ['101', '102', '103', '104', '105'],
+            'slots'       => ['06:15', '09:30', '13:45', '17:00', '20:45'],
+            'duration'    => 115,
+            'prices'      => [1050000, 1250000, 1150000, 1200000, 990000],
+            'aircraft'    => ['model' => 'Airbus A350-900', 'tail' => 'SK-A350']
+        ],
+        [
             'name'        => 'Vietnam Airlines',
             'prefix'      => 'VN',
             'baseNumbers' => ['201', '202', '203', '204', '205'],
@@ -64,7 +73,7 @@ class FlightGeneratorService
             'aircraft'    => ['model' => 'Airbus A320neo', 'tail' => 'VJ-A320']
         ],
         [
-            'name'        => 'FlightBus',
+            'name'        => 'Bamboo Airways',
             'prefix'      => 'FB',
             'baseNumbers' => ['401', '402', '403', '404', '405'],
             'slots'       => ['05:30', '08:30', '11:30', '14:00', '17:30'],
@@ -89,24 +98,51 @@ class FlightGeneratorService
     {
         return DB::transaction(function () use ($departure, $arrival, $date) {
 
-            // Double-check trong transaction — tránh race condition
-            $existing = Flight::where('departure_airport_id', $departure->id)
+            // Double-check trong transaction — đảm bảo đủ cả 4 hãng bay
+            $existingFlights = Flight::where('departure_airport_id', $departure->id)
                 ->where('arrival_airport_id', $arrival->id)
                 ->whereDate('departure_time', $date)
                 ->with(['departureAirport', 'arrivalAirport', 'aircraft'])
                 ->get();
 
-            if ($existing->count() >= 5) {
-                return $existing;
+            $existingPrefixes = $existingFlights
+                ->map(fn($f) => strtoupper(substr((string) $f->flight_number, 0, 2)))
+                ->unique();
+
+            $hasAllAirlines = $existingPrefixes->contains('SK')
+                && $existingPrefixes->contains('VN')
+                && $existingPrefixes->contains('VJ')
+                && ($existingPrefixes->contains('FB') || $existingPrefixes->contains('QH'));
+
+            if ($existingFlights->count() >= 12 && $hasAllAirlines) {
+                return $existingFlights;
             }
 
-            // Lấy hoặc tạo Aircraft riêng cho mỗi hãng
+            // Lấy hoặc tạo Aircraft riêng cho mỗi hãng (kèm sơ đồ 180 ghế nếu máy bay mới tạo)
             $aircrafts = [];
             foreach (self::AIRLINE_SCHEDULES as $airline) {
-                $aircrafts[$airline['prefix']] = Aircraft::firstOrCreate(
+                $aircraft = Aircraft::firstOrCreate(
                     ['tail_number' => $airline['aircraft']['tail']],
                     ['model' => $airline['aircraft']['model'], 'status' => 1]
                 );
+                if ($aircraft->seats()->count() === 0) {
+                    $seatRows = [];
+                    $now = now();
+                    $cols = ['A', 'B', 'C', 'D', 'E', 'F'];
+                    for ($r = 1; $r <= 30; $r++) {
+                        foreach ($cols as $c) {
+                            $seatRows[] = [
+                                'aircraft_id' => $aircraft->id,
+                                'seat_number' => $r . $c,
+                                'seat_class'  => $r <= 5 ? 'business' : 'economy',
+                                'created_at'  => $now,
+                                'updated_at'  => $now,
+                            ];
+                        }
+                    }
+                    DB::table('seats')->insert($seatRows);
+                }
+                $aircrafts[$airline['prefix']] = $aircraft;
             }
 
             // Suffix ngày: MMDD — đảm bảo flight_number global unique
@@ -119,15 +155,22 @@ class FlightGeneratorService
             $routeCodeNumber = (abs(crc32($departure->code . $arrival->code)) % 800) + 100;
             $routeProfile = $this->getRouteProfile($departure->code, $arrival->code);
 
-            // Sinh 3 hãng × 5 chuyến = 15 flights
+            // Sinh 4 hãng (SK, VN, VJ, FB) × 5 chuyến nếu hãng đó chưa có trên tuyến + ngày này
             foreach (self::AIRLINE_SCHEDULES as $airlineIdx => $airline) {
+                $prefix = $airline['prefix'];
+                $alreadyHasAirline = $existingPrefixes->contains($prefix)
+                    || ($prefix === 'FB' && $existingPrefixes->contains('QH'));
+                if ($alreadyHasAirline) {
+                    continue;
+                }
+
                 foreach ($airline['baseNumbers'] as $idx => $baseNum) {
-                    // Mã chuyến bay theo chặng: PREFIX + RouteCode + STT (VD: VN721, VJ722)
-                    $flightNumber  = sprintf('%s%d%d', $airline['prefix'], $routeCodeNumber, $idx + 1);
+                    // Mã chuyến bay theo chặng: PREFIX + RouteCode + STT (VD: SK721, VN721, VJ722)
+                    $flightNumber  = sprintf('%s%d%d', $prefix, $routeCodeNumber, $idx + 1);
                     $timeSlot      = $airline['slots'][$idx];
                     $departureTime = Carbon::parse("{$date} {$timeSlot}");
-                    // Thời gian bay thực tế theo chặng (chênh lệch nhỏ 0–10 phút giữa các hãng)
-                    $durationMins  = $routeProfile['duration'] + ($airlineIdx * 5);
+                    // Thời gian bay thực tế đa dạng giữa các khung giờ & hãng (chênh lệch 0–10 phút)
+                    $durationMins  = $routeProfile['duration'] + ((($idx + $airlineIdx) % 3) * 5);
                     $arrivalTime   = $departureTime->copy()->addMinutes($durationMins);
 
                     // Kiểm tra đúng chuyến bay cho tuyến này + ngày này + giờ này
@@ -148,14 +191,15 @@ class FlightGeneratorService
                         ->exists();
 
                     if ($numberConflict) {
-                        $flightNumber = sprintf('%s%s%s%d', $airline['prefix'], $departure->code, $arrival->code, $idx + 1);
+                        $flightNumber = sprintf('%s%s%s%d', $prefix, $departure->code, $arrival->code, $idx + 1);
                     }
 
-                    // Giá vé thực tế theo tuyến & phân khúc hãng (VN cao hơn VJ/FB)
-                    $tierFactor = match ($airline['prefix']) {
-                        'VN' => 1.18,
-                        'VJ' => 0.96,
-                        default => 0.85,
+                    // Giá vé thực tế theo tuyến & phân khúc hãng
+                    $tierFactor = match ($prefix) {
+                        'VN' => 1.15,
+                        'SK' => 1.02,
+                        'VJ' => 0.94,
+                        default => 0.88,
                     };
                     $minSteps = max(35, (int) round(($routeProfile['min_price'] * $tierFactor) / 10000));
                     $maxSteps = max($minSteps + 10, (int) round(($routeProfile['max_price'] * $tierFactor) / 10000));

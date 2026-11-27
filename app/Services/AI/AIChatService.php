@@ -10,6 +10,7 @@ use App\Services\AI\Tools\GetBookingInfoTool;
 use App\Services\AI\Tools\SearchKnowledgeTool;
 use App\Models\AIConversation;
 use App\Models\AIMessage;
+use App\Models\TravelProduct;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -59,6 +60,22 @@ class AIChatService
                 ...$cheapestFlightReply,
                 'conversation_id' => $conversation->uuid,
                 'quick_replies' => [],
+            ];
+        }
+
+        $travelReply = $this->travelServiceReply($message);
+        if ($travelReply !== null) {
+            $conversation->messages()->create([
+                'role' => 'assistant',
+                'content' => $travelReply['message'],
+            ]);
+
+            return [
+                'type' => 'message',
+                'message' => $travelReply['message'],
+                'flights' => [],
+                'conversation_id' => $conversation->uuid,
+                'quick_replies' => $travelReply['quick_replies'] ?? [],
             ];
         }
 
@@ -152,6 +169,24 @@ class AIChatService
                 ...$cheapestFlightReply,
                 'conversation_id' => $conversation->uuid,
                 'quick_replies' => [],
+            ];
+            return;
+        }
+
+        $travelReply = $this->travelServiceReply($message);
+        if ($travelReply !== null) {
+            $conversation->messages()->create([
+                'role' => 'assistant',
+                'content' => $travelReply['message'],
+            ]);
+
+            yield ['type' => 'chunk', 'content' => $travelReply['message']];
+            yield [
+                'type' => 'done',
+                'conversation_id' => $conversation->uuid,
+                'message' => $travelReply['message'],
+                'flights' => [],
+                'quick_replies' => $travelReply['quick_replies'] ?? [],
             ];
             return;
         }
@@ -303,6 +338,144 @@ class AIChatService
         ];
     }
 
+    private function travelServiceReply(string $message): ?array
+    {
+        $ascii = Str::ascii(mb_strtolower(trim($message), 'UTF-8'));
+
+        // Do not intercept explicit flight searches or airline policy/PNR queries
+        foreach ([
+            'tim chuyen bay', 'tim ve', 'chuyen bay', 've may bay', 'bay tu', 'bay di',
+            'flight', 'book flight', 'ma dat cho', 'pnr', 'check-in', 'checkin',
+            'hanh ly', 'hoan ve', 'huy ve', 'doi ve', 'quy dinh',
+        ] as $flightKw) {
+            if (str_contains($ascii, $flightKw)) {
+                return null;
+            }
+        }
+
+        $serviceType = null;
+        $serviceTitleVi = '';
+        $unitLabel = '';
+        $routePath = '';
+
+        foreach (['khach san', 'resort', 'hotel', 'luu tru', 'nghi duong', 'phong nghi'] as $kw) {
+            if (str_contains($ascii, $kw)) {
+                $serviceType = 'hotel';
+                $serviceTitleVi = 'Khách sạn & Resort';
+                $unitLabel = '/đêm';
+                $routePath = '/travel/hotel';
+                break;
+            }
+        }
+
+        if (!$serviceType) {
+            foreach (['thue xe', 'car rental', 'tu lai', 'tai xe', 'xe 7 cho', 'xe 4 cho', 'o to'] as $kw) {
+                if (str_contains($ascii, $kw)) {
+                    $serviceType = 'car';
+                    $serviceTitleVi = 'Thuê xe';
+                    $unitLabel = '/ngày';
+                    $routePath = '/travel/car';
+                    break;
+                }
+            }
+        }
+
+        if (!$serviceType) {
+            foreach (['trai nghiem', 'tour', 'lich trinh', 'choi gi', 'tham quan', 'diem den', 'attraction', 'experience', 'kham pha'] as $kw) {
+                if (str_contains($ascii, $kw)) {
+                    $serviceType = 'experience';
+                    $serviceTitleVi = 'Trải nghiệm & Tour';
+                    $unitLabel = '/khách';
+                    $routePath = '/travel/experience';
+                    break;
+                }
+            }
+        }
+
+        if (!$serviceType) {
+            return null;
+        }
+
+        $cityMap = [
+            'da nang' => 'Đà Nẵng',
+            'danang' => 'Đà Nẵng',
+            'phu quoc' => 'Phú Quốc',
+            'phuquoc' => 'Phú Quốc',
+            'ha noi' => 'Hà Nội',
+            'hanoi' => 'Hà Nội',
+            'ho chi minh' => 'TP. Hồ Chí Minh',
+            'sai gon' => 'TP. Hồ Chí Minh',
+            'saigon' => 'TP. Hồ Chí Minh',
+            'nha trang' => 'Nha Trang',
+            'da lat' => 'Đà Lạt',
+            'dalat' => 'Đà Lạt',
+            'hoi an' => 'Hội An',
+            'hue' => 'Huế',
+            'quy nhon' => 'Quy Nhơn',
+            'thuong hai' => 'Thượng Hải',
+            'shanghai' => 'Thượng Hải',
+            'tokyo' => 'Tokyo',
+            'seoul' => 'Seoul',
+            'singapore' => 'Singapore',
+        ];
+
+        $detectedCity = null;
+        foreach ($cityMap as $needle => $dbCity) {
+            if (str_contains($ascii, $needle)) {
+                $detectedCity = $dbCity;
+                break;
+            }
+        }
+
+        $query = TravelProduct::query()
+            ->where('type', $serviceType)
+            ->where('is_active', true);
+
+        if ($detectedCity) {
+            $query->where('city', 'like', '%' . $detectedCity . '%');
+        }
+
+        $items = $query->orderByDesc('rating')->orderBy('price')->limit(4)->get();
+
+        // Fallback if specific city has 0 rows: show top rated overall for that service type
+        if ($items->isEmpty() && $detectedCity) {
+            $items = TravelProduct::query()
+                ->where('type', $serviceType)
+                ->where('is_active', true)
+                ->orderByDesc('rating')
+                ->limit(4)
+                ->get();
+        }
+
+        $cityLabel = $detectedCity ? " tại **{$detectedCity}**" : ' nổi bật trên SkyLink';
+        $lines = [];
+        $lines[] = "Dưới đây là những gợi ý **{$serviceTitleVi}** được đánh giá cao nhất{$cityLabel} từ hệ thống SkyLink:";
+        $lines[] = '';
+
+        foreach ($items as $idx => $item) {
+            $num = $idx + 1;
+            $price = number_format((float) $item->price, 0, ',', '.') . ' ₫';
+            $rating = number_format((float) ($item->rating ?? 4.7), 1);
+            $loc = $item->city ? " ({$item->city})" : '';
+            $lines[] = "{$num}. **{$item->name}**{$loc} — Đánh giá **{$rating}/5★**, giá từ **{$price}{$unitLabel}**";
+        }
+
+        $lines[] = '';
+        $lines[] = '✨ Bạn có thể bấm trực tiếp vào các thẻ gợi ý bên dưới để xem chi tiết, so sánh trên bản đồ OpenStreetMap và đặt giữ chỗ ngay (miễn phí hủy 24h)!';
+
+        $targetUrl = $detectedCity
+            ? $routePath . '?q=' . rawurlencode($detectedCity)
+            : $routePath;
+
+        return [
+            'message' => implode("\n", $lines),
+            'quick_replies' => [
+                ['label' => "Xem tất cả {$serviceTitleVi}" . ($detectedCity ? " ở {$detectedCity}" : ''), 'payload' => "open:{$targetUrl}"],
+                ['label' => 'Tìm chuyến bay kèm theo', 'payload' => $detectedCity ? "Tìm chuyến bay giá tốt đi {$detectedCity} cuối tuần này" : 'Tìm chuyến bay giá tốt cuối tuần này'],
+            ],
+        ];
+    }
+
     private function cheapestFlightFollowUp(AIConversation $conversation, string $message): ?array
     {
         $query = mb_strtolower(trim($message), 'UTF-8');
@@ -437,16 +610,44 @@ class AIChatService
 
     private function shouldUseTools(string $message): bool
     {
-        $message = Str::ascii(mb_strtolower(trim($message), 'UTF-8'));
+        $ascii = Str::ascii(mb_strtolower(trim($message), 'UTF-8'));
+
+        $explicitFlightIntent = false;
+        foreach ([
+            'tim chuyen bay', 'tim ve', 'chuyen bay', 've may bay', 'bay tu', 'bay di',
+            'flight', 'book flight', 'booking', 'ma dat cho', 'pnr', 've cua toi',
+            'ghe trong', 'chon ghe', 'hoan ve', 'huy ve', 'doi ve', 'check-in', 'checkin',
+            'hanh ly', 'chinh sach', 'quy dinh',
+        ] as $flightKw) {
+            if (str_contains($ascii, $flightKw)) {
+                $explicitFlightIntent = true;
+                break;
+            }
+        }
+
+        // If user is asking about Hotels, Experiences/Tours, or Car Rental without asking for flights,
+        // let the LLM answer directly as a travel concierge instead of triggering search_flight.
+        if (!$explicitFlightIntent) {
+            foreach ([
+                'khach san', 'resort', 'hotel', 'luu tru', 'nghi duong', 'phong nghi',
+                'trai nghiem', 'tour', 'lich trinh', 'choi gi', 'tham quan', 'diem den', 'attraction', 'experience',
+                'thue xe', 'car rental', 'tu lai', 'tai xe', 'xe 7 cho', 'xe 4 cho',
+            ] as $travelKw) {
+                if (str_contains($ascii, $travelKw)) {
+                    return false;
+                }
+            }
+        }
+
+        if ($explicitFlightIntent) {
+            return true;
+        }
 
         foreach ([
-            'tìm chuyến bay', 'tìm vé', 'chuyến bay', 'vé máy bay', 'bay từ', 'bay đi',
-            'đi từ', 'đến', 'đặt vé', 'booking', 'mã đặt chỗ', 'đặt chỗ', 'vé của tôi',
-            'ghế', 'ghế trống', 'chỗ ngồi', 'hành lý', 'hoàn vé', 'hủy vé', 'đổi vé',
-            'chính sách', 'quy định', 'dịch vụ', 'sân bay', 'nội bài', 'tân sơn nhất',
-            'đà nẵng', 'cam ranh', 'phú quốc',
+            'di tu', 'dat ve', 'dat cho', 'ghe', 'cho ngoi', 'dich vu',
+            'san bay', 'noi bai', 'tan son nhat', 'da nang', 'cam ranh', 'phu quoc',
         ] as $keyword) {
-            if (str_contains($message, Str::ascii($keyword))) return true;
+            if (str_contains($ascii, $keyword)) return true;
         }
 
         return false;

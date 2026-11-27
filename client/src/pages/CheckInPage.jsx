@@ -258,31 +258,37 @@ export default function CheckInPage() {
             />
           </div>
 
-          <div className="relative z-10 mx-auto max-w-[1000px] space-y-6 px-4 sm:px-6">
-            {/* Success / Retrieved Notification Banner */}
+          <div className="relative z-10 mx-auto max-w-[1000px] space-y-4 px-4 sm:px-6">
+            {/* Compact Bilingual Success / Retrieved Notification Banner */}
             {showSuccessBanner && (
               <div
-                className="flex items-start justify-between gap-4 p-5 text-white shadow-lg md:p-6"
+                className="flex items-center justify-between gap-3 px-5 py-3.5 text-white shadow-md"
                 style={{
                   background: "linear-gradient(95deg, #059669 0%, #0d9488 100%)",
-                  borderRadius: 24,
+                  borderRadius: 20,
                   border: "1px solid rgba(255,255,255,0.28)",
                 }}
               >
-                <div className="flex items-start gap-4 sm:items-center">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm">
-                    <CheckCircle size={28} weight="fill" />
+                <div className="flex items-center gap-3.5">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-600 shadow-xs">
+                    <CheckCircle size={24} weight="fill" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-black tracking-tight md:text-2xl">
+                    <h2
+                      className="font-black tracking-tight text-white"
+                      style={{ margin: 0, fontSize: 16.5, lineHeight: 1.25 }}
+                    >
                       {isRetrieved
-                        ? "Đã tải lại Thẻ lên máy bay của bạn!"
-                        : "Check-in trực tuyến thành công!"}
+                        ? "Boarding Pass Retrieved · Đã tải lại Thẻ lên máy bay!"
+                        : "Online Check-in Successful · Check-in trực tuyến thành công!"}
                     </h2>
-                    <p className="mt-1 text-xs font-medium leading-relaxed text-emerald-50 md:text-sm">
+                    <p
+                      className="text-xs font-medium text-emerald-50"
+                      style={{ margin: "2px 0 0 0" }}
+                    >
                       {isRetrieved
-                        ? "Hành khách đã hoàn tất Check-in trước đó. Bạn có thể lưu lại mã QR hoặc in lại thẻ lên máy bay bên dưới."
-                        : "Thẻ lên máy bay điện tử đã được phát hành. Nếu chỉ có hành lý xách tay, vui lòng qua thẳng cửa an ninh và có mặt tại cửa lên tàu trước giờ bay 30–40 phút (có hành lý ký gửi: gửi tại quầy Bag Drop trước 60–90 phút)."}
+                        ? "Save the QR code below or print your boarding pass for airport security."
+                        : "Electronic Boarding Pass issued • Có mặt tại cửa lên tàu trước 30–40 phút (Bag Drop trước 60 phút)."}
                     </p>
                   </div>
                 </div>
@@ -290,11 +296,12 @@ export default function CheckInPage() {
                 <button
                   type="button"
                   onClick={() => setShowSuccessBanner(false)}
-                  className="shrink-0 cursor-pointer rounded-xl p-2 text-white/80 transition hover:bg-white/20 hover:text-white"
-                  title="Đóng thông báo"
-                  aria-label="Đóng thông báo"
+                  className="shrink-0 cursor-pointer rounded-xl p-1.5 text-white/80 transition hover:bg-white/20 hover:text-white"
+                  style={{ background: "transparent", border: "none" }}
+                  title="Close"
+                  aria-label="Close notification"
                 >
-                  <X size={20} weight="bold" />
+                  <X size={18} weight="bold" />
                 </button>
               </div>
             )}
@@ -303,48 +310,51 @@ export default function CheckInPage() {
             <BoardingPassDisplay boardingPass={boardingPass} />
 
             {/* Action Buttons Below Card */}
-            <div className="no-print flex flex-wrap items-center justify-center gap-3 pt-2">
+            <div className="no-print flex flex-wrap items-center justify-center gap-3 pt-1">
               <button
                 type="button"
                 onClick={handlePrintAgain}
-                className="inline-flex items-center justify-center gap-2.5 px-7 py-3.5 text-sm font-black text-white shadow-lg transition hover:brightness-105 md:text-base"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 text-xs font-extrabold text-white shadow-md transition hover:brightness-105"
                 style={{
-                  background: "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
+                  background: "linear-gradient(90deg, #0ea5e9 0%, #1d4ed8 100%)",
                   borderRadius: 9999,
                   border: "none",
                   cursor: "pointer",
-                  boxShadow: "0 10px 24px rgba(13, 97, 225, 0.28)",
+                  whiteSpace: "nowrap",
+                  boxShadow: "0 8px 20px rgba(29, 78, 216, 0.28)",
                 }}
               >
-                <Printer size={20} weight="bold" />
-                <span>In Thẻ Lên Máy Bay / Lưu PDF</span>
-                <CaretRight size={16} weight="bold" />
+                <Printer size={16} weight="bold" />
+                <span>Print Boarding Pass · In thẻ (PDF)</span>
+                <CaretRight size={14} weight="bold" />
               </button>
 
               <button
                 type="button"
                 onClick={handleCheckInAnother}
-                className="inline-flex items-center justify-center gap-2 bg-white px-6 py-3.5 text-sm font-extrabold text-[#0b4fd0] shadow-xs transition hover:bg-blue-50 md:text-base"
+                className="inline-flex items-center justify-center gap-1.5 bg-white px-5 py-3 text-xs font-extrabold text-[#0b4fd0] shadow-xs transition hover:bg-blue-50"
                 style={{
                   borderRadius: 9999,
-                  border: "1px solid #c6defd",
+                  border: "1.5px solid #c6defd",
                   cursor: "pointer",
+                  whiteSpace: "nowrap",
                 }}
               >
-                <PlusCircle size={20} weight="bold" />
-                <span>Check-in Hành Khách Khác</span>
+                <PlusCircle size={16} weight="bold" />
+                <span>Check-in Another · Khách khác</span>
               </button>
 
               <Link
                 to="/my-bookings"
-                className="inline-flex items-center justify-center gap-2 bg-white/90 px-6 py-3.5 text-sm font-extrabold text-[#163d7a] transition hover:bg-white md:text-base"
+                className="inline-flex items-center justify-center gap-1.5 bg-white/95 px-5 py-3 text-xs font-extrabold text-[#163d7a] transition hover:bg-white"
                 style={{
                   borderRadius: 9999,
-                  border: "1px solid #d5e6fc",
+                  border: "1.5px solid #d5e6fc",
                   textDecoration: "none",
+                  whiteSpace: "nowrap",
                 }}
               >
-                <span>Về Chuyến bay của tôi</span>
+                <span>My Bookings · Chuyến bay của tôi</span>
               </Link>
             </div>
           </div>
@@ -387,32 +397,43 @@ export default function CheckInPage() {
 
         <div className="relative z-10 mx-auto max-w-[1140px] px-4 sm:px-6">
           {/* Hero Header */}
-          <header className="mb-7">
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 bg-white/95 px-4 py-2 text-xs font-extrabold text-[#163d7a] shadow-sm transition hover:bg-white"
-              style={{ borderRadius: 9999, border: "1px solid #d5e6fc", textDecoration: "none" }}
-            >
-              <ArrowLeft size={14} weight="bold" />
-              Quay lại trang chủ
-            </Link>
+          <header className="mb-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Link
+                to="/"
+                className="inline-flex items-center gap-2 bg-white/95 px-4 py-1.5 text-xs font-extrabold text-[#163d7a] shadow-sm transition hover:bg-white"
+                style={{ borderRadius: 9999, border: "1px solid #d5e6fc", textDecoration: "none" }}
+              >
+                <ArrowLeft size={14} weight="bold" />
+                <span>Back to Home · Trang chủ</span>
+              </Link>
+
+              <Link
+                to="/my-bookings"
+                className="inline-flex items-center gap-1.5 bg-white/95 px-4 py-1.5 text-xs font-extrabold text-[#0b4fd0] shadow-sm transition hover:bg-blue-50"
+                style={{ borderRadius: 9999, border: "1px solid #d5e6fc", textDecoration: "none" }}
+              >
+                <span>My Bookings · Chuyến bay của tôi</span>
+                <ArrowRight size={13} weight="bold" />
+              </Link>
+            </div>
 
             <div className="mt-4 flex flex-col justify-between gap-4 md:flex-row md:items-end">
               <div>
                 <p
-                  className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em]"
-                  style={{ color: "#0b57d0", margin: "0 0 4px 0" }}
+                  className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.14em]"
+                  style={{ color: "#0b57d0", margin: "0 0 3px 0" }}
                 >
                   <PaperPlaneTilt size={15} weight="fill" />
-                  SKYLINK AIRLINES • ONLINE CHECK-IN
+                  SKYLINK AIRLINES • ONLINE CHECK-IN · LÀM THỦ TỤC TRỰC TUYẾN
                 </p>
                 <h1
                   className="font-black tracking-tight"
                   style={{
-                    fontSize: "clamp(1.9rem, 3.5vw, 2.75rem)",
+                    fontSize: "clamp(1.8rem, 3.2vw, 2.45rem)",
                     color: "#091e47",
                     lineHeight: 1.12,
-                    margin: "0 0 6px 0",
+                    margin: "0 0 5px 0",
                   }}
                 >
                   Check-in Điện Tử SkyLink Airlines
@@ -421,55 +442,58 @@ export default function CheckInPage() {
                   className="max-w-2xl text-xs font-semibold text-[#2d4b7a] sm:text-sm"
                   style={{ margin: 0 }}
                 >
-                  Làm thủ tục trực tuyến từ <strong>24 giờ đến 60 phút</strong> trước giờ khởi hành,
-                  nhận Thẻ lên máy bay điện tử (QR) ngay lập tức hoặc tải lại thẻ đã Check-in.
+                  Check in online <strong>24h to 60 min</strong> before departure • Nhận Thẻ lên máy bay điện tử (QR) ngay lập tức.
                 </p>
               </div>
 
               <div
-                className="inline-flex w-fit items-center gap-2 bg-white/95 px-4 py-2.5 shadow-sm"
+                className="inline-flex w-fit items-center gap-2 bg-white/95 px-4 py-2 shadow-sm"
                 style={{ borderRadius: 9999, border: "1px solid #d5e6fc" }}
               >
                 <Sparkle size={16} className="text-blue-600" weight="fill" />
-                <span className="text-xs font-bold text-[#163d7a]">
-                  Mở cửa: <strong className="font-black text-[#0b4fd0]">24h – 1h trước giờ bay</strong>
+                <span className="text-xs font-bold text-[#163d7a]" style={{ whiteSpace: "nowrap" }}>
+                  Open · Mở cửa: <strong className="font-black text-[#0b4fd0]">24h – 1h before flight</strong>
                 </span>
               </div>
             </div>
           </header>
 
-          {/* 3-Step Visual Strip */}
+          {/* Compact 3-Step Visual Strip */}
           <div
-            className="mb-6 grid grid-cols-1 gap-3 p-3 sm:grid-cols-3"
+            className="mb-5 grid grid-cols-1 gap-2.5 p-2.5 sm:grid-cols-3"
             style={{
-              background: "rgba(255, 255, 255, 0.92)",
-              border: "1px solid rgba(255, 255, 255, 0.98)",
+              background: "rgba(255, 255, 255, 0.94)",
+              border: "1px solid #dbe7fb",
               boxShadow: "0 10px 26px rgba(18, 60, 130, 0.07)",
-              borderRadius: 24,
+              borderRadius: 20,
             }}
           >
             {[
-              { step: "01", title: "Nhập PNR & Họ tên", desc: "Hoặc chọn nhanh từ vé đã đặt" },
-              { step: "02", title: "Cam kết an toàn bay", desc: "Xác nhận quy định hành lý IATA" },
-              { step: "03", title: "Nhận Boarding Pass QR", desc: "In PDF hoặc quét mã trên điện thoại" },
+              { step: "01", title: "PNR & Passenger Name", desc: "Nhập mã đặt chỗ hoặc chọn nhanh" },
+              { step: "02", title: "IATA Safety Declaration", desc: "Xác nhận cam kết an toàn bay" },
+              { step: "03", title: "QR Boarding Pass", desc: "Tải PDF hoặc quét mã tại sân bay" },
             ].map((item) => (
               <div
                 key={item.step}
-                className="flex items-center gap-3 rounded-2xl bg-[#f4f9ff] px-4 py-3"
-                style={{ border: "1px solid #dcebff" }}
+                className="flex items-center gap-3 rounded-2xl bg-[#f4f8ff] px-3.5 py-2.5"
+                style={{ border: "1px solid #e4efff" }}
               >
                 <span
-                  className="flex h-8 w-8 shrink-0 items-center justify-center text-xs font-black text-white"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center text-xs font-black text-white"
                   style={{
-                    background: "linear-gradient(135deg, #0b5ed7 0%, #1d75f2 100%)",
+                    background: "linear-gradient(135deg, #0ea5e9 0%, #1d4ed8 100%)",
                     borderRadius: 9999,
                   }}
                 >
                   {item.step}
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-xs font-black text-[#091e47]">{item.title}</p>
-                  <p className="truncate text-[11px] font-semibold text-[#476494]">{item.desc}</p>
+                  <p className="truncate text-xs font-black text-[#091e47]" style={{ margin: 0 }}>
+                    {item.title}
+                  </p>
+                  <p className="truncate text-[11px] font-semibold text-[#476494]" style={{ margin: "1px 0 0 0" }}>
+                    {item.desc}
+                  </p>
                 </div>
               </div>
             ))}
@@ -477,53 +501,97 @@ export default function CheckInPage() {
 
           {/* 2-Column Main Content */}
           <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
-            {/* Left Column (8 cols): Main Check-in Form Card */}
+            {/* Left Column (8 cols): Main Check-in Form Card with Royal-Blue Header */}
             <div
               className="overflow-hidden bg-white lg:col-span-8"
               style={{
-                borderRadius: 28,
-                border: "1px solid #d5e6fc",
-                boxShadow: "0 18px 42px rgba(13, 62, 145, 0.10)",
+                borderRadius: 24,
+                border: "1px solid #dbe7fb",
+                boxShadow: "0 14px 36px rgba(13, 62, 145, 0.09)",
               }}
             >
-              <form className="space-y-6 p-6 md:p-9" onSubmit={handleCheckIn}>
+              {/* Deep Royal-Blue Header synced with /services & /checkout */}
+              <div
+                className="flex items-center justify-between gap-3 px-6 py-4 text-white"
+                style={{
+                  background: "linear-gradient(135deg, #0a3b8e 0%, #1d64f2 100%)",
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white"
+                    style={{ background: "rgba(255,255,255,0.18)" }}
+                  >
+                    <Ticket size={20} weight="fill" />
+                  </span>
+                  <div>
+                    <h2
+                      className="font-black text-white"
+                      style={{ margin: 0, fontSize: 16, lineHeight: 1.2 }}
+                    >
+                      Passenger &amp; Booking Info · Thông tin Check-in
+                    </h2>
+                    <p
+                      className="text-[11.5px] font-medium text-sky-100"
+                      style={{ margin: "2px 0 0 0" }}
+                    >
+                      Enter your PNR code and full name exactly as shown on your e-ticket
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <form className="space-y-5 p-6" onSubmit={handleCheckIn}>
                 {/* Quick-Select Paid Bookings (if logged in & has bookings) */}
                 {eligibleBookings.length > 0 && (
                   <div
-                    className="rounded-2xl p-4"
-                    style={{ background: "#f2f8ff", border: "1px solid #cde2fd" }}
+                    className="rounded-2xl p-3.5"
+                    style={{ background: "#f4f8ff", border: "1px solid #dce8fa" }}
                   >
-                    <p className="mb-2.5 flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#0b4fd0]">
-                      <AirplaneTilt size={15} weight="fill" />
-                      Chọn nhanh từ chuyến bay đã thanh toán của bạn
+                    <p
+                      className="mb-2 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-[#0b4fd0]"
+                      style={{ margin: "0 0 8px 0" }}
+                    >
+                      <AirplaneTilt size={14} weight="fill" />
+                      Quick Fill · Chọn nhanh chuyến bay đã thanh toán
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {eligibleBookings.map((b) => {
                         const dep = b.flight?.departure_airport?.code || "SGN";
                         const arr = b.flight?.arrival_airport?.code || "HAN";
-                        const paxName = b.tickets?.[0]?.passenger_name || "";
+                        const rawName = (b.tickets?.[0]?.passenger_name || "").trim();
+                        const depDateShort = b.flight?.departure_time
+                          ? new Date(String(b.flight.departure_time).replace(" ", "T")).toLocaleDateString("en-GB", {
+                              day: "2-digit",
+                              month: "short",
+                            })
+                          : "";
+                        const extraLabel = rawName.length >= 3 ? rawName : depDateShort;
                         const isSelected = pnrCode === (b.pnr_code || "").toUpperCase();
                         return (
                           <button
                             key={b.id}
                             type="button"
                             onClick={() => handleQuickFill(b)}
-                            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-extrabold transition"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-extrabold transition"
                             style={{
                               borderRadius: 9999,
                               background: isSelected
-                                ? "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)"
+                                ? "linear-gradient(90deg, #0ea5e9 0%, #1d4ed8 100%)"
                                 : "#ffffff",
                               color: isSelected ? "#ffffff" : "#123975",
                               border: isSelected ? "1px solid #0b5ed7" : "1px solid #c6defd",
                               cursor: "pointer",
+                              whiteSpace: "nowrap",
                             }}
                           >
                             <span className="font-mono font-black">{b.pnr_code}</span>
                             <span>
                               ({dep} → {arr})
                             </span>
-                            {paxName && <span className="opacity-80">• {paxName}</span>}
+                            {extraLabel && (
+                              <span className="opacity-80">• {extraLabel}</span>
+                            )}
                           </button>
                         );
                       })}
@@ -533,106 +601,88 @@ export default function CheckInPage() {
 
                 {/* Error Banner */}
                 {error && (
-                  <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
-                    <WarningCircle size={20} weight="fill" className="mt-0.5 shrink-0 text-red-500" />
+                  <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-3.5 text-xs font-bold text-red-700">
+                    <WarningCircle size={18} weight="fill" className="mt-0.5 shrink-0 text-red-500" />
                     <span className="leading-relaxed">{error}</span>
                   </div>
                 )}
 
-                {/* Section Title */}
-                <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-                  <div
-                    className="flex h-10 w-10 items-center justify-center text-white shadow-sm"
-                    style={{
-                      background: "linear-gradient(135deg, #0b5ed7 0%, #1d75f2 100%)",
-                      borderRadius: 9999,
-                    }}
-                  >
-                    <Ticket size={20} weight="fill" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-black tracking-tight text-[#091e47]">
-                      Thông tin hành khách &amp; Đặt chỗ
-                    </h2>
-                    <p className="text-xs font-semibold text-slate-500">
-                      Nhập chính xác mã PNR và họ tên ghi trên vé điện tử
-                    </p>
-                  </div>
-                </div>
-
                 {/* Input Row: PNR & Passenger Name */}
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {/* Input 1: Mã Đặt Chỗ (PNR) */}
-                  <div className="space-y-2">
+                  <div>
                     <label
                       htmlFor="pnr-code"
-                      className="block text-xs font-extrabold uppercase tracking-wider text-[#163d7a]"
+                      className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wider text-[#163d7a]"
+                      style={{ display: "block" }}
                     >
-                      Mã Đặt Chỗ (PNR) <span className="text-red-500">*</span>
+                      Booking Ref (PNR) · Mã đặt chỗ <span className="text-red-500">*</span>
                     </label>
                     <div className="relative flex items-center">
-                      <div className="absolute left-3.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-blue-600">
-                        <Ticket size={18} weight="bold" />
+                      <div className="absolute left-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl border border-blue-100 bg-[#f4f8ff] text-[#0b5ed7]">
+                        <Ticket size={16} weight="bold" />
                       </div>
                       <input
                         id="pnr-code"
                         type="text"
-                        placeholder="Ví dụ: BQCV0E"
+                        placeholder="e.g. 48N1IT"
                         value={pnrCode}
                         onChange={(e) => setPnrCode(e.target.value.toUpperCase())}
                         maxLength={12}
                         disabled={loading}
-                        className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-15 pr-4 font-mono text-base font-black uppercase tracking-wider text-[#091e47] placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                        style={{ paddingLeft: 56 }}
+                        className="w-full rounded-xl border border-blue-200 bg-white py-2.5 pr-3.5 font-mono text-sm font-black tracking-wider text-[#091e47] placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        style={{ paddingLeft: 50 }}
                         required
                       />
                     </div>
-                    <p className="pl-1 text-[11px] font-medium text-slate-500">
-                      Mã 6–12 ký tự ghi trên vé hoặc email xác nhận
+                    <p className="mt-1 pl-1 text-[11px] font-medium text-slate-500" style={{ margin: "4px 0 0 0" }}>
+                      6–12 character code on your e-ticket
                     </p>
                   </div>
 
                   {/* Input 2: Họ Và Tên */}
-                  <div className="space-y-2">
+                  <div>
                     <label
                       htmlFor="passenger-name"
-                      className="block text-xs font-extrabold uppercase tracking-wider text-[#163d7a]"
+                      className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wider text-[#163d7a]"
+                      style={{ display: "block" }}
                     >
-                      Họ Và Tên Hành Khách <span className="text-red-500">*</span>
+                      Passenger Name · Họ và tên <span className="text-red-500">*</span>
                     </label>
                     <div className="relative flex items-center">
-                      <div className="absolute left-3.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-blue-600">
-                        <User size={18} weight="bold" />
+                      <div className="absolute left-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl border border-blue-100 bg-[#f4f8ff] text-[#0b5ed7]">
+                        <User size={16} weight="bold" />
                       </div>
                       <input
                         id="passenger-name"
                         type="text"
-                        placeholder="Ví dụ: Nguyễn Văn A"
+                        placeholder="e.g. NGUYEN VAN A"
                         value={passengerName}
                         onChange={(e) => setPassengerName(e.target.value)}
                         disabled={loading}
-                        className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pr-4 text-base font-bold text-[#091e47] placeholder:font-normal placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                        style={{ paddingLeft: 56 }}
+                        className="w-full rounded-xl border border-blue-200 bg-white py-2.5 pr-3.5 text-sm font-bold text-[#091e47] placeholder:font-normal placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        style={{ paddingLeft: 50 }}
                         required
                       />
                     </div>
-                    <p className="pl-1 text-[11px] font-medium text-slate-500">
-                      Trùng khớp với CCCD/Hộ chiếu khi đặt vé
+                    <p className="mt-1 pl-1 text-[11px] font-medium text-slate-500" style={{ margin: "4px 0 0 0" }}>
+                      Must match ID / Passport used at booking
                     </p>
                   </div>
                 </div>
 
                 {/* Input 3: Email nhận vé */}
-                <div className="space-y-2">
+                <div>
                   <label
                     htmlFor="checkin-email"
-                    className="block text-xs font-extrabold uppercase tracking-wider text-[#163d7a]"
+                    className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wider text-[#163d7a]"
+                    style={{ display: "block" }}
                   >
-                    Email nhận Thẻ lên máy bay (Tuỳ chọn)
+                    Boarding Pass Email · Email nhận vé (Optional)
                   </label>
                   <div className="relative flex items-center">
-                    <div className="absolute left-3.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-blue-600">
-                      <EnvelopeSimple size={18} weight="bold" />
+                    <div className="absolute left-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl border border-blue-100 bg-[#f4f8ff] text-[#0b5ed7]">
+                      <EnvelopeSimple size={16} weight="bold" />
                     </div>
                     <input
                       id="checkin-email"
@@ -641,44 +691,50 @@ export default function CheckInPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       disabled={loading}
-                      className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pr-4 text-base font-semibold text-[#091e47] placeholder:font-normal placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                      style={{ paddingLeft: 56 }}
+                      className="w-full rounded-xl border border-blue-200 bg-white py-2.5 pr-3.5 text-sm font-semibold text-[#091e47] placeholder:font-normal placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                      style={{ paddingLeft: 50 }}
                     />
                   </div>
-                  <p className="pl-1 text-[11px] font-medium text-slate-500">
-                    Bản sao Thẻ lên máy bay &amp; mã QR sẽ tự động gửi tới email này
-                  </p>
                 </div>
 
                 {/* Box 1: Cam Kết An Toàn Bay */}
                 <div
-                  className="space-y-4 rounded-2xl p-5 md:p-6"
-                  style={{ background: "#f4f9ff", border: "1px solid #d5e6fc" }}
+                  className="space-y-3 rounded-2xl p-4 sm:p-5"
+                  style={{ background: "#f4f8ff", border: "1px solid #dce8fa" }}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-xs">
-                      <ShieldCheck size={20} weight="fill" />
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white shadow-xs"
+                      style={{ background: "linear-gradient(135deg, #0ea5e9 0%, #1d4ed8 100%)" }}
+                    >
+                      <ShieldCheck size={18} weight="fill" />
                     </div>
                     <div>
-                      <h3 className="text-base font-black text-[#091e47]">
-                        Cam Kết An Toàn Bay (Quy định IATA / ICAO)
+                      <h3
+                        className="font-black text-[#091e47]"
+                        style={{ margin: 0, fontSize: 14, lineHeight: 1.25 }}
+                      >
+                        IATA / ICAO Safety Declaration · Cam Kết An Toàn Bay
                       </h3>
-                      <p className="text-xs font-medium text-[#476494]">
-                        Xác nhận hành lý của bạn không chứa các vật phẩm nguy hiểm sau:
+                      <p className="text-[11.5px] font-medium text-[#476494]" style={{ margin: "2px 0 0 0" }}>
+                        Confirm your baggage does not contain any prohibited items below:
                       </p>
                     </div>
                   </div>
 
-                  <ul className="space-y-2.5 text-xs font-semibold text-[#1e3a6b] sm:text-sm">
+                  <ul
+                    className="space-y-2 text-xs font-semibold text-[#1e3a6b]"
+                    style={{ margin: 0, padding: 0, listStyle: "none" }}
+                  >
                     {PROHIBITED_ITEMS.map((item) => {
                       const Icon = item.icon;
                       return (
-                        <li key={item.text} className="flex items-center gap-3">
+                        <li key={item.text} className="flex items-center gap-2.5">
                           <span
-                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg"
                             style={{ background: item.bg, color: item.color }}
                           >
-                            <Icon size={16} weight="fill" />
+                            <Icon size={14} weight="fill" />
                           </span>
                           <span>{item.text}</span>
                         </li>
@@ -688,7 +744,8 @@ export default function CheckInPage() {
 
                   <label
                     htmlFor="safety-commitment"
-                    className="flex cursor-pointer items-start gap-3 border-t border-blue-200/70 pt-3.5"
+                    className="cursor-pointer gap-2.5 border-t border-blue-200/70 pt-3"
+                    style={{ display: "flex", alignItems: "flex-start", marginBottom: 0 }}
                   >
                     <input
                       id="safety-commitment"
@@ -696,24 +753,24 @@ export default function CheckInPage() {
                       checked={safetyCommitment}
                       onChange={(e) => setSafetyCommitment(e.target.checked)}
                       disabled={loading}
-                      className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 accent-blue-600"
                       required
                     />
-                    <span className="text-xs font-bold leading-relaxed text-[#091e47] sm:text-sm">
-                      Tôi xác nhận không mang theo các vật phẩm cấm và cam kết tuân thủ nghiêm quy
-                      định an ninh, an toàn hàng không.
+                    <span className="text-xs font-bold leading-relaxed text-[#091e47]">
+                      Tôi xác nhận không mang theo các vật phẩm cấm và tuân thủ quy định an toàn hàng không IATA.
                     </span>
                   </label>
                 </div>
 
                 {/* Box 2: Điều khoản & Điều kiện */}
                 <div
-                  className="rounded-2xl p-4"
-                  style={{ background: "#f8fbff", border: "1px solid #dcebff" }}
+                  className="rounded-2xl px-4 py-3"
+                  style={{ background: "#f8fbff", border: "1px solid #dce8fa" }}
                 >
                   <label
                     htmlFor="terms-agreed"
-                    className="flex cursor-pointer items-start gap-3 sm:items-center"
+                    className="cursor-pointer gap-2.5"
+                    style={{ display: "flex", alignItems: "center", marginBottom: 0 }}
                   >
                     <input
                       id="terms-agreed"
@@ -721,132 +778,153 @@ export default function CheckInPage() {
                       checked={termsAgreed}
                       onChange={(e) => setTermsAgreed(e.target.checked)}
                       disabled={loading}
-                      className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 text-blue-600 focus:ring-blue-500 sm:mt-0"
+                      className="h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 accent-blue-600"
                       required
                     />
-                    <span className="text-xs font-bold text-[#163d7a] sm:text-sm">
-                      Tôi đồng ý với{" "}
+                    <span className="text-xs font-bold text-[#163d7a]">
+                      I agree to SkyLink{" "}
                       <button
                         type="button"
                         onClick={() => setShowTermsModal(true)}
                         className="inline-flex cursor-pointer items-center gap-0.5 border-0 bg-transparent p-0 font-black text-blue-600 underline hover:text-blue-800"
                       >
-                        điều khoản Check-in trực tuyến <ArrowUpRight size={14} weight="bold" />
-                      </button>{" "}
-                      của SkyLink Airlines
+                        Online Check-in Terms · Điều khoản Check-in <ArrowUpRight size={13} weight="bold" />
+                      </button>
                     </span>
                   </label>
                 </div>
 
-                {/* Submit Button */}
+                {/* Submit Button (Clean 46px Pill CTA synced with /checkout & /services) */}
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex w-full items-center justify-center gap-3 py-4 text-base font-black text-white shadow-lg transition hover:brightness-105 disabled:opacity-60 md:text-lg"
+                  className="inline-flex w-full items-center justify-center gap-2 py-3.5 text-sm font-extrabold text-white shadow-md transition hover:-translate-y-0.5 hover:brightness-105 disabled:opacity-60"
                   style={{
-                    background: "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
+                    background: "linear-gradient(90deg, #0ea5e9 0%, #1d4ed8 100%)",
                     borderRadius: 9999,
                     border: "none",
                     cursor: loading ? "wait" : "pointer",
-                    boxShadow: "0 12px 28px rgba(13, 97, 225, 0.30)",
+                    boxShadow: "0 8px 20px rgba(29, 78, 216, 0.28)",
                   }}
                 >
-                  <PaperPlaneTilt size={22} weight="fill" />
-                  <span>{loading ? "Đang xác thực & xuất thẻ..." : "Xác nhận Check-in Ngay"}</span>
-                  <ArrowRight size={20} weight="bold" />
+                  <PaperPlaneTilt size={18} weight="fill" />
+                  <span>
+                    {loading ? "Processing Check-in..." : "Confirm Check-in · Xác nhận Check-in Ngay"}
+                  </span>
+                  <ArrowRight size={16} weight="bold" />
                 </button>
               </form>
             </div>
 
             {/* Right Column (4 cols): Real-world Airport Check-in Guide */}
             <aside className="space-y-4 lg:sticky lg:top-24 lg:col-span-4">
-              {/* Card 1: Khung giờ tiêu chuẩn */}
+              {/* Card 1: Key Deadlines */}
               <div
                 className="bg-white p-5"
                 style={{
-                  borderRadius: 24,
-                  border: "1px solid #d5e6fc",
-                  boxShadow: "0 12px 28px rgba(18, 60, 130, 0.07)",
+                  borderRadius: 22,
+                  border: "1px solid #dbe7fb",
+                  boxShadow: "0 10px 26px rgba(18, 60, 130, 0.07)",
                 }}
               >
                 <div className="mb-3 flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                    <Clock size={20} weight="bold" />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#0b5ed7]">
+                    <Clock size={18} weight="bold" />
                   </div>
-                  <h3 className="text-sm font-black text-[#091e47]">Mốc thời gian cần nhớ</h3>
+                  <h3
+                    className="font-black text-[#091e47]"
+                    style={{ margin: 0, fontSize: 14.5, lineHeight: 1.25 }}
+                  >
+                    Key Deadlines · Mốc thời gian
+                  </h3>
                 </div>
-                <div className="space-y-2.5 text-xs font-semibold text-[#33507f]">
-                  <div className="flex items-center justify-between rounded-xl bg-[#f4f9ff] px-3.5 py-2.5">
-                    <span>Mở Check-in trực tuyến</span>
-                    <strong className="font-black text-[#0b4fd0]">Trước 24 giờ</strong>
+                <div className="space-y-2 text-xs font-semibold text-[#33507f]">
+                  <div className="flex items-center justify-between gap-2 rounded-xl bg-[#f4f8ff] px-3 py-2.5">
+                    <span>Mở Check-in (Opens)</span>
+                    <strong className="shrink-0 font-black text-[#0b5ed7]" style={{ whiteSpace: "nowrap" }}>
+                      24h before
+                    </strong>
                   </div>
-                  <div className="flex items-center justify-between rounded-xl bg-[#f4f9ff] px-3.5 py-2.5">
-                    <span>Đóng Check-in trực tuyến</span>
-                    <strong className="font-black text-[#0b4fd0]">Trước 60 phút</strong>
+                  <div className="flex items-center justify-between gap-2 rounded-xl bg-[#f4f8ff] px-3 py-2.5">
+                    <span>Đóng Check-in (Closes)</span>
+                    <strong className="shrink-0 font-black text-[#0b5ed7]" style={{ whiteSpace: "nowrap" }}>
+                      60m before
+                    </strong>
                   </div>
-                  <div className="flex items-center justify-between rounded-xl bg-[#fff7ed] px-3.5 py-2.5 text-amber-900">
-                    <span>Đóng cửa lên máy bay</span>
-                    <strong className="font-black text-amber-700">Trước 15 phút</strong>
+                  <div className="flex items-center justify-between gap-2 rounded-xl bg-[#fff7ed] px-3 py-2.5 text-amber-900">
+                    <span>Đóng cửa tàu (Gate)</span>
+                    <strong className="shrink-0 font-black text-amber-700" style={{ whiteSpace: "nowrap" }}>
+                      15m before
+                    </strong>
                   </div>
                 </div>
               </div>
 
-              {/* Card 2: Hướng dẫn tại sân bay */}
+              {/* Card 2: At the Airport */}
               <div
                 className="bg-white p-5"
                 style={{
-                  borderRadius: 24,
-                  border: "1px solid #d5e6fc",
-                  boxShadow: "0 12px 28px rgba(18, 60, 130, 0.07)",
+                  borderRadius: 22,
+                  border: "1px solid #dbe7fb",
+                  boxShadow: "0 10px 26px rgba(18, 60, 130, 0.07)",
                 }}
               >
                 <div className="mb-3 flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                    <SuitcaseRolling size={20} weight="bold" />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                    <SuitcaseRolling size={18} weight="bold" />
                   </div>
-                  <h3 className="text-sm font-black text-[#091e47]">Khi đến sân bay</h3>
+                  <h3
+                    className="font-black text-[#091e47]"
+                    style={{ margin: 0, fontSize: 14.5, lineHeight: 1.25 }}
+                  >
+                    At the Airport · Khi đến sân bay
+                  </h3>
                 </div>
-                <ul className="space-y-3 text-xs font-medium leading-relaxed text-[#33507f]">
-                  <li className="flex items-start gap-2.5">
-                    <CheckCircle size={16} weight="fill" className="mt-0.5 shrink-0 text-emerald-600" />
+                <ul
+                  className="space-y-2.5 text-xs font-medium leading-relaxed text-[#33507f]"
+                  style={{ margin: 0, padding: 0, listStyle: "none" }}
+                >
+                  <li className="flex items-start gap-2">
+                    <CheckCircle size={15} weight="fill" className="mt-0.5 shrink-0 text-emerald-600" />
                     <span>
-                      <strong>Chỉ có hành lý xách tay:</strong> Đi thẳng tới cửa kiểm tra an ninh và
-                      có mặt tại cửa lên tàu trước giờ bay <strong>30–40 phút</strong>.
+                      <strong>Carry-on only:</strong> Đi thẳng tới cổng an ninh và có mặt tại cửa ra tàu bay trước <strong>30–40 phút</strong>.
                     </span>
                   </li>
-                  <li className="flex items-start gap-2.5">
-                    <CheckCircle size={16} weight="fill" className="mt-0.5 shrink-0 text-blue-600" />
+                  <li className="flex items-start gap-2">
+                    <CheckCircle size={15} weight="fill" className="mt-0.5 shrink-0 text-blue-600" />
                     <span>
-                      <strong>Có hành lý ký gửi:</strong> Gửi hành lý tại quầy{" "}
-                      <strong>Bag Drop</strong> của SkyLink trước giờ bay <strong>60–90 phút</strong>.
+                      <strong>Checked baggage:</strong> Gửi hành lý tại quầy <strong>Bag Drop</strong> trước giờ bay <strong>60–90 phút</strong>.
                     </span>
                   </li>
-                  <li className="flex items-start gap-2.5">
-                    <IdentificationCard size={16} weight="fill" className="mt-0.5 shrink-0 text-amber-600" />
+                  <li className="flex items-start gap-2">
+                    <IdentificationCard size={15} weight="fill" className="mt-0.5 shrink-0 text-amber-600" />
                     <span>
-                      <strong>Giấy tờ tùy thân:</strong> Mang theo CCCD bản gốc / VNeID mức 2 (bay
-                      nội địa) hoặc Hộ chiếu còn hạn ≥ 6 tháng (bay quốc tế).
+                      <strong>ID / Passport:</strong> Mang CCCD gốc / VNeID mức 2 (nội địa) hoặc Hộ chiếu còn hạn ≥ 6 tháng (quốc tế).
                     </span>
                   </li>
                 </ul>
               </div>
 
-              {/* Card 3: Hỗ trợ nhanh */}
+              {/* Card 3: 24/7 Support */}
               <div
                 className="p-5 text-white"
                 style={{
-                  background: "linear-gradient(135deg, #0b4fd0 0%, #1d75f2 100%)",
-                  borderRadius: 24,
+                  background: "linear-gradient(135deg, #0a3b8e 0%, #1d64f2 100%)",
+                  borderRadius: 22,
                   boxShadow: "0 14px 30px rgba(13, 97, 225, 0.22)",
                 }}
               >
                 <div className="flex items-center gap-2.5">
-                  <Headset size={22} weight="fill" className="text-sky-200" />
-                  <h3 className="text-sm font-black">Cần hỗ trợ làm thủ tục?</h3>
+                  <Headset size={20} weight="fill" className="shrink-0 text-sky-200" />
+                  <h3
+                    className="font-black text-white"
+                    style={{ margin: 0, fontSize: 14.5, lineHeight: 1.25 }}
+                  >
+                    Need Help? · Hỗ trợ 24/7
+                  </h3>
                 </div>
-                <p className="mt-2 text-xs font-medium leading-relaxed text-blue-100">
-                  Quên mã đặt chỗ (PNR) hoặc đi cùng trẻ nhỏ, hành khách cần hỗ trợ đặc biệt? Đội
-                  ngũ SkyLink 24/7 luôn sẵn sàng hỗ trợ.
+                <p className="mt-2 text-xs font-medium leading-relaxed text-blue-100" style={{ margin: "8px 0 0 0" }}>
+                  Forgot your PNR code or traveling with infants? Đội ngũ SkyLink 24/7 luôn sẵn sàng hỗ trợ bạn.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Link
@@ -854,7 +932,7 @@ export default function CheckInPage() {
                     className="inline-flex items-center gap-1 bg-white px-3.5 py-2 text-xs font-extrabold text-[#0b4fd0] transition hover:bg-blue-50"
                     style={{ borderRadius: 9999, textDecoration: "none" }}
                   >
-                    Tra cứu PNR
+                    Find PNR · Tra cứu PNR
                   </Link>
                   <Link
                     to="/support"
@@ -865,7 +943,7 @@ export default function CheckInPage() {
                       textDecoration: "none",
                     }}
                   >
-                    Liên hệ 24/7
+                    Contact 24/7
                   </Link>
                 </div>
               </div>

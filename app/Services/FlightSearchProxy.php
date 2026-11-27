@@ -103,10 +103,16 @@ class FlightSearchProxy
             ->get();
 
         // ── Bước 3: Proxy Intercept — Lazy Generation ────────────
-        // NẾU DB chưa đủ ít nhất 5 chuyến bay cho tuyến+ngày này → delegate sang Generator.
-        // Sau khi generate, data đã được persist vào DB.
-        // → MỌI NGÀY TRONG TƯƠNG LAI LUÔN ĐẢM BẢO CÓ TỪ 5 ĐẾN 15 CHUYẾN BAY.
-        if ($flights->count() < 5) {
+        // Đảm bảo MỌI tuyến + ngày luôn có đầy đủ đa dạng 4 hãng bay (SkyLink, Vietnam Airlines, Bamboo, VietJet).
+        $existingPrefixes = $flights
+            ->map(fn($f) => strtoupper(substr((string) $f->flight_number, 0, 2)))
+            ->unique();
+        $hasAllAirlines = $existingPrefixes->contains('SK')
+            && $existingPrefixes->contains('VN')
+            && $existingPrefixes->contains('VJ')
+            && ($existingPrefixes->contains('FB') || $existingPrefixes->contains('QH'));
+
+        if ($flights->count() < 12 || !$hasAllAirlines) {
             $this->generator->generate(
                 $departureAirport,
                 $arrivalAirport,

@@ -11,13 +11,17 @@ import {
   ArrowsLeftRight,
   CalendarBlank,
   CaretDown,
+  CaretLeft,
+  CaretRight,
   MagnifyingGlass,
   MapPinLine,
   Minus,
   Plus,
   Robot,
+  Tag,
   Users,
   WarningCircle,
+  X,
 } from "@phosphor-icons/react";
 import FlightCard from "../components/flight/FlightCard";
 import FlightFilterSidebar from "../components/flight/FlightFilterSidebar";
@@ -476,6 +480,11 @@ export default function FlightResults() {
         const priceB = parseFloat(b.display_price || b.base_price);
         return priceA - priceB;
       }
+      if (filters.sort === "duration_asc") {
+        const durA = new Date(a.arrival_time) - new Date(a.departure_time);
+        const durB = new Date(b.arrival_time) - new Date(b.departure_time);
+        return durA - durB;
+      }
       if (filters.sort === "time_asc") {
         return new Date(a.departure_time) - new Date(b.departure_time);
       }
@@ -486,6 +495,105 @@ export default function FlightResults() {
   };
 
   const displayedFlights = getFilteredAndSortedFlights();
+
+  const cheapestFlight = displayedFlights.reduce((best, f) => {
+    const p = Number(f.display_price || f.base_price || 0);
+    if (!best || p < Number(best.display_price || best.base_price || Infinity)) return f;
+    return best;
+  }, null);
+
+  const fastestFlight = displayedFlights.reduce((best, f) => {
+    const d = new Date(f.arrival_time) - new Date(f.departure_time);
+    const bestD = best ? new Date(best.arrival_time) - new Date(best.departure_time) : Infinity;
+    if (d > 0 && d < bestD) return f;
+    return best;
+  }, null);
+
+  const earliestFlight = displayedFlights.reduce((best, f) => {
+    const t = new Date(f.departure_time).getTime();
+    const bestT = best ? new Date(best.departure_time).getTime() : Infinity;
+    if (!Number.isNaN(t) && t < bestT) return f;
+    return best;
+  }, null);
+
+  const formatShortDurEn = (f) => {
+    if (!f?.departure_time || !f?.arrival_time) return "—";
+    const ms = new Date(f.arrival_time) - new Date(f.departure_time);
+    if (Number.isNaN(ms) || ms <= 0) return "—";
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    return `${h}h ${m > 0 ? `${m}m` : ""}`.trim();
+  };
+
+  const formatVndCompact = (val) => {
+    if (!val) return "—";
+    return `${new Intl.NumberFormat("vi-VN").format(Math.round(Number(val)))} VND`;
+  };
+
+  const formatStripDayEn = (iso) => {
+    const parts = String(iso).split("-").map(Number);
+    if (parts.length !== 3) return iso;
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return `${days[d.getDay()]}, ${String(d.getDate()).padStart(2, "0")} ${months[d.getMonth()]}`;
+  };
+
+  const activeDateStr = searchParams.date || getTodayString();
+  const dateStripDays = (() => {
+    const parts = activeDateStr.split("-").map(Number);
+    const base =
+      parts.length === 3
+        ? new Date(parts[0], parts[1] - 1, parts[2])
+        : new Date();
+    const todayFloor = new Date();
+    todayFloor.setHours(0, 0, 0, 0);
+    const arr = [];
+    for (let offset = -2; offset <= 2; offset += 1) {
+      const d = new Date(base);
+      d.setDate(base.getDate() + offset);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      const iso = `${y}-${m}-${day}`;
+      arr.push({
+        iso,
+        label: formatStripDayEn(iso),
+        disabled: d < todayFloor,
+      });
+    }
+    return arr;
+  })();
+
+  const handleQuickDateSelect = (nextIso) => {
+    if (!nextIso || nextIso === activeDateStr) return;
+    const updated = { ...searchParams, date: nextIso };
+    setSearchParams(updated);
+    localStorage.setItem("search_params", JSON.stringify(updated));
+    const newParams = new URLSearchParams();
+    if (updated.departure) newParams.set("from", updated.departure);
+    if (updated.arrival) newParams.set("to", updated.arrival);
+    newParams.set("date", nextIso);
+    if (updated.tripType === "round-trip" && updated.returnDate) {
+      newParams.set("returnDate", updated.returnDate);
+    }
+    if (updated.tripType) {
+      newParams.set("trip_type", updated.tripType.replace("-", "_"));
+    }
+    setUrlSearchParams(newParams);
+    fetchFlights(updated);
+  };
+
+  const shiftStripDate = (delta) => {
+    const parts = activeDateStr.split("-").map(Number);
+    const d = parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date();
+    d.setDate(d.getDate() + delta);
+    const todayFloor = new Date();
+    todayFloor.setHours(0, 0, 0, 0);
+    if (d < todayFloor) return;
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    handleQuickDateSelect(iso);
+  };
   const totalPages = Math.max(
     1,
     Math.ceil(displayedFlights.length / FLIGHTS_PER_PAGE)
@@ -625,165 +733,101 @@ export default function FlightResults() {
             </div>
           </div>
 
-          {/* Floating Quick Search Bar */}
+          {/* Compact 1-Row Floating Search Bar matching Traveloka mockup */}
           <form
             onSubmit={handleApplySearch}
-            className="bg-white/95 p-5 shadow-lg"
+            className="bg-white/95 px-4 py-3.5 shadow-lg"
             style={{
-              borderRadius: 24,
+              borderRadius: 20,
               border: "1px solid rgba(255,255,255,0.98)",
-              boxShadow: "0 16px 38px rgba(20, 62, 132, 0.11)",
+              boxShadow: "0 14px 34px rgba(20, 62, 132, 0.11)",
               backdropFilter: "blur(12px)",
             }}
           >
-            {/* Row 1: Trip Type Pills + Search CTA on Desktop */}
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-blue-50 pb-3.5">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-[#eef5ff] p-1">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSearchParams((prev) => ({
-                      ...prev,
-                      tripType: "one-way",
-                      returnDate: "",
-                    }))
-                  }
-                  className="px-4 py-1.5 text-xs font-extrabold transition"
-                  style={
-                    searchParams.tripType === "one-way"
-                      ? {
-                          background:
-                            "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
-                          color: "#ffffff",
-                          borderRadius: 9999,
-                          border: "none",
-                          cursor: "pointer",
-                        }
-                      : {
-                          background: "transparent",
-                          color: "#365382",
-                          borderRadius: 9999,
-                          border: "none",
-                          cursor: "pointer",
-                        }
-                  }
-                >
-                  Một chiều
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSearchParams((prev) => ({
-                      ...prev,
-                      tripType: "round-trip",
-                    }))
-                  }
-                  className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-extrabold transition"
-                  style={
-                    searchParams.tripType === "round-trip"
-                      ? {
-                          background:
-                            "linear-gradient(90deg, #0b5ed7 0%, #1d75f2 100%)",
-                          color: "#ffffff",
-                          borderRadius: 9999,
-                          border: "none",
-                          cursor: "pointer",
-                        }
-                      : {
-                          background: "transparent",
-                          color: "#365382",
-                          borderRadius: 9999,
-                          border: "none",
-                          cursor: "pointer",
-                        }
-                  }
-                >
-                  <span>Khứ hồi</span>
-                  <span className="rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-black text-amber-950">
-                    -10%
-                  </span>
-                </button>
+            {searchWarning && (
+              <div
+                role="alert"
+                className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700"
+                style={{ border: "1px solid #fecdd3" }}
+              >
+                <WarningCircle size={15} weight="fill" />
+                <span>{searchWarning}</span>
               </div>
+            )}
 
-              {searchWarning && (
-                <p
-                  role="alert"
-                  className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700"
-                  style={{ margin: 0, border: "1px solid #fecdd3" }}
-                >
-                  <WarningCircle size={15} weight="fill" />
-                  {searchWarning}
-                </p>
-              )}
-            </div>
+            <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center">
+              {/* Origin + Overlapping Swap + Destination */}
+              <div className="relative flex flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+                <div className="min-w-0 flex-1">
+                  <SkyAirportPicker
+                    compact
+                    label="From"
+                    placeholder="From city / airport"
+                    variant="departure"
+                    allowClear
+                    airports={airports}
+                    value={searchParams.departure}
+                    disabledCode={searchParams.arrival}
+                    onChange={(code) => {
+                      setSearchWarning("");
+                      setSearchParams((prev) => ({
+                        ...prev,
+                        departure: code,
+                      }));
+                    }}
+                  />
+                </div>
 
-            {/* Row 2: Compact Single-Row Search Inputs */}
-            <div className="grid grid-cols-1 items-center gap-3 md:grid-cols-12">
-              {/* Departure */}
-              <div className="md:col-span-3">
-                <SkyAirportPicker
-                  label="Điểm đi"
-                  placeholder="Tất cả điểm đi"
-                  variant="departure"
-                  allowClear
-                  airports={airports}
-                  value={searchParams.departure}
-                  disabledCode={searchParams.arrival}
-                  onChange={(code) => {
-                    setSearchWarning("");
-                    setSearchParams((prev) => ({
-                      ...prev,
-                      departure: code,
-                    }));
-                  }}
-                />
-              </div>
-
-              {/* Swap Button */}
-              <div className="flex justify-center md:col-span-1">
+                {/* Overlapping Light-Blue Circular Swap Button */}
                 <button
                   type="button"
                   onClick={handleSwapAirports}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-blue-200 bg-white text-blue-600 shadow-xs transition hover:bg-blue-50"
-                  style={{ cursor: "pointer" }}
-                  title="Đổi chiều bay"
+                  className="z-10 mx-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-600 transition hover:brightness-95 sm:-mx-4"
+                  style={{
+                    background: "#dff0ff",
+                    border: "2px solid #ffffff",
+                    cursor: "pointer",
+                  }}
+                  title="Swap origin & destination"
                   aria-label="Đổi chiều bay"
                 >
-                  <ArrowsLeftRight size={15} weight="bold" />
+                  <ArrowsLeftRight size={14} weight="bold" />
                 </button>
+
+                <div className="min-w-0 flex-1">
+                  <SkyAirportPicker
+                    compact
+                    label="To"
+                    placeholder="To city / airport"
+                    variant="arrival"
+                    allowClear
+                    airports={airports}
+                    value={searchParams.arrival}
+                    disabledCode={searchParams.departure}
+                    onChange={(code) => {
+                      setSearchWarning("");
+                      setSearchParams((prev) => ({
+                        ...prev,
+                        arrival: code,
+                      }));
+                    }}
+                  />
+                </div>
               </div>
 
-              {/* Arrival */}
-              <div className="md:col-span-3">
-                <SkyAirportPicker
-                  label="Điểm đến"
-                  placeholder="Tất cả điểm đến"
-                  variant="arrival"
-                  allowClear
-                  airports={airports}
-                  value={searchParams.arrival}
-                  disabledCode={searchParams.departure}
-                  onChange={(code) => {
-                    setSearchWarning("");
-                    setSearchParams((prev) => ({
-                      ...prev,
-                      arrival: code,
-                    }));
-                  }}
-                />
-              </div>
-
-              {/* Departure Date (Vietnamese 5-Star SkyDatePicker) */}
+              {/* Departure Date Pill */}
               <div
-                className="rounded-2xl border border-blue-100 bg-[#f7faff] p-2.5 transition-colors hover:border-blue-300 md:col-span-3"
+                className="flex items-center bg-white px-2.5 lg:w-[170px] lg:shrink-0"
+                style={{
+                  borderRadius: 12,
+                  border: "1px solid #d5e2f2",
+                  height: 44,
+                }}
               >
-                <label className="mb-0.5 block text-[10px] font-extrabold uppercase tracking-wider text-[#5a749b]">
-                  Ngày đi
-                </label>
                 <SkyDatePicker
                   value={searchParams.date}
                   min={todayStr}
-                  placeholder="Chọn ngày đi"
+                  placeholder="Depart date"
                   onChange={(val) => {
                     setSearchWarning("");
                     setSearchParams((prev) => ({
@@ -798,57 +842,93 @@ export default function FlightResults() {
                 />
               </div>
 
-              {/* Return Date (When Round-trip) */}
-              {searchParams.tripType === "round-trip" && (
-                <div className="rounded-2xl border border-blue-100 bg-[#f7faff] p-2.5 transition-colors hover:border-blue-300 md:col-span-3">
-                  <label className="mb-0.5 block text-[10px] font-extrabold uppercase tracking-wider text-[#5a749b]">
-                    Ngày về
-                  </label>
-                  <SkyDatePicker
-                    value={searchParams.returnDate}
-                    min={searchParams.date || todayStr}
-                    align="right"
-                    placeholder="Chọn ngày về"
-                    onChange={(val) => {
-                      setSearchWarning("");
+              {/* Optional Return Date Pill with circular Clear 'x' */}
+              <div
+                className="flex items-center justify-between gap-1 bg-white px-2.5 lg:w-[178px] lg:shrink-0"
+                style={{
+                  borderRadius: 12,
+                  border: "1px solid #d5e2f2",
+                  height: 44,
+                }}
+              >
+                {searchParams.tripType === "round-trip" ? (
+                  <>
+                    <div className="min-w-0 flex-1">
+                      <SkyDatePicker
+                        value={searchParams.returnDate}
+                        min={searchParams.date || todayStr}
+                        placeholder="Return date"
+                        align="right"
+                        onChange={(val) => {
+                          setSearchWarning("");
+                          setSearchParams((prev) => ({
+                            ...prev,
+                            returnDate: val,
+                          }));
+                        }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSearchParams((prev) => ({
+                          ...prev,
+                          tripType: "one-way",
+                          returnDate: "",
+                        }))
+                      }
+                      aria-label="Remove return date"
+                      title="One-way flight"
+                      className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-slate-600 transition hover:bg-blue-200"
+                      style={{ background: "#dff0ff", border: "none" }}
+                    >
+                      <X size={12} weight="bold" />
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const base = searchParams.date || todayStr;
+                      const d = new Date(`${base}T00:00:00`);
+                      d.setDate(d.getDate() + 2);
+                      const retIso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
                       setSearchParams((prev) => ({
                         ...prev,
-                        returnDate: val,
+                        tripType: "round-trip",
+                        returnDate: retIso,
                       }));
                     }}
-                  />
-                </div>
-              )}
+                    className="flex w-full cursor-pointer items-center gap-2 bg-transparent text-left font-semibold text-slate-400 hover:text-blue-600"
+                    style={{ border: "none", fontSize: 13 }}
+                  >
+                    <CalendarBlank size={17} weight="duotone" className="shrink-0 text-slate-400" />
+                    <span className="truncate">+ Return date</span>
+                  </button>
+                )}
+              </div>
 
-              {/* Interactive Passenger & Cabin Class Selector */}
-              <div
-                ref={passengerMenuRef}
-                className="relative md:col-span-2"
-              >
+              {/* Compact Passenger & Cabin Class Pill */}
+              <div ref={passengerMenuRef} className="relative lg:w-[188px] lg:shrink-0">
                 <button
                   type="button"
                   onClick={() => setPassengerMenuOpen((v) => !v)}
-                  className="w-full rounded-2xl border border-blue-100 bg-[#f7faff] p-2.5 text-left transition hover:border-blue-300"
-                  style={{ cursor: "pointer" }}
+                  className="flex w-full cursor-pointer items-center justify-between gap-1.5 bg-white px-3 text-left transition hover:border-blue-300"
+                  style={{
+                    borderRadius: 12,
+                    border: passengerMenuOpen ? "1.5px solid #1d75f2" : "1px solid #d5e2f2",
+                    height: 44,
+                  }}
                 >
-                  <span className="mb-0.5 block text-[10px] font-extrabold uppercase tracking-wider text-[#5a749b]">
-                    {totalPassengers} hành khách
-                  </span>
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="inline-flex items-center gap-1.5 truncate text-xs font-extrabold text-[#0b2559]">
-                      <Users size={14} weight="fill" className="shrink-0 text-blue-600" />
-                      <span>{searchParams.cabinClass || "Phổ thông"}</span>
+                  <span className="inline-flex min-w-0 items-center gap-2 font-bold text-[#091e47]" style={{ fontSize: 13 }}>
+                    <Users size={17} weight="duotone" className="shrink-0 text-slate-600" />
+                    <span className="truncate">
+                      {totalPassengers} passenger(s) ·{" "}
+                      {(searchParams.cabinClass || "Phổ thông") === "Thương gia"
+                        ? "Business"
+                        : "Economy"}
                     </span>
-                    <CaretDown
-                      size={13}
-                      weight="bold"
-                      className="shrink-0 text-slate-500"
-                      style={{
-                        transform: passengerMenuOpen ? "rotate(180deg)" : "none",
-                        transition: "transform 0.2s ease",
-                      }}
-                    />
-                  </div>
+                  </span>
                 </button>
 
                 {passengerMenuOpen && (
@@ -861,17 +941,17 @@ export default function FlightResults() {
                     }}
                   >
                     <p className="mb-3 text-xs font-black text-[#092152]" style={{ margin: "0 0 10px 0" }}>
-                      Hành khách & Hạng vé
+                      Passengers &amp; Cabin Class
                     </p>
 
                     <div className="space-y-3 border-b border-blue-50 pb-3">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-xs font-extrabold text-[#0b2559]" style={{ margin: 0 }}>
-                            Người lớn
+                            Adults (Người lớn)
                           </p>
                           <p className="text-[10px] font-semibold text-slate-400" style={{ margin: 0 }}>
-                            Từ 12 tuổi trở lên
+                            12+ years
                           </p>
                         </div>
                         <div className="flex items-center gap-2.5">
@@ -900,10 +980,10 @@ export default function FlightResults() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-xs font-extrabold text-[#0b2559]" style={{ margin: 0 }}>
-                            Trẻ em
+                            Children (Trẻ em)
                           </p>
                           <p className="text-[10px] font-semibold text-slate-400" style={{ margin: 0 }}>
-                            Từ 2 – 11 tuổi
+                            2 – 11 years
                           </p>
                         </div>
                         <div className="flex items-center gap-2.5">
@@ -932,20 +1012,23 @@ export default function FlightResults() {
 
                     <div className="mt-3">
                       <p className="mb-2 text-[11px] font-extrabold text-[#5a749b]" style={{ margin: "0 0 8px 0" }}>
-                        Hạng ghế ưu tiên
+                        Cabin Class
                       </p>
                       <div className="grid grid-cols-2 gap-2">
-                        {["Phổ thông", "Thương gia"].map((cabin) => {
+                        {[
+                          { val: "Phổ thông", label: "Economy" },
+                          { val: "Thương gia", label: "Business" },
+                        ].map((cabin) => {
                           const active =
-                            (searchParams.cabinClass || "Phổ thông") === cabin;
+                            (searchParams.cabinClass || "Phổ thông") === cabin.val;
                           return (
                             <button
-                              key={cabin}
+                              key={cabin.val}
                               type="button"
                               onClick={() =>
                                 setSearchParams((prev) => ({
                                   ...prev,
-                                  cabinClass: cabin,
+                                  cabinClass: cabin.val,
                                 }))
                               }
                               className="rounded-xl py-2 text-xs font-extrabold transition"
@@ -965,7 +1048,7 @@ export default function FlightResults() {
                                     }
                               }
                             >
-                              {cabin}
+                              {cabin.label}
                             </button>
                           );
                         })}
@@ -984,30 +1067,29 @@ export default function FlightResults() {
                         cursor: "pointer",
                       }}
                     >
-                      Xong
+                      Done
                     </button>
                   </div>
                 )}
               </div>
 
-              {/* Submit Search Button */}
-              <div className="flex justify-end pt-1 md:col-span-12">
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-2 px-6 py-2.5 text-xs font-extrabold text-white transition hover:-translate-y-0.5"
-                  style={{
-                    background:
-                      "linear-gradient(90deg, #0b5ed7 0%, #1d78f0 100%)",
-                    boxShadow: "0 8px 20px rgba(13, 94, 215, 0.28)",
-                    borderRadius: 9999,
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  <MagnifyingGlass size={15} weight="bold" />
-                  <span>Tìm chuyến bay</span>
-                </button>
-              </div>
+              {/* Search Pill CTA Button matching mockup */}
+              <button
+                type="submit"
+                className="shrink-0 cursor-pointer font-extrabold transition hover:brightness-95"
+                style={{
+                  background: "#dff0ff",
+                  color: "#026aa7",
+                  borderRadius: 9999,
+                  border: "none",
+                  height: 44,
+                  padding: "0 20px",
+                  fontSize: 13.5,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Search
+              </button>
             </div>
           </form>
         </div>
@@ -1060,35 +1142,161 @@ export default function FlightResults() {
             </div>
           )}
 
-          {/* Top Control Bar (Accurate real count — never lies when 0 results) */}
-          <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
-            <span className="text-xs font-bold text-[#355384]">
-              Hiển thị{" "}
-              <strong className="text-[#092152]">
-                {displayedFlights.length} kết quả
-              </strong>
-              {totalPages > 1 && (
-                <span>
-                  {" "}
-                  (Trang {safeCurrentPage}/{totalPages})
+          {/* Traveloka-Style Date Price Strip + 3-Tab Sort Bar */}
+          <div
+            className="overflow-hidden bg-white shadow-xs"
+            style={{ borderRadius: 22, border: "1px solid #dbe7fb" }}
+          >
+            {/* Header Row: Depart Route + Promos Pill */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-3.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-black text-[#091e47]" style={{ fontSize: 15 }}>
+                  Depart: {routeSummaryText}
                 </span>
-              )}
-            </span>
+                <span
+                  className="bg-blue-50 px-2.5 py-0.5 font-bold text-blue-700"
+                  style={{ borderRadius: 9999, fontSize: 11.5 }}
+                >
+                  {displayedFlights.length} flights
+                </span>
+              </div>
 
-            {/* Sort Dropdown */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-[#47628a]">
-                Sắp xếp:
-              </span>
-              <select
-                aria-label="Sắp xếp chuyến bay"
-                value={filters.sort}
-                onChange={(e) => handleFilterChange({ sort: e.target.value })}
-                className="cursor-pointer rounded-full border border-blue-200 bg-white px-3.5 py-1.5 text-xs font-extrabold text-[#0b2559] outline-none hover:border-blue-300"
+              <button
+                type="button"
+                onClick={() => navigate("/promotions")}
+                className="inline-flex cursor-pointer items-center gap-1.5 bg-white px-3.5 py-1.5 font-bold text-[#091e47] transition hover:bg-blue-50"
+                style={{
+                  borderRadius: 9999,
+                  border: "1px solid #cbd5e1",
+                  fontSize: 12,
+                }}
               >
-                <option value="price_asc">Giá thấp nhất</option>
-                <option value="time_asc">Cất cánh sớm nhất</option>
-              </select>
+                <Tag size={14} weight="duotone" className="text-blue-600" />
+                <span>Promos</span>
+              </button>
+            </div>
+
+            {/* 5-Day Horizontal Date Strip */}
+            <div className="flex items-center border-b border-slate-100 px-2 py-2">
+              <button
+                type="button"
+                onClick={() => shiftStripDate(-1)}
+                aria-label="Previous day"
+                className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-transparent text-slate-500 transition hover:bg-blue-50 hover:text-blue-600"
+                style={{ border: "none" }}
+              >
+                <CaretLeft size={16} weight="bold" />
+              </button>
+
+              <div className="grid flex-1 grid-cols-3 gap-1.5 sm:grid-cols-5">
+                {dateStripDays.map((d) => {
+                  const isActive = d.iso === activeDateStr;
+                  return (
+                    <button
+                      key={d.iso}
+                      type="button"
+                      disabled={d.disabled}
+                      onClick={() => handleQuickDateSelect(d.iso)}
+                      className="cursor-pointer px-2 py-2 text-center transition disabled:cursor-not-allowed disabled:opacity-40"
+                      style={{
+                        borderRadius: 12,
+                        border: "none",
+                        background: isActive ? "#ebf5ff" : "transparent",
+                      }}
+                    >
+                      <div
+                        className="font-bold"
+                        style={{
+                          fontSize: 12,
+                          color: isActive ? "#0284c7" : "#475569",
+                        }}
+                      >
+                        {d.label}
+                      </div>
+                      <div
+                        className="mt-0.5 truncate font-extrabold"
+                        style={{
+                          fontSize: 11.5,
+                          color: isActive ? "#0369a1" : "#059669",
+                        }}
+                      >
+                        {isActive && cheapestFlight
+                          ? formatVndCompact(cheapestFlight.display_price || cheapestFlight.base_price)
+                          : "Xem giá"}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => shiftStripDate(1)}
+                aria-label="Next day"
+                className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-transparent text-slate-500 transition hover:bg-blue-50 hover:text-blue-600"
+                style={{ border: "none" }}
+              >
+                <CaretRight size={16} weight="bold" />
+              </button>
+            </div>
+
+            {/* 3-Tab Sort Bar matching Traveloka mockup */}
+            <div className="grid grid-cols-3 divide-x divide-slate-100">
+              {[
+                {
+                  id: "price_asc",
+                  title: "Lowest price",
+                  sub: cheapestFlight
+                    ? `${formatVndCompact(cheapestFlight.display_price || cheapestFlight.base_price)} · ${formatShortDurEn(cheapestFlight)}`
+                    : "Giá thấp nhất",
+                },
+                {
+                  id: "duration_asc",
+                  title: "Shortest duration",
+                  sub: fastestFlight
+                    ? `${formatVndCompact(fastestFlight.display_price || fastestFlight.base_price)} · ${formatShortDurEn(fastestFlight)}`
+                    : "Bay nhanh nhất",
+                },
+                {
+                  id: "time_asc",
+                  title: "Earliest departure",
+                  sub: earliestFlight
+                    ? (() => {
+                        const dt = new Date(String(earliestFlight.departure_time || "").replace(" ", "T"));
+                        if (Number.isNaN(dt.getTime())) return "Cất cánh sớm nhất";
+                        return `Cất cánh ${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
+                      })()
+                    : "Cất cánh sớm nhất",
+                },
+              ].map((tab) => {
+                const active = filters.sort === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => handleFilterChange({ sort: tab.id })}
+                    className="cursor-pointer px-3 py-3 text-center transition hover:bg-slate-50"
+                    style={{
+                      background: active ? "#f8fbff" : "#ffffff",
+                      border: "none",
+                      borderBottom: active ? "3px solid #0284c7" : "3px solid transparent",
+                    }}
+                  >
+                    <div
+                      className="font-extrabold"
+                      style={{ fontSize: 13, color: active ? "#0284c7" : "#0f172a" }}
+                    >
+                      {tab.title}
+                    </div>
+                    <div
+                      className="mt-0.5 truncate font-semibold text-slate-500"
+                      style={{ fontSize: 11 }}
+                    >
+                      {tab.sub}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -1135,6 +1343,9 @@ export default function FlightResults() {
                 <FlightCard
                   key={flight.id}
                   flight={flight}
+                  isCheapest={cheapestFlight?.id === flight.id}
+                  isFastest={fastestFlight?.id === flight.id}
+                  cabinClass={searchParams.cabinClass}
                   onSelect={handleSelectFlight}
                 />
               ))}

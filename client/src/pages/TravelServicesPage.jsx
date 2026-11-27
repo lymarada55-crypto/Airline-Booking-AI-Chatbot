@@ -35,6 +35,9 @@ import {
 } from "@phosphor-icons/react";
 import api from "../api";
 import Navbar from "../components/Navbar";
+import HotelResultsView from "../components/travel/HotelResultsView";
+import ExperienceResultsView from "../components/travel/ExperienceResultsView";
+import CarResultsView from "../components/travel/CarResultsView";
 import { getCanonicalTravelProductImage } from "../utils/travelServiceImages";
 
 const serviceLabels = {
@@ -341,6 +344,17 @@ export default function TravelServicesPage() {
     setSearchParams(nextParams, { replace: true });
   };
 
+  const handleHotelSearchSubmit = ({ q: nextQ, startDate: sDate, endDate: eDate, guests: gCount, rooms: rCount }) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextQ) nextParams.set("q", nextQ);
+    else nextParams.delete("q");
+    if (sDate) nextParams.set("start_date", sDate);
+    if (eDate) nextParams.set("end_date", eDate);
+    if (gCount) nextParams.set("guests", String(gCount));
+    if (rCount) nextParams.set("rooms", String(rCount));
+    setSearchParams(nextParams, { replace: true });
+  };
+
   useEffect(() => {
     if (!label) {
       setLoading(false);
@@ -376,7 +390,7 @@ export default function TravelServicesPage() {
     return () => controller.abort();
   }, [type, label, q, startDate, effectiveEndDate, guests]);
 
-  const reserve = async (product) => {
+  const reserve = async (product, quantityOverride = null) => {
     const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
     if (!token) {
       setError("Vui lòng đăng nhập để gửi yêu cầu đặt dịch vụ.");
@@ -429,7 +443,7 @@ export default function TravelServicesPage() {
         start_date: effectiveStart,
         end_date: effectiveEnd,
         guest_count: guests,
-        quantity: quantities[product.id] || 1,
+        quantity: quantityOverride || quantities[product.id] || 1,
         ...(requiresGuestContact ? {
           guest_name: guestContact.name.trim(),
           guest_email: guestContact.email.trim(),
@@ -656,6 +670,62 @@ export default function TravelServicesPage() {
           </div>
         )}
 
+        {isHotelPage ? (
+          <HotelResultsView
+            products={sortedProducts}
+            hotelImageUrls={hotelImageUrls}
+            loading={loading}
+            error={error}
+            q={q}
+            startDate={startDate}
+            endDate={effectiveEndDate || defaultCheckoutDate}
+            guests={guests}
+            roomsInitial={Number(searchParams.get("rooms") || 1)}
+            favorites={favorites}
+            toggleFavorite={toggleFavorite}
+            guestContact={guestContact}
+            setGuestContact={setGuestContact}
+            busyProductId={busyProductId}
+            onSearchSubmit={handleHotelSearchSubmit}
+            onConfirmReserve={(prod, roomsCount) => reserve(prod, roomsCount)}
+          />
+        ) : isExperiencePage ? (
+          <ExperienceResultsView
+            products={sortedProducts}
+            imageUrls={hotelImageUrls}
+            loading={loading}
+            error={error}
+            q={q}
+            startDate={startDate}
+            guests={guests}
+            favorites={favorites}
+            toggleFavorite={toggleFavorite}
+            guestContact={guestContact}
+            setGuestContact={setGuestContact}
+            busyProductId={busyProductId}
+            onSearchSubmit={handleHotelSearchSubmit}
+            onConfirmReserve={(prod, paxCount) => reserve(prod, paxCount)}
+          />
+        ) : isCarPage ? (
+          <CarResultsView
+            products={sortedProducts}
+            imageUrls={hotelImageUrls}
+            loading={loading}
+            error={error}
+            q={q}
+            startDate={startDate}
+            endDate={effectiveEndDate || defaultCheckoutDate}
+            guests={guests}
+            favorites={favorites}
+            toggleFavorite={toggleFavorite}
+            guestContact={guestContact}
+            setGuestContact={setGuestContact}
+            busyProductId={busyProductId}
+            onSearchSubmit={handleHotelSearchSubmit}
+            onConfirmReserve={(prod, carsCount) => reserve(prod, carsCount)}
+          />
+        ) : (
+        <>
         {(isStayOrRental || isExperiencePage) && (
           <label
             style={{
@@ -1900,6 +1970,8 @@ export default function TravelServicesPage() {
                 );
               })}
           </div>
+        )}
+        </>
         )}
       </div>
     </main>

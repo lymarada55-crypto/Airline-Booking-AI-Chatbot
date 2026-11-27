@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AirplaneTilt,
+  Armchair,
   ArrowLeft,
   ArrowRight,
   ArrowsOut,
@@ -9,11 +10,13 @@ import {
   CaretDown,
   CaretUp,
   Check,
-  Clock,
+  ForkKnife,
   Info,
   Robot,
+  SealCheck,
   ShieldCheck,
   Sparkle,
+  SuitcaseRolling,
 } from "@phosphor-icons/react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -53,21 +56,174 @@ const currency = new Intl.NumberFormat("vi-VN", {
 });
 
 const VietnamAirlinesLogo = () => (
-  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#00557B] p-1 shadow-xs">
-    <svg viewBox="0 0 40 40" fill="none" className="h-full w-full">
+  <div
+    className="flex shrink-0 flex-col items-center justify-center shadow-xs"
+    style={{
+      width: 54,
+      height: 54,
+      borderRadius: 14,
+      background: "linear-gradient(145deg, #00556e 0%, #006d88 100%)",
+      padding: "5px 4px",
+    }}
+  >
+    <svg viewBox="0 0 44 26" fill="none" style={{ width: 32, height: 18 }}>
       <path
-        d="M20 6C20 6 22 13 25 15C28 17 34 18 34 18C34 18 28 20 25 23C22 26 20 34 20 34C20 34 18 26 15 23C12 20 6 18 6 18C6 18 12 17 15 15C18 13 20 6 20 6Z"
+        d="M22 2C22 2 24.4 9.5 27.6 12C31.2 14.8 38.5 14 38.5 14C38.5 14 32 18.2 28.2 20.5C24.5 22.8 22 24.5 22 24.5C22 24.5 19.5 22.8 15.8 20.5C12 18.2 5.5 14 5.5 14C5.5 14 12.8 14.8 16.4 12C19.6 9.5 22 2 22 2Z"
         fill="#F4B41A"
       />
+      <path
+        d="M22 7.5C22 7.5 23.6 13.5 26 15.6C24.2 18.2 22 20.2 22 20.2C22 20.2 19.8 18.2 18 15.6C20.4 13.5 22 7.5 22 7.5Z"
+        fill="#FFD86B"
+      />
     </svg>
+    <span
+      className="mt-0.5 text-center font-bold leading-tight text-white/95"
+      style={{ fontSize: 8.5 }}
+    >
+      Vietnam
+      <br />
+      Airlines
+    </span>
+  </div>
+);
+
+const VietjetLogo = () => (
+  <div
+    className="flex shrink-0 flex-col items-center justify-center shadow-xs"
+    style={{
+      width: 54,
+      height: 54,
+      borderRadius: 14,
+      background: "linear-gradient(145deg, #d9141d 0%, #f0232b 100%)",
+      padding: "5px 4px",
+    }}
+  >
+    <svg viewBox="0 0 40 24" fill="none" style={{ width: 28, height: 16 }}>
+      <path
+        d="M6 4L20 20L34 4"
+        stroke="#FFF200"
+        strokeWidth="4.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="20" cy="11" r="2.6" fill="#FFFFFF" />
+    </svg>
+    <span
+      className="mt-0.5 text-center font-extrabold leading-tight text-white"
+      style={{ fontSize: 8.5 }}
+    >
+      VietJet
+      <br />
+      Air
+    </span>
+  </div>
+);
+
+const BambooAirwaysLogo = () => (
+  <div
+    className="flex shrink-0 flex-col items-center justify-center shadow-xs"
+    style={{
+      width: 54,
+      height: 54,
+      borderRadius: 14,
+      background: "linear-gradient(145deg, #006633 0%, #009944 100%)",
+      padding: "5px 4px",
+    }}
+  >
+    <svg viewBox="0 0 40 26" fill="none" style={{ width: 28, height: 18 }}>
+      <path d="M9 21C12 13 19 7 30 4C25 12 18 18 9 21Z" fill="#FFFFFF" />
+      <path d="M13 24C16 18 22 13 31 11C27 17 21 21 13 24Z" fill="#38BDF8" />
+    </svg>
+    <span
+      className="mt-0.5 text-center font-bold leading-tight text-white/95"
+      style={{ fontSize: 8.5 }}
+    >
+      Bamboo
+      <br />
+      Airways
+    </span>
   </div>
 );
 
 const SkyLinkLogo = () => (
-  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm font-black text-white shadow-xs">
-    ✈
+  <div
+    className="flex shrink-0 flex-col items-center justify-center shadow-xs"
+    style={{
+      width: 54,
+      height: 54,
+      borderRadius: 14,
+      background: "linear-gradient(145deg, #092c7a 0%, #0284c7 100%)",
+      padding: "5px 4px",
+    }}
+  >
+    <svg viewBox="0 0 40 24" fill="none" style={{ width: 28, height: 16 }}>
+      <path d="M20 18L4 6L15 11L20 18Z" fill="#7DD3FC" />
+      <path d="M20 18L36 6L25 11L20 18Z" fill="#FFFFFF" />
+      <path d="M20 4L23 13L20 18L17 13L20 4Z" fill="#E0F2FE" />
+    </svg>
+    <span
+      className="mt-0.5 text-center font-extrabold leading-tight text-white"
+      style={{ fontSize: 8.5 }}
+    >
+      SkyLink
+      <br />
+      Airlines
+    </span>
   </div>
 );
+
+const SEAT_AIRLINE_MAP = {
+  VN: {
+    name: "Vietnam Airlines",
+    tagline: "Bay cùng vẻ đẹp Việt Nam",
+    baggage: "7kg + 23kg",
+    hasMeal: true,
+    logo: <VietnamAirlinesLogo />,
+  },
+  VJ: {
+    name: "VietJet Air",
+    tagline: "Bay là thích ngay",
+    baggage: "7kg x 1",
+    hasMeal: false,
+    logo: <VietjetLogo />,
+  },
+  QH: {
+    name: "Bamboo Airways",
+    tagline: "Hơn cả một chuyến bay",
+    baggage: "7kg + 20kg",
+    hasMeal: true,
+    logo: <BambooAirwaysLogo />,
+  },
+  FB: {
+    name: "Bamboo Airways",
+    tagline: "Hơn cả một chuyến bay",
+    baggage: "7kg + 20kg",
+    hasMeal: true,
+    logo: <BambooAirwaysLogo />,
+  },
+};
+
+const DEFAULT_SEAT_AIRLINE = {
+  name: "SkyLink Airlines",
+  tagline: "Trải nghiệm bay 5 sao quốc tế",
+  baggage: "10kg + 30kg",
+  hasMeal: true,
+  logo: <SkyLinkLogo />,
+};
+
+function getSeatAirline(flightNumber = "") {
+  const prefix = (String(flightNumber).match(/^[A-Za-z]+/) ?? [""])[0].toUpperCase();
+  return SEAT_AIRLINE_MAP[prefix] ?? DEFAULT_SEAT_AIRLINE;
+}
+
+function formatDateEnShort(dateStr) {
+  if (!dateStr) return "—";
+  const d = new Date(String(dateStr).replace(" ", "T"));
+  if (Number.isNaN(d.getTime())) return String(dateStr);
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${days[d.getDay()]}, ${String(d.getDate()).padStart(2, "0")} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
 
 // Matches Backend BookingController.php (rows 1–5 Business +20%, 6–14 Standard 0%, 15+ Saver -5%)
 function getSeatTierInfo(seatNumber = "", basePrice = 0) {
@@ -123,11 +279,11 @@ function getSeatTierInfo(seatNumber = "", basePrice = 0) {
 
 function formatDuration(dep, arr) {
   if (!dep || !arr) return "—";
-  const ms = new Date(arr) - new Date(dep);
+  const ms = new Date(String(arr).replace(" ", "T")) - new Date(String(dep).replace(" ", "T"));
   if (Number.isNaN(ms) || ms <= 0) return "—";
   const h = Math.floor(ms / 3600000);
   const m = Math.floor((ms % 3600000) / 60000);
-  return `${h}g ${String(m).padStart(2, "0")}p`;
+  return m > 0 ? `${h}h ${m}m` : `${h}h 00m`;
 }
 
 export default function SeatSelection() {
@@ -409,16 +565,47 @@ export default function SeatSelection() {
 
     return (
       <div
-        className="flex flex-col items-center overflow-hidden bg-white p-5 sm:p-6"
+        className="flex flex-col items-center overflow-hidden bg-white px-5 pb-5 pt-4 sm:px-6"
         style={{
           borderRadius: 24,
-          border: "1px solid rgba(255,255,255,0.98)",
-          boxShadow: "0 14px 36px rgba(20, 62, 132, 0.09)",
+          border: "1px solid #dbe7fb",
+          boxShadow: "0 10px 30px rgba(20, 62, 132, 0.08)",
         }}
       >
+        {/* Compact Cabin Map Header + Horizontal Scroll Hint */}
+        <div className="mb-2 flex w-full flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2">
+            <span className="font-black text-[#091e47]" style={{ fontSize: 14 }}>
+              Aircraft Seat Map
+            </span>
+            <span
+              className="font-bold text-slate-500"
+              style={{
+                fontSize: 11.5,
+                background: "#f1f5f9",
+                borderRadius: 9999,
+                padding: "2px 9px",
+              }}
+            >
+              Sơ đồ ghế • {currentSeats.length} seats
+            </span>
+          </div>
+          <span
+            className="inline-flex items-center gap-1 font-bold text-[#0b5ed7]"
+            style={{
+              fontSize: 11.5,
+              background: "#eff6ff",
+              borderRadius: 9999,
+              padding: "3px 10px",
+            }}
+          >
+            Cuộn ngang xem hàng 15–30 (Saver -5%) →
+          </span>
+        </div>
+
         {/* Scroll container for Aircraft Fuselage */}
-        <div className="custom-scrollbar w-full overflow-x-auto pb-5 pt-3">
-          <div className="relative mx-auto flex min-w-max items-center justify-center px-16 py-6">
+        <div className="custom-scrollbar w-full overflow-x-auto pb-4 pt-2">
+          <div className="relative mx-auto flex min-w-max items-center justify-center px-16 py-3">
             {/* AIRCRAFT FUSELAGE */}
             <div
               className="relative flex items-center border-2 border-blue-200/80 bg-[#f2f7fd] px-10 py-6 shadow-inner"
@@ -510,29 +697,29 @@ export default function SeatSelection() {
           </div>
         </div>
 
-        {/* Clean Accurate Legend Bar */}
-        <div className="mt-3 flex w-full flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-blue-50 pt-4 text-xs font-bold text-[#2b4776]">
+        {/* Clean Accurate Bilingual Legend Bar */}
+        <div className="mt-2 flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-slate-100 pt-3.5 text-xs font-bold text-[#2b4776]">
           <div className="flex items-center gap-1.5">
-            <span className="inline-block h-4 w-4 rounded-xs bg-[#f43f5e]" />
-            <span>Thương gia H1–H5 (+20%)</span>
+            <span className="inline-block h-3.5 w-3.5 rounded-xs bg-[#f43f5e]" />
+            <span>Business H1–H5 (+20%)</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="inline-block h-4 w-4 rounded-xs bg-[#10b981]" />
-            <span>Tiêu chuẩn H6–H14</span>
+            <span className="inline-block h-3.5 w-3.5 rounded-xs bg-[#10b981]" />
+            <span>Standard H6–H14</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="inline-block h-4 w-4 rounded-xs bg-[#0284c7]" />
-            <span>Tiết kiệm H15+ (-5%)</span>
+            <span className="inline-block h-3.5 w-3.5 rounded-xs bg-[#0284c7]" />
+            <span>Saver H15+ (-5%)</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="inline-block h-4 w-4 rounded-xs bg-[#0b5ed7] ring-2 ring-blue-300" />
-            <span>Đang chọn</span>
+            <span className="inline-block h-3.5 w-3.5 rounded-xs bg-[#0b5ed7] ring-2 ring-blue-300" />
+            <span>Selected · Đang chọn</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="flex h-4 w-4 items-center justify-center rounded-xs border border-slate-300 bg-slate-200 text-[9px] text-slate-400">
+            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-xs border border-slate-300 bg-slate-200 text-[9px] text-slate-400">
               ✕
             </span>
-            <span>Đã đặt</span>
+            <span>Occupied · Đã đặt</span>
           </div>
         </div>
       </div>
@@ -569,10 +756,18 @@ export default function SeatSelection() {
     "Đà Nẵng"
   );
   const flightNo = currentFlight?.flight_number || "VN7211";
+  const seatAirline = getSeatAirline(flightNo);
   const flightDuration = formatDuration(
     currentFlight?.departure_time,
     currentFlight?.arrival_time
   );
+  const formattedFlightDateEn = formatDateEnShort(
+    currentFlight?.departure_time || searchParams.date
+  );
+  const cabinLabel =
+    searchParams.cabinClass === "business"
+      ? "Thương gia"
+      : "Phổ thông";
 
   // Calculate real-time estimated fare for selected seats
   const selectedSeatDetails = selectedList.map((seat) => ({
@@ -595,11 +790,11 @@ export default function SeatSelection() {
       <Navbar />
 
       {/* 1. HERO HEADER BANNER (Synced 5-Star SkyLink Style) */}
-      <div className="relative overflow-hidden pb-8 pt-22">
+      <div className="relative overflow-hidden pb-5 pt-22">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-0 overflow-hidden"
-          style={{ height: 310 }}
+          style={{ height: 270 }}
         >
           <div
             className="absolute inset-0"
@@ -644,7 +839,7 @@ export default function SeatSelection() {
               }}
             >
               <ArrowLeft size={14} weight="bold" />
-              <span>Quay lại chọn chuyến bay</span>
+              <span>Back to Flights · Quay lại</span>
             </button>
 
             {/* Clean 4-Step Progress Bar */}
@@ -658,38 +853,37 @@ export default function SeatSelection() {
             >
               <span className="inline-flex items-center gap-1 text-emerald-700">
                 <Check size={13} weight="bold" />
-                1. Chuyến bay
+                1. Flights
               </span>
               <span className="text-slate-300">›</span>
-              <span className="font-black text-[#0b5ed7]">2. Chọn ghế</span>
+              <span className="font-black text-[#0b5ed7]">2. Seat Selection</span>
               <span className="text-slate-300">›</span>
-              <span className="text-slate-400">3. Dịch vụ</span>
+              <span className="text-slate-400">3. Add-ons</span>
               <span className="text-slate-300">›</span>
-              <span className="text-slate-400">4. Thanh toán</span>
+              <span className="text-slate-400">4. Payment</span>
             </div>
           </div>
 
           <p
-            className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em]"
-            style={{ color: "#0b57d0", margin: "0 0 4px 0" }}
+            className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.14em]"
+            style={{ color: "#0b57d0", margin: "0 0 2px 0" }}
           >
             <AirplaneTilt size={15} weight="fill" />
-            BƯỚC 2/4 • {bookingStage === "outbound" ? "CHỌN GHẾ CHIỀU ĐI" : "CHỌN GHẾ CHIỀU VỀ"}
+            STEP 2/4 • {bookingStage === "outbound" ? "OUTBOUND SEAT · CHỌN GHẾ CHIỀU ĐI" : "RETURN SEAT · CHỌN GHẾ CHIỀU VỀ"}
           </p>
           <h1
             className="font-black tracking-tight"
             style={{
-              fontSize: "clamp(1.95rem, 3.4vw, 2.7rem)",
+              fontSize: "clamp(1.75rem, 3vw, 2.35rem)",
               color: "#091e47",
               lineHeight: 1.12,
-              margin: "0 0 6px 0",
+              margin: "0 0 4px 0",
             }}
           >
             Chọn chỗ ngồi
           </h1>
-          <p className="max-w-xl text-xs font-semibold text-[#2d4b7a] sm:text-sm" style={{ margin: 0 }}>
-            Lựa chọn vị trí ngồi lý tưởng cho {totalPassengers} hành khách. Ghế đã chọn được hệ
-            thống khóa giữ riêng trong 15 phút để bạn hoàn tất đặt vé.
+          <p className="max-w-2xl text-xs font-semibold text-[#2d4b7a] sm:text-sm" style={{ margin: 0 }}>
+            Select your preferred seat for {totalPassengers} passenger(s) • Ghế đã chọn được giữ độc quyền trong 15 phút.
           </p>
         </div>
       </div>
@@ -750,89 +944,214 @@ export default function SeatSelection() {
             </div>
           )}
 
-          {/* Flight Summary Meta Card */}
+          {/* Flight Summary Card — Synced 5-Star Style matching FlightCard.jsx */}
           <div
-            className="flex flex-wrap items-center justify-between gap-4 bg-white p-5"
+            className="bg-white p-5"
             style={{
               borderRadius: 22,
-              border: "1px solid rgba(255,255,255,0.98)",
+              border: "1px solid #dbe7fb",
               boxShadow: "0 10px 28px rgba(20, 62, 132, 0.08)",
             }}
           >
-            {/* Airline */}
-            <div className="flex items-center gap-3">
-              {flightNo.includes("VN") ? <VietnamAirlinesLogo /> : <SkyLinkLogo />}
-              <div>
-                <span className="block text-xs font-black text-[#092152]">
-                  {currentFlight?.airline_name ||
-                    (flightNo.includes("VN")
-                      ? "Vietnam Airlines"
-                      : "SkyLink Airlines")}
+            {/* Row 1: Airline Tile + Name + Verified Badge + Flight Code + Date Pill */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3.5">
+                {seatAirline.logo}
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <h2
+                      className="truncate font-black text-[#091e47]"
+                      style={{ margin: 0, fontSize: 16.5, lineHeight: 1.2 }}
+                    >
+                      {seatAirline.name}
+                    </h2>
+                    <SealCheck
+                      size={17}
+                      weight="fill"
+                      className="shrink-0 text-[#2563eb]"
+                      title="Verified Airline"
+                    />
+                    <span
+                      className="font-mono font-bold text-slate-600"
+                      style={{
+                        fontSize: 11,
+                        background: "#f1f5f9",
+                        borderRadius: 6,
+                        padding: "1px 7px",
+                      }}
+                    >
+                      {flightNo}
+                    </span>
+                  </div>
+                  <p
+                    className="truncate italic text-slate-500"
+                    style={{ margin: "2px 0 0 0", fontSize: 12 }}
+                  >
+                    {seatAirline.tagline}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className="inline-flex items-center gap-1.5 font-extrabold text-[#0b5ed7]"
+                  style={{
+                    background: "#eff6ff",
+                    border: "1px solid #dbeafe",
+                    borderRadius: 9999,
+                    padding: "5px 12px",
+                    fontSize: 12,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <CalendarBlank size={14} weight="fill" />
+                  <span>{formattedFlightDateEn}</span>
                 </span>
-                <span className="text-[11px] font-bold text-[#5a749b]">
-                  {flightNo} • {currentFlight?.aircraft?.model || "Airbus A321neo"}
+                <span
+                  className="inline-flex items-center font-extrabold text-white"
+                  style={{
+                    background: "linear-gradient(90deg, #0ea5e9 0%, #1d4ed8 100%)",
+                    borderRadius: 9999,
+                    padding: "5px 12px",
+                    fontSize: 11.5,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {bookingStage === "outbound" ? "Departure · Chiều đi" : "Return · Chiều về"}
                 </span>
               </div>
             </div>
 
-            {/* Route */}
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <span className="block text-sm font-black text-[#092152]">
-                  {depCode}
-                </span>
-                <span className="text-[10px] font-bold text-[#5a749b]">
-                  {depCity}
-                </span>
+            {/* Row 2: Visual Flight Timeline (06:00 HAN --- ✈ 2h 00m / Direct --- 08:00 SGN) */}
+            <div className="mt-4 flex items-center gap-4 border-t border-slate-100 pt-4">
+              <div className="min-w-[115px]">
+                <div
+                  className="font-black leading-none text-[#091e47]"
+                  style={{ fontSize: 23 }}
+                >
+                  {formatTime(currentFlight?.departure_time)}
+                </div>
+                <div
+                  className="mt-1 truncate font-semibold text-slate-500"
+                  style={{ fontSize: 12 }}
+                >
+                  {depCity} <span className="font-extrabold text-[#091e47]">({depCode})</span>
+                </div>
               </div>
-              <span className="text-xs font-bold text-blue-600">✈</span>
-              <div>
-                <span className="block text-sm font-black text-[#092152]">
-                  {arrCode}
-                </span>
-                <span className="text-[10px] font-bold text-[#5a749b]">
-                  {arrCity}
-                </span>
-              </div>
-            </div>
 
-            {/* Date */}
-            <div className="flex items-center gap-2">
-              <CalendarBlank size={16} weight="fill" className="text-blue-600" />
-              <div>
-                <span className="block text-[10px] font-bold text-[#5a749b]">
-                  Ngày bay
-                </span>
-                <span className="text-xs font-black text-[#092152]">
-                  {formatDate(currentFlight?.departure_time || searchParams.date)}
-                </span>
-              </div>
-            </div>
-
-            {/* Time */}
-            <div className="flex items-center gap-2">
-              <Clock size={16} weight="fill" className="text-blue-600" />
-              <div>
-                <span className="block text-[10px] font-bold text-[#5a749b]">
-                  Giờ bay
-                </span>
-                <span className="text-xs font-black text-[#092152]">
-                  {formatTime(currentFlight?.departure_time)} –{" "}
-                  {formatTime(currentFlight?.arrival_time)}
-                </span>
-              </div>
-            </div>
-
-            {/* Real Calculated Duration */}
-            <div className="flex items-center gap-2">
-              <Clock size={16} weight="fill" className="text-blue-600" />
-              <div>
-                <span className="block text-[10px] font-bold text-[#5a749b]">
-                  Thời gian bay
-                </span>
-                <span className="text-xs font-black text-[#0b4fd0]">
+              <div className="flex flex-1 flex-col items-center px-2">
+                <div className="relative flex w-full items-center justify-center">
+                  <div
+                    className="w-full"
+                    style={{ borderTop: "1.5px dashed #cbd5e1" }}
+                  />
+                  <span
+                    className="absolute flex items-center justify-center bg-white px-2"
+                    style={{ color: "#0ea5e9" }}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      style={{ width: 18, height: 18 }}
+                    >
+                      <path
+                        d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"
+                        transform="rotate(90 12 12)"
+                      />
+                    </svg>
+                  </span>
+                </div>
+                <span
+                  className="mt-1.5 font-extrabold text-[#1d4ed8]"
+                  style={{
+                    background: "#eff6ff",
+                    borderRadius: 9999,
+                    padding: "1px 10px",
+                    fontSize: 11.5,
+                  }}
+                >
                   {flightDuration}
                 </span>
+                <span
+                  className="mt-0.5 font-extrabold text-[#0264c8]"
+                  style={{ fontSize: 11.5 }}
+                >
+                  Direct · Bay thẳng
+                </span>
+              </div>
+
+              <div className="min-w-[115px] text-right">
+                <div
+                  className="font-black leading-none text-[#091e47]"
+                  style={{ fontSize: 23 }}
+                >
+                  {formatTime(currentFlight?.arrival_time)}
+                </div>
+                <div
+                  className="mt-1 truncate font-semibold text-slate-500"
+                  style={{ fontSize: 12 }}
+                >
+                  {arrCity} <span className="font-extrabold text-[#091e47]">({arrCode})</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Row 3: 4-Column Ice-Blue Quick Info Bar (Synced with FlightCard.jsx) */}
+            <div
+              className="mt-4 grid grid-cols-2 gap-y-2.5 sm:grid-cols-4 sm:divide-x sm:divide-blue-100"
+              style={{
+                background: "#f4f8ff",
+                border: "1px solid #e4efff",
+                borderRadius: 14,
+                padding: "9px 6px",
+              }}
+            >
+              <div className="flex items-center gap-2 px-3">
+                <AirplaneTilt size={18} weight="fill" className="shrink-0 text-[#1d64f2]" />
+                <div className="min-w-0">
+                  <div className="font-semibold text-slate-500" style={{ fontSize: 10.5, lineHeight: 1.2 }}>
+                    Aircraft · Tàu bay
+                  </div>
+                  <div className="truncate font-extrabold text-[#091e47]" style={{ fontSize: 12 }}>
+                    {currentFlight?.aircraft?.model || "Airbus A321neo"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 px-3">
+                <SuitcaseRolling size={18} weight="fill" className="shrink-0 text-[#1d64f2]" />
+                <div className="min-w-0">
+                  <div className="font-semibold text-slate-500" style={{ fontSize: 10.5, lineHeight: 1.2 }}>
+                    Baggage · Hành lý
+                  </div>
+                  <div className="truncate font-extrabold text-[#091e47]" style={{ fontSize: 12 }}>
+                    {seatAirline.baggage}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 px-3">
+                <Armchair size={18} weight="fill" className="shrink-0 text-[#1d64f2]" />
+                <div className="min-w-0">
+                  <div className="font-semibold text-slate-500" style={{ fontSize: 10.5, lineHeight: 1.2 }}>
+                    Cabin · Hạng ghế
+                  </div>
+                  <div className="truncate font-extrabold text-[#091e47]" style={{ fontSize: 12 }}>
+                    {cabinLabel}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 px-3">
+                <ForkKnife size={18} weight="fill" className="shrink-0 text-[#1d64f2]" />
+                <div className="min-w-0">
+                  <div className="font-semibold text-slate-500" style={{ fontSize: 10.5, lineHeight: 1.2 }}>
+                    Meal · Suất ăn
+                  </div>
+                  <div className="truncate font-extrabold text-[#091e47]" style={{ fontSize: 12 }}>
+                    {seatAirline.hasMeal ? "Included · Có" : "Mua thêm"}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -925,40 +1244,78 @@ export default function SeatSelection() {
               boxShadow: "0 14px 36px rgba(20, 62, 132, 0.10)",
             }}
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-black tracking-tight text-[#092152]" style={{ margin: 0 }}>
-                  Chi tiết chỗ ngồi
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <h2
+                  className="truncate font-black tracking-tight text-[#092152]"
+                  style={{ margin: 0, fontSize: 17, lineHeight: 1.25 }}
+                >
+                  Seat Summary
                 </h2>
-                <span className="mt-0.5 block text-xs font-extrabold text-[#0b5ed7]">
-                  {bookingStage === "outbound" ? "Chuyến đi" : "Chuyến về"}
+                <span className="mt-0.5 block font-extrabold text-[#0b5ed7]" style={{ fontSize: 11.5 }}>
+                  {bookingStage === "outbound" ? "Chi tiết chỗ ngồi · Chiều đi" : "Chi tiết chỗ ngồi · Chiều về"}
                 </span>
               </div>
               <span
-                className="rounded-full px-3 py-1 text-xs font-black"
-                style={{ background: "#eef6ff", color: "#0b4fd0" }}
+                className="shrink-0 font-black"
+                style={{
+                  background: "#eef6ff",
+                  color: "#0b4fd0",
+                  borderRadius: 9999,
+                  padding: "4px 11px",
+                  fontSize: 12,
+                  whiteSpace: "nowrap",
+                }}
               >
-                {selectedList.length}/{totalPassengers} ghế
+                {selectedList.length}/{totalPassengers} seat
               </span>
             </div>
 
-            {/* Route Box */}
-            <div className="flex items-center justify-between rounded-2xl border border-blue-100 bg-[#f7faff] p-3.5">
-              <div>
-                <span className="block text-base font-black text-[#092152]">
-                  {depCode}
-                </span>
-                <span className="text-[10px] font-bold text-[#5a749b]">
-                  {depCity}
-                </span>
+            {/* Route Mini-Card */}
+            <div
+              className="p-3.5"
+              style={{
+                borderRadius: 16,
+                background: "#f4f8ff",
+                border: "1px solid #e4efff",
+              }}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <span className="block font-black text-[#092152]" style={{ fontSize: 16 }}>
+                    {depCode}
+                  </span>
+                  <span className="font-semibold text-[#5a749b]" style={{ fontSize: 11 }}>
+                    {depCity}
+                  </span>
+                </div>
+                <div className="flex flex-1 flex-col items-center px-2">
+                  <div className="relative flex w-full items-center justify-center">
+                    <div className="w-full" style={{ borderTop: "1.5px dashed #bfd5f7" }} />
+                    <span className="absolute bg-[#f4f8ff] px-1.5 text-xs font-bold text-[#0ea5e9]">
+                      ✈
+                    </span>
+                  </div>
+                  <span className="mt-1 font-bold text-[#0b5ed7]" style={{ fontSize: 10.5 }}>
+                    {flightDuration}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="block font-black text-[#092152]" style={{ fontSize: 16 }}>
+                    {arrCode}
+                  </span>
+                  <span className="font-semibold text-[#5a749b]" style={{ fontSize: 11 }}>
+                    {arrCity}
+                  </span>
+                </div>
               </div>
-              <span className="text-xs font-bold text-blue-600">✈</span>
-              <div className="text-right">
-                <span className="block text-base font-black text-[#092152]">
-                  {arrCode}
-                </span>
-                <span className="text-[10px] font-bold text-[#5a749b]">
-                  {arrCity}
+              <div
+                className="mt-2.5 flex items-center justify-between border-t border-blue-100/80 pt-2 font-semibold text-slate-500"
+                style={{ fontSize: 11 }}
+              >
+                <span>{formattedFlightDateEn}</span>
+                <span className="font-extrabold text-[#091e47]">
+                  {formatTime(currentFlight?.departure_time)} – {formatTime(currentFlight?.arrival_time)}
                 </span>
               </div>
             </div>
@@ -1034,7 +1391,7 @@ export default function SeatSelection() {
               disabled={selectedList.length !== totalPassengers || processing}
               className="inline-flex w-full items-center justify-center gap-2 py-3.5 text-xs font-extrabold text-white shadow-md transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
               style={{
-                background: "linear-gradient(90deg, #0b5ed7 0%, #1d78f0 100%)",
+                background: "linear-gradient(90deg, #0ea5e9 0%, #1d4ed8 100%)",
                 borderRadius: 9999,
                 border: "none",
                 cursor:
@@ -1045,17 +1402,17 @@ export default function SeatSelection() {
             >
               <span>
                 {processing
-                  ? "Đang khóa giữ ghế..."
+                  ? "Locking seats..."
                   : flights.length > 1 && bookingStage === "outbound"
                     ? "Chọn ghế chiều về"
-                    : "Xác nhận giữ ghế & Tiếp tục"}
+                    : "Confirm & Continue · Tiếp tục"}
               </span>
               <ArrowRight size={15} weight="bold" />
             </button>
 
             <div className="flex items-center justify-center gap-1.5 pt-1 text-[11px] font-semibold text-slate-400">
               <ShieldCheck size={14} className="text-emerald-500" weight="bold" />
-              <span>Giữ ghế độc quyền 15 phút • Bảo mật tuyệt đối</span>
+              <span>15-min exclusive seat lock • Bảo mật tuyệt đối</span>
             </div>
           </div>
         </div>

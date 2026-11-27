@@ -2,7 +2,16 @@ import { useEffect, useRef } from "react";
 import MessageBubble from "./MessageBubble";
 import TypingIndicator from "./TypingIndicator";
 
-export default function MessageList({ messages, isSending, onQuickReply, onSelectFlight, onEditMessage }) {
+export default function MessageList({
+  messages,
+  isSending,
+  onQuickReply,
+  onSelectFlight,
+  onEditMessage,
+  onNavigateClose,
+  savedIdSet,
+  onToggleSave,
+}) {
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -12,14 +21,18 @@ export default function MessageList({ messages, isSending, onQuickReply, onSelec
   }, [messages, isSending]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4 flex flex-col gap-3 bg-[#f8fbff]">
-      {messages.map((message) => (
+    <div className="flex flex-1 flex-col gap-3 overflow-y-auto bg-white px-5 pt-5 pb-4 sm:px-6">
+      {messages.map((message, idx) => (
         <MessageBubble
           key={message.id}
           message={message}
+          isFirstMessage={idx === 0}
           onQuickReply={onQuickReply}
           onSelectFlight={onSelectFlight}
           onEditMessage={onEditMessage}
+          onNavigateClose={onNavigateClose}
+          isSaved={savedIdSet?.has(message.id)}
+          onToggleSave={onToggleSave}
           disabled={isSending}
         />
       ))}
